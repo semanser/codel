@@ -33,6 +33,7 @@ type Query {
 type Mutation {
   createFlow: Flow!
   createTask(id: Uint!, query: String!): Task!
+  stopTask(id: Uint!): Task!
 }
 
 type Subscription {

@@ -70,6 +70,11 @@ func (r *mutationResolver) CreateTask(ctx context.Context, id uint, query string
 	}, nil
 }
 
+// StopTask is the resolver for the stopTask field.
+func (r *mutationResolver) StopTask(ctx context.Context, id uint) (*gmodel.Task, error) {
+	panic(fmt.Errorf("not implemented: StopTask - stopTask"))
+}
+
 // Flows is the resolver for the flows field.
 func (r *queryResolver) Flows(ctx context.Context) ([]*gmodel.Flow, error) {
 	flows := []models.Flow{}

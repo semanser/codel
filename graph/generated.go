@@ -57,6 +57,7 @@ type ComplexityRoot struct {
 	Mutation struct {
 		CreateFlow func(childComplexity int) int
 		CreateTask func(childComplexity int, id uint, query string) int
+		StopTask   func(childComplexity int, id uint) int
 	}
 
 	Query struct {
@@ -80,6 +81,7 @@ type ComplexityRoot struct {
 type MutationResolver interface {
 	CreateFlow(ctx context.Context) (*gmodel.Flow, error)
 	CreateTask(ctx context.Context, id uint, query string) (*gmodel.Task, error)
+	StopTask(ctx context.Context, id uint) (*gmodel.Task, error)
 }
 type QueryResolver interface {
 	Flows(ctx context.Context) ([]*gmodel.Flow, error)
@@ -140,6 +142,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.CreateTask(childComplexity, args["id"].(uint), args["query"].(string)), true
+
+	case "Mutation.stopTask":
+		if e.complexity.Mutation.StopTask == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_stopTask_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.StopTask(childComplexity, args["id"].(uint)), true
 
 	case "Query.flows":
 		if e.complexity.Query.Flows == nil {
@@ -358,6 +372,21 @@ func (ec *executionContext) field_Mutation_createTask_args(ctx context.Context, 
 		}
 	}
 	args["query"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_stopTask_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 uint
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+		arg0, err = ec.unmarshalNUint2uint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
 	return args, nil
 }
 
@@ -625,6 +654,73 @@ func (ec *executionContext) fieldContext_Mutation_createTask(ctx context.Context
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_createTask_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_stopTask(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_stopTask(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().StopTask(rctx, fc.Args["id"].(uint))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*gmodel.Task)
+	fc.Result = res
+	return ec.marshalNTask2ᚖgithubᚗcomᚋsemanserᚋaiᚑcoderᚋgraphᚋmodelᚐTask(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_stopTask(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Task_id(ctx, field)
+			case "type":
+				return ec.fieldContext_Task_type(ctx, field)
+			case "status":
+				return ec.fieldContext_Task_status(ctx, field)
+			case "args":
+				return ec.fieldContext_Task_args(ctx, field)
+			case "results":
+				return ec.fieldContext_Task_results(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Task", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_stopTask_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -3024,6 +3120,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "createTask":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_createTask(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "stopTask":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_stopTask(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
