@@ -59,7 +59,7 @@ func (r *mutationResolver) CreateTask(ctx context.Context, id uint, query string
 	tx := r.Db.Create(&task)
 
 	if tx.Error != nil {
-		return nil, tx.Error
+		return nil, fmt.Errorf("failed to create task: %w", tx.Error)
 	}
 
 	return &gmodel.Task{
@@ -72,7 +72,36 @@ func (r *mutationResolver) CreateTask(ctx context.Context, id uint, query string
 
 // Flows is the resolver for the flows field.
 func (r *queryResolver) Flows(ctx context.Context) ([]*gmodel.Flow, error) {
-	panic(fmt.Errorf("not implemented: Flows - flows"))
+	flows := []models.Flow{}
+
+	tx := r.Db.Model(&models.Flow{}).Preload("Tasks").Find(&flows)
+
+	if tx.Error != nil {
+		return nil, fmt.Errorf("failed to fetch flows: %w", tx.Error)
+	}
+
+	var gFlows []*gmodel.Flow
+
+	for _, flow := range flows {
+		var gTasks []*gmodel.Task
+
+		for _, task := range flow.Tasks {
+			gTasks = append(gTasks, &gmodel.Task{
+				ID:      task.ID,
+				Type:    gmodel.TaskType(task.Type),
+				Status:  gmodel.TaskStatus(task.Status),
+				Args:    task.Args.String(),
+				Results: task.Results.String(),
+			})
+		}
+
+		gFlows = append(gFlows, &gmodel.Flow{
+			ID:    flow.ID,
+			Tasks: gTasks,
+		})
+	}
+
+	return gFlows, nil
 }
 
 // TaskAdded is the resolver for the taskAdded field.

@@ -7,7 +7,8 @@ import (
 
 type Flow struct {
 	gorm.Model
-	ID uint
+	ID    uint
+	Tasks []Task
 }
 
 type TaskType string
