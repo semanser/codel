@@ -1,15 +1,17 @@
 package main
 
 import (
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
 	"log"
 	"net/http"
 	"os"
 
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/semanser/ai-coder/graph"
+	"github.com/semanser/ai-coder/models"
 )
 
 const defaultPort = "8080"
@@ -22,14 +24,16 @@ func main() {
 	}
 
 	// Migrate the schema
-	db.AutoMigrate(&Flow{}, &Task{})
+	db.AutoMigrate(&models.Flow{}, &models.Task{})
 
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = defaultPort
 	}
 
-	srv := handler.NewDefaultServer(graph.NewExecutableSchema(graph.Config{Resolvers: &graph.Resolver{}}))
+	srv := handler.NewDefaultServer(graph.NewExecutableSchema(graph.Config{Resolvers: &graph.Resolver{
+		Db: db,
+	}}))
 
 	http.Handle("/", playground.Handler("GraphQL playground", "/query"))
 	http.Handle("/query", srv)

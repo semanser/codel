@@ -15,7 +15,7 @@ import (
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/introspection"
-	"github.com/semanser/ai-coder/graph/model"
+	gmodel "github.com/semanser/ai-coder/graph/model"
 	gqlparser "github.com/vektah/gqlparser/v2"
 	"github.com/vektah/gqlparser/v2/ast"
 )
@@ -78,15 +78,15 @@ type ComplexityRoot struct {
 }
 
 type MutationResolver interface {
-	CreateFlow(ctx context.Context) (*model.Flow, error)
-	CreateTask(ctx context.Context, query string) (*model.Task, error)
+	CreateFlow(ctx context.Context) (*gmodel.Flow, error)
+	CreateTask(ctx context.Context, query string) (*gmodel.Task, error)
 }
 type QueryResolver interface {
-	Flows(ctx context.Context) ([]*model.Flow, error)
+	Flows(ctx context.Context) ([]*gmodel.Flow, error)
 }
 type SubscriptionResolver interface {
-	TaskAdded(ctx context.Context) (<-chan *model.Task, error)
-	TaskUpdated(ctx context.Context) (<-chan *model.Task, error)
+	TaskAdded(ctx context.Context) (<-chan *gmodel.Task, error)
+	TaskUpdated(ctx context.Context) (<-chan *gmodel.Task, error)
 }
 
 type executableSchema struct {
@@ -405,7 +405,7 @@ func (ec *executionContext) field___Type_fields_args(ctx context.Context, rawArg
 
 // region    **************************** field.gotpl *****************************
 
-func (ec *executionContext) _Flow_id(ctx context.Context, field graphql.CollectedField, obj *model.Flow) (ret graphql.Marshaler) {
+func (ec *executionContext) _Flow_id(ctx context.Context, field graphql.CollectedField, obj *gmodel.Flow) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Flow_id(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -431,9 +431,9 @@ func (ec *executionContext) _Flow_id(ctx context.Context, field graphql.Collecte
 		}
 		return graphql.Null
 	}
-	res := resTmp.(int)
+	res := resTmp.(uint)
 	fc.Result = res
-	return ec.marshalNInt2int(ctx, field.Selections, res)
+	return ec.marshalNUint2uint(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Flow_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -443,13 +443,13 @@ func (ec *executionContext) fieldContext_Flow_id(ctx context.Context, field grap
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int does not have child fields")
+			return nil, errors.New("field of type Uint does not have child fields")
 		},
 	}
 	return fc, nil
 }
 
-func (ec *executionContext) _Flow_tasks(ctx context.Context, field graphql.CollectedField, obj *model.Flow) (ret graphql.Marshaler) {
+func (ec *executionContext) _Flow_tasks(ctx context.Context, field graphql.CollectedField, obj *gmodel.Flow) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Flow_tasks(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -475,7 +475,7 @@ func (ec *executionContext) _Flow_tasks(ctx context.Context, field graphql.Colle
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]*model.Task)
+	res := resTmp.([]*gmodel.Task)
 	fc.Result = res
 	return ec.marshalNTask2ᚕᚖgithubᚗcomᚋsemanserᚋaiᚑcoderᚋgraphᚋmodelᚐTaskᚄ(ctx, field.Selections, res)
 }
@@ -531,7 +531,7 @@ func (ec *executionContext) _Mutation_createFlow(ctx context.Context, field grap
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.Flow)
+	res := resTmp.(*gmodel.Flow)
 	fc.Result = res
 	return ec.marshalNFlow2ᚖgithubᚗcomᚋsemanserᚋaiᚑcoderᚋgraphᚋmodelᚐFlow(ctx, field.Selections, res)
 }
@@ -581,7 +581,7 @@ func (ec *executionContext) _Mutation_createTask(ctx context.Context, field grap
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.Task)
+	res := resTmp.(*gmodel.Task)
 	fc.Result = res
 	return ec.marshalNTask2ᚖgithubᚗcomᚋsemanserᚋaiᚑcoderᚋgraphᚋmodelᚐTask(ctx, field.Selections, res)
 }
@@ -648,7 +648,7 @@ func (ec *executionContext) _Query_flows(ctx context.Context, field graphql.Coll
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]*model.Flow)
+	res := resTmp.([]*gmodel.Flow)
 	fc.Result = res
 	return ec.marshalNFlow2ᚕᚖgithubᚗcomᚋsemanserᚋaiᚑcoderᚋgraphᚋmodelᚐFlowᚄ(ctx, field.Selections, res)
 }
@@ -829,7 +829,7 @@ func (ec *executionContext) _Subscription_taskAdded(ctx context.Context, field g
 	}
 	return func(ctx context.Context) graphql.Marshaler {
 		select {
-		case res, ok := <-resTmp.(<-chan *model.Task):
+		case res, ok := <-resTmp.(<-chan *gmodel.Task):
 			if !ok {
 				return nil
 			}
@@ -899,7 +899,7 @@ func (ec *executionContext) _Subscription_taskUpdated(ctx context.Context, field
 	}
 	return func(ctx context.Context) graphql.Marshaler {
 		select {
-		case res, ok := <-resTmp.(<-chan *model.Task):
+		case res, ok := <-resTmp.(<-chan *gmodel.Task):
 			if !ok {
 				return nil
 			}
@@ -941,7 +941,7 @@ func (ec *executionContext) fieldContext_Subscription_taskUpdated(ctx context.Co
 	return fc, nil
 }
 
-func (ec *executionContext) _Task_id(ctx context.Context, field graphql.CollectedField, obj *model.Task) (ret graphql.Marshaler) {
+func (ec *executionContext) _Task_id(ctx context.Context, field graphql.CollectedField, obj *gmodel.Task) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Task_id(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -967,9 +967,9 @@ func (ec *executionContext) _Task_id(ctx context.Context, field graphql.Collecte
 		}
 		return graphql.Null
 	}
-	res := resTmp.(int)
+	res := resTmp.(uint)
 	fc.Result = res
-	return ec.marshalNInt2int(ctx, field.Selections, res)
+	return ec.marshalNUint2uint(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Task_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -979,13 +979,13 @@ func (ec *executionContext) fieldContext_Task_id(ctx context.Context, field grap
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int does not have child fields")
+			return nil, errors.New("field of type Uint does not have child fields")
 		},
 	}
 	return fc, nil
 }
 
-func (ec *executionContext) _Task_type(ctx context.Context, field graphql.CollectedField, obj *model.Task) (ret graphql.Marshaler) {
+func (ec *executionContext) _Task_type(ctx context.Context, field graphql.CollectedField, obj *gmodel.Task) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Task_type(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -1011,7 +1011,7 @@ func (ec *executionContext) _Task_type(ctx context.Context, field graphql.Collec
 		}
 		return graphql.Null
 	}
-	res := resTmp.(model.TaskType)
+	res := resTmp.(gmodel.TaskType)
 	fc.Result = res
 	return ec.marshalNTaskType2githubᚗcomᚋsemanserᚋaiᚑcoderᚋgraphᚋmodelᚐTaskType(ctx, field.Selections, res)
 }
@@ -1029,7 +1029,7 @@ func (ec *executionContext) fieldContext_Task_type(ctx context.Context, field gr
 	return fc, nil
 }
 
-func (ec *executionContext) _Task_status(ctx context.Context, field graphql.CollectedField, obj *model.Task) (ret graphql.Marshaler) {
+func (ec *executionContext) _Task_status(ctx context.Context, field graphql.CollectedField, obj *gmodel.Task) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Task_status(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -1055,7 +1055,7 @@ func (ec *executionContext) _Task_status(ctx context.Context, field graphql.Coll
 		}
 		return graphql.Null
 	}
-	res := resTmp.(model.TaskStatus)
+	res := resTmp.(gmodel.TaskStatus)
 	fc.Result = res
 	return ec.marshalNTaskStatus2githubᚗcomᚋsemanserᚋaiᚑcoderᚋgraphᚋmodelᚐTaskStatus(ctx, field.Selections, res)
 }
@@ -1073,7 +1073,7 @@ func (ec *executionContext) fieldContext_Task_status(ctx context.Context, field 
 	return fc, nil
 }
 
-func (ec *executionContext) _Task_args(ctx context.Context, field graphql.CollectedField, obj *model.Task) (ret graphql.Marshaler) {
+func (ec *executionContext) _Task_args(ctx context.Context, field graphql.CollectedField, obj *gmodel.Task) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Task_args(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -1117,7 +1117,7 @@ func (ec *executionContext) fieldContext_Task_args(ctx context.Context, field gr
 	return fc, nil
 }
 
-func (ec *executionContext) _Task_results(ctx context.Context, field graphql.CollectedField, obj *model.Task) (ret graphql.Marshaler) {
+func (ec *executionContext) _Task_results(ctx context.Context, field graphql.CollectedField, obj *gmodel.Task) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Task_results(ctx, field)
 	if err != nil {
 		return graphql.Null
@@ -2944,7 +2944,7 @@ func (ec *executionContext) fieldContext___Type_specifiedByURL(ctx context.Conte
 
 var flowImplementors = []string{"Flow"}
 
-func (ec *executionContext) _Flow(ctx context.Context, sel ast.SelectionSet, obj *model.Flow) graphql.Marshaler {
+func (ec *executionContext) _Flow(ctx context.Context, sel ast.SelectionSet, obj *gmodel.Flow) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, flowImplementors)
 
 	out := graphql.NewFieldSet(fields)
@@ -3138,7 +3138,7 @@ func (ec *executionContext) _Subscription(ctx context.Context, sel ast.Selection
 
 var taskImplementors = []string{"Task"}
 
-func (ec *executionContext) _Task(ctx context.Context, sel ast.SelectionSet, obj *model.Task) graphql.Marshaler {
+func (ec *executionContext) _Task(ctx context.Context, sel ast.SelectionSet, obj *gmodel.Task) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, taskImplementors)
 
 	out := graphql.NewFieldSet(fields)
@@ -3536,11 +3536,11 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 	return res
 }
 
-func (ec *executionContext) marshalNFlow2githubᚗcomᚋsemanserᚋaiᚑcoderᚋgraphᚋmodelᚐFlow(ctx context.Context, sel ast.SelectionSet, v model.Flow) graphql.Marshaler {
+func (ec *executionContext) marshalNFlow2githubᚗcomᚋsemanserᚋaiᚑcoderᚋgraphᚋmodelᚐFlow(ctx context.Context, sel ast.SelectionSet, v gmodel.Flow) graphql.Marshaler {
 	return ec._Flow(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNFlow2ᚕᚖgithubᚗcomᚋsemanserᚋaiᚑcoderᚋgraphᚋmodelᚐFlowᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Flow) graphql.Marshaler {
+func (ec *executionContext) marshalNFlow2ᚕᚖgithubᚗcomᚋsemanserᚋaiᚑcoderᚋgraphᚋmodelᚐFlowᚄ(ctx context.Context, sel ast.SelectionSet, v []*gmodel.Flow) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -3584,7 +3584,7 @@ func (ec *executionContext) marshalNFlow2ᚕᚖgithubᚗcomᚋsemanserᚋaiᚑco
 	return ret
 }
 
-func (ec *executionContext) marshalNFlow2ᚖgithubᚗcomᚋsemanserᚋaiᚑcoderᚋgraphᚋmodelᚐFlow(ctx context.Context, sel ast.SelectionSet, v *model.Flow) graphql.Marshaler {
+func (ec *executionContext) marshalNFlow2ᚖgithubᚗcomᚋsemanserᚋaiᚑcoderᚋgraphᚋmodelᚐFlow(ctx context.Context, sel ast.SelectionSet, v *gmodel.Flow) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
@@ -3592,21 +3592,6 @@ func (ec *executionContext) marshalNFlow2ᚖgithubᚗcomᚋsemanserᚋaiᚑcoder
 		return graphql.Null
 	}
 	return ec._Flow(ctx, sel, v)
-}
-
-func (ec *executionContext) unmarshalNInt2int(ctx context.Context, v interface{}) (int, error) {
-	res, err := graphql.UnmarshalInt(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNInt2int(ctx context.Context, sel ast.SelectionSet, v int) graphql.Marshaler {
-	res := graphql.MarshalInt(v)
-	if res == graphql.Null {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-	}
-	return res
 }
 
 func (ec *executionContext) unmarshalNJSON2string(ctx context.Context, v interface{}) (string, error) {
@@ -3639,11 +3624,11 @@ func (ec *executionContext) marshalNString2string(ctx context.Context, sel ast.S
 	return res
 }
 
-func (ec *executionContext) marshalNTask2githubᚗcomᚋsemanserᚋaiᚑcoderᚋgraphᚋmodelᚐTask(ctx context.Context, sel ast.SelectionSet, v model.Task) graphql.Marshaler {
+func (ec *executionContext) marshalNTask2githubᚗcomᚋsemanserᚋaiᚑcoderᚋgraphᚋmodelᚐTask(ctx context.Context, sel ast.SelectionSet, v gmodel.Task) graphql.Marshaler {
 	return ec._Task(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNTask2ᚕᚖgithubᚗcomᚋsemanserᚋaiᚑcoderᚋgraphᚋmodelᚐTaskᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Task) graphql.Marshaler {
+func (ec *executionContext) marshalNTask2ᚕᚖgithubᚗcomᚋsemanserᚋaiᚑcoderᚋgraphᚋmodelᚐTaskᚄ(ctx context.Context, sel ast.SelectionSet, v []*gmodel.Task) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -3687,7 +3672,7 @@ func (ec *executionContext) marshalNTask2ᚕᚖgithubᚗcomᚋsemanserᚋaiᚑco
 	return ret
 }
 
-func (ec *executionContext) marshalNTask2ᚖgithubᚗcomᚋsemanserᚋaiᚑcoderᚋgraphᚋmodelᚐTask(ctx context.Context, sel ast.SelectionSet, v *model.Task) graphql.Marshaler {
+func (ec *executionContext) marshalNTask2ᚖgithubᚗcomᚋsemanserᚋaiᚑcoderᚋgraphᚋmodelᚐTask(ctx context.Context, sel ast.SelectionSet, v *gmodel.Task) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
@@ -3697,24 +3682,39 @@ func (ec *executionContext) marshalNTask2ᚖgithubᚗcomᚋsemanserᚋaiᚑcoder
 	return ec._Task(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalNTaskStatus2githubᚗcomᚋsemanserᚋaiᚑcoderᚋgraphᚋmodelᚐTaskStatus(ctx context.Context, v interface{}) (model.TaskStatus, error) {
-	var res model.TaskStatus
+func (ec *executionContext) unmarshalNTaskStatus2githubᚗcomᚋsemanserᚋaiᚑcoderᚋgraphᚋmodelᚐTaskStatus(ctx context.Context, v interface{}) (gmodel.TaskStatus, error) {
+	var res gmodel.TaskStatus
 	err := res.UnmarshalGQL(v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNTaskStatus2githubᚗcomᚋsemanserᚋaiᚑcoderᚋgraphᚋmodelᚐTaskStatus(ctx context.Context, sel ast.SelectionSet, v model.TaskStatus) graphql.Marshaler {
+func (ec *executionContext) marshalNTaskStatus2githubᚗcomᚋsemanserᚋaiᚑcoderᚋgraphᚋmodelᚐTaskStatus(ctx context.Context, sel ast.SelectionSet, v gmodel.TaskStatus) graphql.Marshaler {
 	return v
 }
 
-func (ec *executionContext) unmarshalNTaskType2githubᚗcomᚋsemanserᚋaiᚑcoderᚋgraphᚋmodelᚐTaskType(ctx context.Context, v interface{}) (model.TaskType, error) {
-	var res model.TaskType
+func (ec *executionContext) unmarshalNTaskType2githubᚗcomᚋsemanserᚋaiᚑcoderᚋgraphᚋmodelᚐTaskType(ctx context.Context, v interface{}) (gmodel.TaskType, error) {
+	var res gmodel.TaskType
 	err := res.UnmarshalGQL(v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNTaskType2githubᚗcomᚋsemanserᚋaiᚑcoderᚋgraphᚋmodelᚐTaskType(ctx context.Context, sel ast.SelectionSet, v model.TaskType) graphql.Marshaler {
+func (ec *executionContext) marshalNTaskType2githubᚗcomᚋsemanserᚋaiᚑcoderᚋgraphᚋmodelᚐTaskType(ctx context.Context, sel ast.SelectionSet, v gmodel.TaskType) graphql.Marshaler {
 	return v
+}
+
+func (ec *executionContext) unmarshalNUint2uint(ctx context.Context, v interface{}) (uint, error) {
+	res, err := graphql.UnmarshalUint(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNUint2uint(ctx context.Context, sel ast.SelectionSet, v uint) graphql.Marshaler {
+	res := graphql.MarshalUint(v)
+	if res == graphql.Null {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+	}
+	return res
 }
 
 func (ec *executionContext) marshalN__Directive2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐDirective(ctx context.Context, sel ast.SelectionSet, v introspection.Directive) graphql.Marshaler {

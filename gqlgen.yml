@@ -15,7 +15,7 @@ exec:
 # Where should any generated models go?
 model:
   filename: graph/model/models_gen.go
-  package: model
+  package: gmodel
 
 # Where should the resolver implementations go?
 resolver:
@@ -76,6 +76,7 @@ autobind:
 models:
   ID:
     model:
+      - github.com/99designs/gqlgen/graphql.Uint
       - github.com/99designs/gqlgen/graphql.ID
       - github.com/99designs/gqlgen/graphql.Int
       - github.com/99designs/gqlgen/graphql.Int64
@@ -85,3 +86,7 @@ models:
       - github.com/99designs/gqlgen/graphql.Int
       - github.com/99designs/gqlgen/graphql.Int64
       - github.com/99designs/gqlgen/graphql.Int32
+      - github.com/99designs/gqlgen/graphql.Uint
+  Uint:
+    model:
+      - github.com/99designs/gqlgen/graphql.Uint

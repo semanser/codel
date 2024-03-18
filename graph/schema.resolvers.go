@@ -6,33 +6,73 @@ package graph
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
-	"github.com/semanser/ai-coder/graph/model"
+	gmodel "github.com/semanser/ai-coder/graph/model"
+	"github.com/semanser/ai-coder/models"
+	"gorm.io/datatypes"
 )
 
 // CreateFlow is the resolver for the createFlow field.
-func (r *mutationResolver) CreateFlow(ctx context.Context) (*model.Flow, error) {
-	panic(fmt.Errorf("not implemented: CreateFlow - createFlow"))
+func (r *mutationResolver) CreateFlow(ctx context.Context) (*gmodel.Flow, error) {
+	flow := models.Flow{}
+	tx := r.Db.Create(&flow)
+
+	if tx.Error != nil {
+		return nil, tx.Error
+	}
+
+	return &gmodel.Flow{
+		ID:    flow.ID,
+		Tasks: []*gmodel.Task{},
+	}, nil
+}
+
+type InputTaskArgs struct {
+	Query string `json:"query"`
 }
 
 // CreateTask is the resolver for the createTask field.
-func (r *mutationResolver) CreateTask(ctx context.Context, query string) (*model.Task, error) {
-	panic(fmt.Errorf("not implemented: CreateTask - createTask"))
+func (r *mutationResolver) CreateTask(ctx context.Context, query string) (*gmodel.Task, error) {
+	args := InputTaskArgs{Query: query}
+	arg, err := json.Marshal(args)
+	if err != nil {
+		return nil, err
+	}
+
+	task := models.Task{
+		Type:   models.Input,
+		Status: models.Finished,
+		Args:   datatypes.JSON(arg),
+	}
+
+	tx := r.Db.Create(&task)
+
+	if tx.Error != nil {
+		return nil, tx.Error
+	}
+
+	return &gmodel.Task{
+		ID:     task.ID,
+		Type:   gmodel.TaskType(task.Type),
+		Status: gmodel.TaskStatus(task.Status),
+		Args:   task.Args.String(),
+	}, nil
 }
 
 // Flows is the resolver for the flows field.
-func (r *queryResolver) Flows(ctx context.Context) ([]*model.Flow, error) {
+func (r *queryResolver) Flows(ctx context.Context) ([]*gmodel.Flow, error) {
 	panic(fmt.Errorf("not implemented: Flows - flows"))
 }
 
 // TaskAdded is the resolver for the taskAdded field.
-func (r *subscriptionResolver) TaskAdded(ctx context.Context) (<-chan *model.Task, error) {
+func (r *subscriptionResolver) TaskAdded(ctx context.Context) (<-chan *gmodel.Task, error) {
 	panic(fmt.Errorf("not implemented: TaskAdded - taskAdded"))
 }
 
 // TaskUpdated is the resolver for the taskUpdated field.
-func (r *subscriptionResolver) TaskUpdated(ctx context.Context) (<-chan *model.Task, error) {
+func (r *subscriptionResolver) TaskUpdated(ctx context.Context) (<-chan *gmodel.Task, error) {
 	panic(fmt.Errorf("not implemented: TaskUpdated - taskUpdated"))
 }
 

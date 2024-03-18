@@ -1,4 +1,5 @@
 scalar JSON
+scalar Uint
 
 enum TaskType {
   input
@@ -13,7 +14,7 @@ enum TaskStatus {
 }
 
 type Task {
-  id: Int!
+  id: Uint!
   type: TaskType!
   status: TaskStatus!
   args: JSON!
@@ -21,7 +22,7 @@ type Task {
 }
 
 type Flow {
-  id: Int!
+  id: Uint!
   tasks: [Task!]!
 }
 

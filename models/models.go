@@ -1,7 +1,7 @@
-package main
+package models
 
 import (
-	"github.com/jackc/pgx/pgtype"
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
@@ -31,6 +31,6 @@ type Task struct {
 	ID      uint
 	Type    TaskType
 	Status  TaskStatus
-	Args    pgtype.JSONB
-	Results pgtype.JSONB
+	Args    datatypes.JSON
+	Results datatypes.JSON
 }
