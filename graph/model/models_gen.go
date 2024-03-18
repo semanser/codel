@@ -26,8 +26,8 @@ type Task struct {
 	ID      uint       `json:"id"`
 	Type    TaskType   `json:"type"`
 	Status  TaskStatus `json:"status"`
-	Args    any        `json:"args"`
-	Results any        `json:"results"`
+	Args    string     `json:"args"`
+	Results string     `json:"results"`
 }
 
 type TaskStatus string

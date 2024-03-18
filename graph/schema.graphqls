@@ -32,7 +32,7 @@ type Query {
 
 type Mutation {
   createFlow: Flow!
-  createTask(query: String!): Task!
+  createTask(id: Uint!, query: String!): Task!
 }
 
 type Subscription {

@@ -7,11 +7,13 @@ package graph
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	gmodel "github.com/semanser/ai-coder/graph/model"
 	"github.com/semanser/ai-coder/models"
 	"gorm.io/datatypes"
+	"gorm.io/gorm"
 )
 
 // CreateFlow is the resolver for the createFlow field.
@@ -29,22 +31,29 @@ func (r *mutationResolver) CreateFlow(ctx context.Context) (*gmodel.Flow, error)
 	}, nil
 }
 
-type InputTaskArgs struct {
-	Query string `json:"query"`
-}
-
 // CreateTask is the resolver for the createTask field.
-func (r *mutationResolver) CreateTask(ctx context.Context, query string) (*gmodel.Task, error) {
+func (r *mutationResolver) CreateTask(ctx context.Context, id uint, query string) (*gmodel.Task, error) {
+	type InputTaskArgs struct {
+		Query string `json:"query"`
+	}
+
 	args := InputTaskArgs{Query: query}
 	arg, err := json.Marshal(args)
 	if err != nil {
 		return nil, err
 	}
 
+	flowResult := r.Db.First(&models.Flow{}, id)
+
+	if errors.Is(flowResult.Error, gorm.ErrRecordNotFound) {
+		return nil, fmt.Errorf("flow with id %d not found", id)
+	}
+
 	task := models.Task{
 		Type:   models.Input,
 		Status: models.Finished,
 		Args:   datatypes.JSON(arg),
+		FlowID: id,
 	}
 
 	tx := r.Db.Create(&task)

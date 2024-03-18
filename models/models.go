@@ -33,4 +33,6 @@ type Task struct {
 	Status  TaskStatus
 	Args    datatypes.JSON
 	Results datatypes.JSON
+	FlowID  uint
+	Flow    Flow
 }
