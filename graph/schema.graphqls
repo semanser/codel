@@ -1,0 +1,40 @@
+scalar JSON
+
+enum TaskType {
+  input
+  action
+}
+
+enum TaskStatus {
+  inProgress
+  finished
+  stopped
+  failed
+}
+
+type Task {
+  id: Int!
+  type: TaskType!
+  status: TaskStatus!
+  args: JSON!
+  results: JSON!
+}
+
+type Flow {
+  id: Int!
+  tasks: [Task!]!
+}
+
+type Query {
+  flows: [Flow!]!
+}
+
+type Mutation {
+  createFlow: Flow!
+  createTask(query: String!): Task!
+}
+
+type Subscription {
+  taskAdded: Task!
+  taskUpdated: Task!
+}
