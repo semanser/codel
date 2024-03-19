@@ -1,8 +1,9 @@
 import { style } from "@vanilla-extract/css";
-import { vars } from "@/styles/theme.css";
 
 export const wrapperStyles = style({
+  width: "250px",
   display: "flex",
-  height: "100vh",
-  backgroundColor: vars.color.gray1,
+  flexDirection: "column",
+  gap: 8,
+  padding: 16
 });
