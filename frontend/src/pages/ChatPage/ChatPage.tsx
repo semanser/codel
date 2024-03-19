@@ -1,3 +1,12 @@
+import { Panel } from "@/components/Panel/Panel/Panel";
+
+import { wrapperStyles } from "./ChatPage.css";
+
 export const ChatPage = () => {
-  return <div>test</div>;
+  return (
+    <div className={wrapperStyles}>
+      <Panel />
+      <Panel />
+    </div>
+  );
 };
