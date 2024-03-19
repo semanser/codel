@@ -1,3 +1,5 @@
+import { formatDistance } from "date-fns";
+
 import { Icon } from "@/components/Icon/Icon";
 
 import {
@@ -34,7 +36,9 @@ export const Message = ({ time, message, type }: MessageProps) => {
         height="40"
       />
       <div className={rightColumnStyles}>
-        <div className={timeStyles}>{time.toDateString()}</div>
+        <div className={timeStyles}>
+          {formatDistance(new Date(time), new Date(), { addSuffix: true })}
+        </div>
         <div className={messageStyles}>
           <span className={iconStyles}>{getIcon(type)}</span>
           <div>{message}</div>
