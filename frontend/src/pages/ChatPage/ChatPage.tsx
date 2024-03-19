@@ -1,9 +1,17 @@
+import * as Tabs from "@radix-ui/react-tabs";
+
 import {
   Message,
   MessageStatus,
   MessageType,
 } from "@/components/Message/Message";
 import { Panel } from "@/components/Panel/Panel";
+import {
+  tabsContentStyles,
+  tabsListStyles,
+  tabsRootStyles,
+  tabsTriggerStyles,
+} from "@/components/Tabs/Tabs.css";
 
 import { messagesWrapper, titleStyles, wrapperStyles } from "./ChatPage.css";
 
@@ -65,7 +73,30 @@ export const ChatPage = () => {
           ))}
         </div>
       </Panel>
-      <Panel>test</Panel>
+      <Panel>
+        <Tabs.Root className={tabsRootStyles} defaultValue="terminal">
+          <Tabs.List className={tabsListStyles}>
+            <Tabs.Trigger className={tabsTriggerStyles} value="terminal">
+              Terminal
+            </Tabs.Trigger>
+            <Tabs.Trigger className={tabsTriggerStyles} value="browser">
+              Browser
+            </Tabs.Trigger>
+            <Tabs.Trigger className={tabsTriggerStyles} value="code">
+              Code
+            </Tabs.Trigger>
+          </Tabs.List>
+          <Tabs.Content className={tabsContentStyles} value="terminal">
+            terminal
+          </Tabs.Content>
+          <Tabs.Content className={tabsContentStyles} value="browser">
+            browser
+          </Tabs.Content>
+          <Tabs.Content className={tabsContentStyles} value="code">
+            code
+          </Tabs.Content>
+        </Tabs.Root>
+      </Panel>
     </div>
   );
 };

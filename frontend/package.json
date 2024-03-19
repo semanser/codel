@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@radix-ui/colors": "^3.0.0",
+    "@radix-ui/react-tabs": "^1.0.4",
     "@vanilla-extract/css": "^1.14.1",
     "@vanilla-extract/vite-plugin": "^4.0.6",
     "date-fns": "^3.6.0",
