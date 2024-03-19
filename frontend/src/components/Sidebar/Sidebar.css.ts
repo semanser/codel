@@ -5,5 +5,5 @@ export const wrapperStyles = style({
   display: "flex",
   flexDirection: "column",
   gap: 8,
-  padding: 16
+  padding: 16,
 });

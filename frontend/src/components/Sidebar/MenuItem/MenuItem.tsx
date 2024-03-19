@@ -1,10 +1,11 @@
 import { Link } from "react-router-dom";
-import { linkStyles, wrapperStyles } from "./MenuItem.css"
+
+import { linkStyles, wrapperStyles } from "./MenuItem.css";
 
 export type MenuItemProps = {
   title: string;
   id: number;
-}
+};
 
 export const MenuItem = ({ title, id }: MenuItemProps) => {
   return (
@@ -13,5 +14,5 @@ export const MenuItem = ({ title, id }: MenuItemProps) => {
         {title}
       </Link>
     </div>
-  )
-}
+  );
+};

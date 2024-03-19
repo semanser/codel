@@ -7,12 +7,16 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "format:validate": "prettier --check .",
+    "format:fix": "prettier --write ."
   },
   "dependencies": {
     "@radix-ui/colors": "^3.0.0",
+    "@trivago/prettier-plugin-sort-imports": "^4.3.0",
     "@vanilla-extract/css": "^1.14.1",
     "@vanilla-extract/vite-plugin": "^4.0.6",
+    "prettier": "^3.2.5",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.22.3"
