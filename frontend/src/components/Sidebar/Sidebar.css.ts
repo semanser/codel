@@ -6,4 +6,5 @@ export const wrapperStyles = style({
   flexDirection: "column",
   gap: 8,
   padding: 16,
+  overflowY: "scroll",
 });
