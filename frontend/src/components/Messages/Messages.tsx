@@ -1,7 +1,12 @@
-import { Message, MessageType } from "@/components/Messages/Message/Message";
 import { Task } from "@/generated/graphql";
 
-import { messagesWrapper, titleStyles } from "./Messages.css";
+import { Message, MessageType } from "./Message/Message";
+import {
+  messagesListWrapper,
+  messagesWrapper,
+  newMessageTextarea,
+  titleStyles,
+} from "./Messages.css";
 
 type MessagesProps = {
   tasks: Task[];
@@ -21,13 +26,17 @@ export const Messages = ({ tasks, name }: MessagesProps) => {
     })) ?? [];
 
   return (
-    <>
+    <div className={messagesWrapper}>
       <div className={titleStyles}>{name}</div>
-      <div className={messagesWrapper}>
+      <div className={messagesListWrapper}>
         {messages.map((message) => (
           <Message key={message.id} {...message} />
         ))}
       </div>
-    </>
+      <textarea
+        className={newMessageTextarea}
+        placeholder="Enter your message..."
+      />
+    </div>
   );
 };

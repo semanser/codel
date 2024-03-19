@@ -8,5 +8,4 @@ export const wrapperStyles = style({
   borderRadius: 6,
   flex: 1,
   padding: 16,
-  overflowY: "scroll",
 });
