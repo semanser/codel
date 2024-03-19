@@ -86,7 +86,7 @@ func (r *mutationResolver) StopTask(ctx context.Context, id uint) (*gmodel.Task,
 func (r *queryResolver) Flows(ctx context.Context) ([]*gmodel.Flow, error) {
 	flows := []models.Flow{}
 
-	tx := r.Db.Model(&models.Flow{}).Preload("Tasks").Find(&flows)
+	tx := r.Db.Model(&models.Flow{}).Order("created_at DESC").Preload("Tasks").Find(&flows)
 
 	if tx.Error != nil {
 		return nil, fmt.Errorf("failed to fetch flows: %w", tx.Error)
