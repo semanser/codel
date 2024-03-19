@@ -1,5 +1,5 @@
 import * as Tabs from "@radix-ui/react-tabs";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 
 import { Messages } from "@/components/Messages/Messages";
 import { Panel } from "@/components/Panel/Panel";
@@ -10,12 +10,19 @@ import {
   tabsTriggerStyles,
 } from "@/components/Tabs/Tabs.css";
 import { Terminal } from "@/components/Terminal/Terminal";
-import { useFlowQuery } from "@/generated/graphql";
+import {
+  useCreateFlowMutation,
+  useCreateTaskMutation,
+  useFlowQuery,
+} from "@/generated/graphql";
 
 import { wrapperStyles } from "./ChatPage.css";
 
 export const ChatPage = () => {
+  const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  const [, createFlowMutation] = useCreateFlowMutation();
+  const [, createTaskMutation] = useCreateTaskMutation();
   const [{ data }] = useFlowQuery({
     pause: !id && id !== "new",
     variables: { id: id },
@@ -26,10 +33,30 @@ export const ChatPage = () => {
   const tasks = id && !isNew ? data?.flow.tasks ?? [] : [];
   const name = id && !isNew ? data?.flow.name ?? "" : "";
 
+  const handleSubmit = async (message: string) => {
+    if (isNew) {
+      const result = await createFlowMutation({});
+
+      const flowId = result?.data?.createFlow.id;
+      if (flowId) {
+        createTaskMutation({
+          id: flowId,
+          query: message,
+        });
+        navigate(`/chat/${flowId}`, { replace: true });
+      }
+    } else {
+      createTaskMutation({
+        id: id,
+        query: message,
+      });
+    }
+  };
+
   return (
     <div className={wrapperStyles}>
       <Panel>
-        <Messages tasks={tasks} name={name} />
+        <Messages tasks={tasks} name={name} onSubmit={handleSubmit} />
       </Panel>
       <Panel>
         <Tabs.Root className={tabsRootStyles} defaultValue="terminal">

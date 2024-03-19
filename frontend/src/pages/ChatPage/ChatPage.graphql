@@ -21,3 +21,15 @@ query flow($id: Uint!) {
     ...flowFragment
   }
 }
+
+mutation createFlow {
+  createFlow {
+    id
+  }
+}
+
+mutation createTask($id: Uint!, $query: String!) {
+  createTask(id: $id, query: $query) {
+    ...taskFragment
+  }
+}

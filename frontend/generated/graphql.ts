@@ -158,6 +158,33 @@ export function useFlowQuery(
     ...options,
   });
 }
+export const CreateFlowDocument = gql`
+  mutation createFlow {
+    createFlow {
+      id
+    }
+  }
+`;
+
+export function useCreateFlowMutation() {
+  return Urql.useMutation<CreateFlowMutation, CreateFlowMutationVariables>(
+    CreateFlowDocument,
+  );
+}
+export const CreateTaskDocument = gql`
+  mutation createTask($id: Uint!, $query: String!) {
+    createTask(id: $id, query: $query) {
+      ...taskFragment
+    }
+  }
+  ${TaskFragmentFragmentDoc}
+`;
+
+export function useCreateTaskMutation() {
+  return Urql.useMutation<CreateTaskMutation, CreateTaskMutationVariables>(
+    CreateTaskDocument,
+  );
+}
 export type FlowOverviewFragmentFragment = {
   __typename?: "Flow";
   id: any;
@@ -218,6 +245,32 @@ export type FlowQuery = {
       results: any;
       createdAt: any;
     }>;
+  };
+};
+
+export type CreateFlowMutationVariables = Exact<{ [key: string]: never }>;
+
+export type CreateFlowMutation = {
+  __typename?: "Mutation";
+  createFlow: { __typename?: "Flow"; id: any };
+};
+
+export type CreateTaskMutationVariables = Exact<{
+  id: Scalars["Uint"]["input"];
+  query: Scalars["String"]["input"];
+}>;
+
+export type CreateTaskMutation = {
+  __typename?: "Mutation";
+  createTask: {
+    __typename?: "Task";
+    id: any;
+    type: TaskType;
+    message: string;
+    status: TaskStatus;
+    args: any;
+    results: any;
+    createdAt: any;
   };
 };
 

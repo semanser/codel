@@ -1,5 +1,5 @@
 import { devtoolsExchange } from "@urql/devtools";
-import { cacheExchange } from "@urql/exchange-graphcache";
+import { Data, cacheExchange } from "@urql/exchange-graphcache";
 import { createClient as createWSClient } from "graphql-ws";
 import { createClient, fetchExchange, subscriptionExchange } from "urql";
 
@@ -8,7 +8,25 @@ import schema from "../generated/graphql.schema.json";
 export const cache = cacheExchange({
   schema: schema,
   updates: {
-    Mutation: {},
+    Mutation: {
+      createFlow: (result, _args, cache) => {
+        const flows = cache.resolve("Query", "flows");
+
+        if (Array.isArray(flows)) {
+          flows.push(result.createFlow as Data);
+          cache.link("Query", "flows", flows as Data[]);
+        }
+      },
+      createTask: (result, _args, cache) => {
+        const flowEntityKey = `Flow:${_args.id}`;
+        const tasks = cache.resolve(flowEntityKey, "tasks");
+
+        if (Array.isArray(tasks)) {
+          tasks.push(result.createTask as Data);
+          cache.link(flowEntityKey, "tasks", tasks as Data[]);
+        }
+      },
+    },
   },
   keys: {},
 });

@@ -11,9 +11,10 @@ import {
 type MessagesProps = {
   tasks: Task[];
   name: string;
+  onSubmit: (message: string) => void;
 };
 
-export const Messages = ({ tasks, name }: MessagesProps) => {
+export const Messages = ({ tasks, name, onSubmit }: MessagesProps) => {
   const messages =
     tasks.map((task) => ({
       id: task.id,
@@ -24,6 +25,18 @@ export const Messages = ({ tasks, name }: MessagesProps) => {
       type: MessageType.Terminal,
       output: "Test output",
     })) ?? [];
+
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+
+      const message = e.currentTarget.value;
+
+      e.currentTarget.value = "";
+
+      onSubmit(message);
+    }
+  };
 
   return (
     <div className={messagesWrapper}>
@@ -36,6 +49,7 @@ export const Messages = ({ tasks, name }: MessagesProps) => {
       <textarea
         className={newMessageTextarea}
         placeholder="Enter your message..."
+        onKeyPress={handleKeyPress}
       />
     </div>
   );

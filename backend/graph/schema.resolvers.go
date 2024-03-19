@@ -18,7 +18,10 @@ import (
 
 // CreateFlow is the resolver for the createFlow field.
 func (r *mutationResolver) CreateFlow(ctx context.Context) (*gmodel.Flow, error) {
-	flow := models.Flow{}
+	flow := models.Flow{
+		// TODO generate flow name based on the first message
+		Name: "New Flow",
+	}
 	tx := r.Db.Create(&flow)
 
 	if tx.Error != nil {

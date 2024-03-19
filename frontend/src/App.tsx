@@ -18,7 +18,6 @@ export const router = createBrowserRouter(
   createRoutesFromElements(
     <>
       <Route element={<AppLayout />}>
-        <Route path="/chat/new" element={<ChatPage />} />
         <Route path="/chat/:id?" element={<ChatPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/chat" />} />
