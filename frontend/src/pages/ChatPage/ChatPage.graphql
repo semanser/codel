@@ -1,5 +1,0 @@
-query flows {
-  flows {
-    id
-  }
-}

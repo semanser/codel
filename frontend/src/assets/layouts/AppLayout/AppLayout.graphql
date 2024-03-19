@@ -1,0 +1,21 @@
+fragment taskFragment on Task {
+  id
+  type
+  status
+  args
+  results
+}
+
+fragment flowFragment on Flow {
+  id
+  name
+  tasks {
+    ...taskFragment
+  }
+}
+
+query flows {
+  flows {
+    ...flowFragment
+  }
+}

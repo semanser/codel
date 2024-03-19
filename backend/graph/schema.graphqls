@@ -23,6 +23,7 @@ type Task {
 
 type Flow {
   id: Uint!
+  name: String!
   tasks: [Task!]!
 }
 

@@ -14,14 +14,12 @@ export const cache = cacheExchange({
 });
 
 const wsClient = createWSClient({
-  url: "wss://" + import.meta.env.VITE_API_URL + "/graphql",
+  url: "ws://" + import.meta.env.VITE_API_URL + "/graphql",
 });
 
 export const graphqlClient = createClient({
-  url: "https://" + import.meta.env.VITE_API_URL + "/graphql",
-  fetchOptions: {
-    credentials: "same-origin",
-  },
+  url: "http://" + import.meta.env.VITE_API_URL + "/graphql",
+  fetchOptions: {},
   exchanges: [
     devtoolsExchange,
     cache,

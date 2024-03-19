@@ -8,9 +8,6 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 
-	"github.com/99designs/gqlgen/graphql/handler"
-	"github.com/99designs/gqlgen/graphql/playground"
-	"github.com/semanser/ai-coder/graph"
 	"github.com/semanser/ai-coder/models"
 )
 
@@ -31,13 +28,9 @@ func main() {
 		port = defaultPort
 	}
 
-	srv := handler.NewDefaultServer(graph.NewExecutableSchema(graph.Config{Resolvers: &graph.Resolver{
-		Db: db,
-	}}))
+	r := newRouter(db)
 
-	http.Handle("/", playground.Handler("GraphQL playground", "/query"))
-	http.Handle("/query", srv)
-
-	log.Printf("connect to http://localhost:%s/ for GraphQL playground", port)
-	log.Fatal(http.ListenAndServe(":"+port, nil))
+	// Run the server
+	log.Printf("connect to http://localhost:%s/playground for GraphQL playground", port)
+	log.Fatal(http.ListenAndServe(":"+port, r))
 }

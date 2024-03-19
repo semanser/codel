@@ -37,6 +37,7 @@ export type Scalars = {
 export type Flow = {
   __typename?: "Flow";
   id: Scalars["Uint"]["output"];
+  name: Scalars["String"]["output"];
   tasks: Array<Task>;
 };
 
@@ -88,12 +89,32 @@ export enum TaskType {
   Input = "input",
 }
 
+export const TaskFragmentFragmentDoc = gql`
+  fragment taskFragment on Task {
+    id
+    type
+    status
+    args
+    results
+  }
+`;
+export const FlowFragmentFragmentDoc = gql`
+  fragment flowFragment on Flow {
+    id
+    name
+    tasks {
+      ...taskFragment
+    }
+  }
+  ${TaskFragmentFragmentDoc}
+`;
 export const FlowsDocument = gql`
   query flows {
     flows {
-      id
+      ...flowFragment
     }
   }
+  ${FlowFragmentFragmentDoc}
 `;
 
 export function useFlowsQuery(
@@ -104,11 +125,46 @@ export function useFlowsQuery(
     ...options,
   });
 }
+export type TaskFragmentFragment = {
+  __typename?: "Task";
+  id: any;
+  type: TaskType;
+  status: TaskStatus;
+  args: any;
+  results: any;
+};
+
+export type FlowFragmentFragment = {
+  __typename?: "Flow";
+  id: any;
+  name: string;
+  tasks: Array<{
+    __typename?: "Task";
+    id: any;
+    type: TaskType;
+    status: TaskStatus;
+    args: any;
+    results: any;
+  }>;
+};
+
 export type FlowsQueryVariables = Exact<{ [key: string]: never }>;
 
 export type FlowsQuery = {
   __typename?: "Query";
-  flows: Array<{ __typename?: "Flow"; id: any }>;
+  flows: Array<{
+    __typename?: "Flow";
+    id: any;
+    name: string;
+    tasks: Array<{
+      __typename?: "Task";
+      id: any;
+      type: TaskType;
+      status: TaskStatus;
+      args: any;
+      results: any;
+    }>;
+  }>;
 };
 
 export default {
@@ -129,6 +185,17 @@ export default {
         fields: [
           {
             name: "id",
+            type: {
+              kind: "NON_NULL",
+              ofType: {
+                kind: "SCALAR",
+                name: "Any",
+              },
+            },
+            args: [],
+          },
+          {
+            name: "name",
             type: {
               kind: "NON_NULL",
               ofType: {

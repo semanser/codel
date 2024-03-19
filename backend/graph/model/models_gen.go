@@ -10,6 +10,7 @@ import (
 
 type Flow struct {
 	ID    uint    `json:"id"`
+	Name  string  `json:"name"`
 	Tasks []*Task `json:"tasks"`
 }
 

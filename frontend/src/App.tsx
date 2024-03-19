@@ -5,8 +5,10 @@ import {
   createBrowserRouter,
   createRoutesFromElements,
 } from "react-router-dom";
+import { Provider as GraphqlProvider } from "urql";
 
 import { AppLayout } from "./assets/layouts/AppLayout/AppLayout";
+import { graphqlClient } from "./graphql";
 import { ChatPage } from "./pages/ChatPage/ChatPage";
 import "./styles/font.css.ts";
 import "./styles/global.css.ts";
@@ -24,7 +26,11 @@ export const router = createBrowserRouter(
 );
 
 function App() {
-  return <RouterProvider router={router} />;
+  return (
+    <GraphqlProvider value={graphqlClient}>
+      <RouterProvider router={router} />
+    </GraphqlProvider>
+  );
 }
 
 export default App;

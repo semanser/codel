@@ -8,6 +8,7 @@ export default defineConfig({
   plugins: [react(), vanillaExtractPlugin()],
   resolve: {
     alias: {
+      "@/generated": path.resolve(__dirname, "./generated"),
       "@": path.resolve(__dirname, "./src"),
     },
   },

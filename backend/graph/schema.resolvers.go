@@ -102,6 +102,7 @@ func (r *queryResolver) Flows(ctx context.Context) ([]*gmodel.Flow, error) {
 
 		gFlows = append(gFlows, &gmodel.Flow{
 			ID:    flow.ID,
+			Name:  flow.Name,
 			Tasks: gTasks,
 		})
 	}
