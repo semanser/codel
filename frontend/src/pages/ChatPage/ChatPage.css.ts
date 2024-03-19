@@ -19,3 +19,9 @@ export const titleStyles = style([
     textAlign: "center",
   },
 ]);
+
+export const messagesWrapper = style({
+  display: "flex",
+  flexDirection: "column",
+  gap: 22,
+});
