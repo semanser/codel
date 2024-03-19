@@ -27,7 +27,7 @@ export const ChatPage = () => {
         <div className={titleStyles}>{fakeData.title}</div>
         <div className={messagesWrapper}>
           {fakeData.messages.map((message) => (
-            <Message {...message} />
+            <Message key={message.id} {...message} />
           ))}
         </div>
       </Panel>
