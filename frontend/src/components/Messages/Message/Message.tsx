@@ -1,10 +1,10 @@
 import { formatDistance } from "date-fns";
 import { useState } from "react";
 
+import { Button } from "@/components/Button/Button";
 import { Icon } from "@/components/Icon/Icon";
 import { TaskStatus } from "@/generated/graphql";
 
-import { Button } from "../Button/Button";
 import {
   avatarStyles,
   contentStyles,

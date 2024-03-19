@@ -1,7 +1,7 @@
 import * as Tabs from "@radix-ui/react-tabs";
 import { useParams } from "react-router-dom";
 
-import { Message, MessageType } from "@/components/Message/Message";
+import { Messages } from "@/components/Messages/Messages";
 import { Panel } from "@/components/Panel/Panel";
 import {
   tabsContentStyles,
@@ -12,35 +12,19 @@ import {
 import { Terminal } from "@/components/Terminal/Terminal";
 import { useFlowQuery } from "@/generated/graphql";
 
-import { messagesWrapper, titleStyles, wrapperStyles } from "./ChatPage.css";
+import { wrapperStyles } from "./ChatPage.css";
 
 export const ChatPage = () => {
   const { id } = useParams<{ id: string }>();
   const [{ data }] = useFlowQuery({
-    pause: !id,
+    pause: !id && id !== "new",
     variables: { id: id },
   });
-
-  const messages =
-    data?.flow?.tasks.map((task) => ({
-      id: task.id,
-      message: task.message,
-      time: task.createdAt,
-      status: task.status,
-      // TODO Add the correct type and output
-      type: MessageType.Terminal,
-      output: "Test output",
-    })) ?? [];
 
   return (
     <div className={wrapperStyles}>
       <Panel>
-        <div className={titleStyles}>{data?.flow.name}</div>
-        <div className={messagesWrapper}>
-          {messages.map((message) => (
-            <Message key={message.id} {...message} />
-          ))}
-        </div>
+        <Messages tasks={data?.flow.tasks ?? []} name={data?.flow.name ?? ""} />
       </Panel>
       <Panel>
         <Tabs.Root className={tabsRootStyles} defaultValue="terminal">

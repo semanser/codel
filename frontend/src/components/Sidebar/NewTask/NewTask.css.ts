@@ -6,6 +6,8 @@ import { vars } from "@/styles/theme.css";
 export const wrapperStyles = style([
   font.textSmSemibold,
   {
+    display: "block",
+    textDecoration: "none",
     background: "none",
     border: "none",
     textAlign: "left",
@@ -13,6 +15,7 @@ export const wrapperStyles = style([
     padding: "9px 16px",
     cursor: "pointer",
     marginBottom: 16,
+    borderRadius: 6,
 
     ":hover": {
       color: vars.color.primary9,
