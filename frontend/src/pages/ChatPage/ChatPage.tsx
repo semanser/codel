@@ -1,12 +1,18 @@
 import { Panel } from "@/components/Panel/Panel/Panel";
 
-import { wrapperStyles } from "./ChatPage.css";
+import { titleStyles, wrapperStyles } from "./ChatPage.css";
+
+const fakeData = {
+  title: "This is a chat",
+};
 
 export const ChatPage = () => {
   return (
     <div className={wrapperStyles}>
-      <Panel />
-      <Panel />
+      <Panel>
+        <div className={titleStyles}>{fakeData.title}</div>
+      </Panel>
+      <Panel>test</Panel>
     </div>
   );
 };
