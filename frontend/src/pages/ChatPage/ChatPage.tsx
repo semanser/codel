@@ -1,4 +1,8 @@
-import { Message, MessageType } from "@/components/Message/Message";
+import {
+  Message,
+  MessageStatus,
+  MessageType,
+} from "@/components/Message/Message";
 import { Panel } from "@/components/Panel/Panel";
 
 import { messagesWrapper, titleStyles, wrapperStyles } from "./ChatPage.css";
@@ -11,6 +15,7 @@ const fakeData = {
       message: "This is a test message",
       time: new Date("2024-01-10"),
       type: MessageType.Browser,
+      status: MessageStatus.Finished,
     },
     {
       id: 2,
@@ -18,24 +23,28 @@ const fakeData = {
         "This is a some pretty long message. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum placerat felis ante, non semper mi hendrerit id. Praesent sodales est dui, ut semper sem consectetur nec. Praesent vitae euismod metus. Interdum et malesuada fames ac ante ipsum primis in faucibus. Maecenas vitae ante interdum erat blandit eleifend.",
       time: new Date("2024-03-18"),
       type: MessageType.Terminal,
+      status: MessageStatus.Finished,
     },
     {
       id: 3,
       message: "This is some random message",
       time: new Date("2024-03-18"),
       type: MessageType.Code,
+      status: MessageStatus.Finished,
     },
     {
       id: 4,
       message: "This is some ask message",
       time: new Date("2024-03-18"),
       type: MessageType.Ask,
+      status: MessageStatus.Failed,
     },
     {
       id: 5,
       message: "This task is done",
       time: new Date("2024-03-18"),
       type: MessageType.Done,
+      status: MessageStatus.InProgress,
     },
   ],
 };

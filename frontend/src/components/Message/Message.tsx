@@ -2,8 +2,10 @@ import { formatDistance } from "date-fns";
 
 import { Icon } from "@/components/Icon/Icon";
 
+import { Button } from "../Button/Button";
 import {
   avatarStyles,
+  contentStyles,
   iconStyles,
   messageStyles,
   rightColumnStyles,
@@ -19,13 +21,21 @@ export enum MessageType {
   Done,
 }
 
+export enum MessageStatus {
+  InProgress,
+  Finished,
+  Stopped,
+  Failed,
+}
+
 type MessageProps = {
   message: string;
   time: Date;
   type: MessageType;
+  status: MessageStatus;
 };
 
-export const Message = ({ time, message, type }: MessageProps) => {
+export const Message = ({ time, message, type, status }: MessageProps) => {
   return (
     <div className={wrapperStyles}>
       <img
@@ -39,9 +49,30 @@ export const Message = ({ time, message, type }: MessageProps) => {
         <div className={timeStyles}>
           {formatDistance(new Date(time), new Date(), { addSuffix: true })}
         </div>
-        <div className={messageStyles}>
-          <span className={iconStyles}>{getIcon(type)}</span>
-          <div>{message}</div>
+        <div
+          className={
+            status !== MessageStatus.Failed
+              ? messageStyles.Regular
+              : messageStyles.Failed
+          }
+        >
+          <div className={contentStyles}>
+            <span
+              className={
+                status !== MessageStatus.Failed
+                  ? iconStyles.Regular
+                  : iconStyles.Failed
+              }
+            >
+              {getIcon(type)}
+            </span>
+            <div>{message}</div>
+          </div>
+          {status === MessageStatus.InProgress && (
+            <Button size="small" hierarchy="danger">
+              Stop
+            </Button>
+          )}
         </div>
       </div>
     </div>

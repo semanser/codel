@@ -1,4 +1,4 @@
-import { globalStyle, style } from "@vanilla-extract/css";
+import { globalStyle, style, styleVariants } from "@vanilla-extract/css";
 
 import { font } from "@/styles/font.css";
 import { vars } from "@/styles/theme.css";
@@ -16,6 +16,7 @@ export const rightColumnStyles = style({
   display: "flex",
   flexDirection: "column",
   gap: 6,
+  flex: 1,
 });
 
 export const timeStyles = style([
@@ -25,26 +26,71 @@ export const timeStyles = style([
   },
 ]);
 
-export const messageStyles = style([
+const messageStylesBase = style([
   font.textSmRegular,
   {
-    color: vars.color.primary12,
     padding: "10px 14px",
-    background: vars.color.gray1,
     borderRadius: "0 8px 8px 8px",
-    border: `1px solid ${vars.color.gray3}`,
     display: "flex",
-    gap: 8,
+    justifyContent: "space-between",
+    alignItems: "center",
+    cursor: "pointer",
+    color: vars.color.primary12,
   },
 ]);
 
-export const iconStyles = style({
-  marginTop: 2,
+export const messageStyles = styleVariants({
+  Regular: [
+    messageStylesBase,
+    {
+      border: `1px solid ${vars.color.gray3}`,
+      background: vars.color.gray1,
+      ":hover": {
+        background: vars.color.gray2,
+        border: `1px solid ${vars.color.gray5}`,
+      },
+    },
+  ],
+  Failed: [
+    messageStylesBase,
+    {
+      border: `1px solid ${vars.color.error3}`,
+      background: vars.color.error1,
+      ":hover": {
+        background: vars.color.error2,
+        border: `1px solid ${vars.color.error6}`,
+      },
+    },
+  ],
+});
+
+export const contentStyles = style({
+  display: "flex",
+  gap: 10,
+  alignItems: "center",
+});
+
+globalStyle(`${messageStyles} button`, {
+  opacity: 0,
+});
+
+const iconStylesBase = style({
   height: 16,
 });
 
-globalStyle(`${iconStyles} svg`, {
+export const iconStyles = styleVariants({
+  Regular: [iconStylesBase],
+  Failed: [iconStylesBase],
+});
+
+globalStyle(`${iconStyles.Regular} svg`, {
   width: 16,
   height: 16,
   color: vars.color.primary10,
+});
+
+globalStyle(`${iconStyles.Failed} svg`, {
+  width: 16,
+  height: 16,
+  color: vars.color.error9,
 });
