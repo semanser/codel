@@ -12,6 +12,7 @@ import {
   tabsRootStyles,
   tabsTriggerStyles,
 } from "@/components/Tabs/Tabs.css";
+import { Terminal } from "@/components/Terminal/Terminal";
 
 import { messagesWrapper, titleStyles, wrapperStyles } from "./ChatPage.css";
 
@@ -79,15 +80,23 @@ export const ChatPage = () => {
             <Tabs.Trigger className={tabsTriggerStyles} value="terminal">
               Terminal
             </Tabs.Trigger>
-            <Tabs.Trigger className={tabsTriggerStyles} value="browser">
-              Browser
+            <Tabs.Trigger
+              className={tabsTriggerStyles}
+              value="browser"
+              disabled
+            >
+              Browser (Soon)
             </Tabs.Trigger>
-            <Tabs.Trigger className={tabsTriggerStyles} value="code">
-              Code
+            <Tabs.Trigger className={tabsTriggerStyles} value="code" disabled>
+              Code (Soon)
             </Tabs.Trigger>
           </Tabs.List>
           <Tabs.Content className={tabsContentStyles} value="terminal">
-            terminal
+            <Terminal
+              options={{
+                allowProposedApi: true,
+              }}
+            />
           </Tabs.Content>
           <Tabs.Content className={tabsContentStyles} value="browser">
             browser
