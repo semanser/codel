@@ -47,6 +47,7 @@ export const Messages = ({ tasks, name, onSubmit }: MessagesProps) => {
         ))}
       </div>
       <textarea
+        autoFocus
         className={newMessageTextarea}
         placeholder="Enter your message..."
         onKeyPress={handleKeyPress}
