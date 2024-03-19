@@ -1,5 +1,6 @@
 scalar JSON
 scalar Uint
+scalar Time
 
 enum TaskType {
   input
@@ -15,6 +16,8 @@ enum TaskStatus {
 
 type Task {
   id: Uint!
+  message: String!
+  createdAt: Time!
   type: TaskType!
   status: TaskStatus!
   args: JSON!
@@ -29,6 +32,7 @@ type Flow {
 
 type Query {
   flows: [Flow!]!
+  flow(id: Uint!): Flow!
 }
 
 type Mutation {

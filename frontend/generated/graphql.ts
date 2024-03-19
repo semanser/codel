@@ -31,6 +31,7 @@ export type Scalars = {
   Int: { input: number; output: number };
   Float: { input: number; output: number };
   JSON: { input: any; output: any };
+  Time: { input: any; output: any };
   Uint: { input: any; output: any };
 };
 
@@ -59,7 +60,12 @@ export type MutationStopTaskArgs = {
 
 export type Query = {
   __typename?: "Query";
+  flow: Flow;
   flows: Array<Flow>;
+};
+
+export type QueryFlowArgs = {
+  id: Scalars["Uint"]["input"];
 };
 
 export type Subscription = {
@@ -71,7 +77,9 @@ export type Subscription = {
 export type Task = {
   __typename?: "Task";
   args: Scalars["JSON"]["output"];
+  createdAt: Scalars["Time"]["output"];
   id: Scalars["Uint"]["output"];
+  message: Scalars["String"]["output"];
   results: Scalars["JSON"]["output"];
   status: TaskStatus;
   type: TaskType;
@@ -89,13 +97,21 @@ export enum TaskType {
   Input = "input",
 }
 
+export const FlowOverviewFragmentFragmentDoc = gql`
+  fragment flowOverviewFragment on Flow {
+    id
+    name
+  }
+`;
 export const TaskFragmentFragmentDoc = gql`
   fragment taskFragment on Task {
     id
     type
+    message
     status
     args
     results
+    createdAt
   }
 `;
 export const FlowFragmentFragmentDoc = gql`
@@ -111,10 +127,10 @@ export const FlowFragmentFragmentDoc = gql`
 export const FlowsDocument = gql`
   query flows {
     flows {
-      ...flowFragment
+      ...flowOverviewFragment
     }
   }
-  ${FlowFragmentFragmentDoc}
+  ${FlowOverviewFragmentFragmentDoc}
 `;
 
 export function useFlowsQuery(
@@ -125,13 +141,45 @@ export function useFlowsQuery(
     ...options,
   });
 }
+export const FlowDocument = gql`
+  query flow($id: Uint!) {
+    flow(id: $id) {
+      ...flowFragment
+    }
+  }
+  ${FlowFragmentFragmentDoc}
+`;
+
+export function useFlowQuery(
+  options: Omit<Urql.UseQueryArgs<FlowQueryVariables>, "query">,
+) {
+  return Urql.useQuery<FlowQuery, FlowQueryVariables>({
+    query: FlowDocument,
+    ...options,
+  });
+}
+export type FlowOverviewFragmentFragment = {
+  __typename?: "Flow";
+  id: any;
+  name: string;
+};
+
+export type FlowsQueryVariables = Exact<{ [key: string]: never }>;
+
+export type FlowsQuery = {
+  __typename?: "Query";
+  flows: Array<{ __typename?: "Flow"; id: any; name: string }>;
+};
+
 export type TaskFragmentFragment = {
   __typename?: "Task";
   id: any;
   type: TaskType;
+  message: string;
   status: TaskStatus;
   args: any;
   results: any;
+  createdAt: any;
 };
 
 export type FlowFragmentFragment = {
@@ -142,17 +190,21 @@ export type FlowFragmentFragment = {
     __typename?: "Task";
     id: any;
     type: TaskType;
+    message: string;
     status: TaskStatus;
     args: any;
     results: any;
+    createdAt: any;
   }>;
 };
 
-export type FlowsQueryVariables = Exact<{ [key: string]: never }>;
+export type FlowQueryVariables = Exact<{
+  id: Scalars["Uint"]["input"];
+}>;
 
-export type FlowsQuery = {
+export type FlowQuery = {
   __typename?: "Query";
-  flows: Array<{
+  flow: {
     __typename?: "Flow";
     id: any;
     name: string;
@@ -160,11 +212,13 @@ export type FlowsQuery = {
       __typename?: "Task";
       id: any;
       type: TaskType;
+      message: string;
       status: TaskStatus;
       args: any;
       results: any;
+      createdAt: any;
     }>;
-  }>;
+  };
 };
 
 export default {
@@ -306,6 +360,29 @@ export default {
         name: "Query",
         fields: [
           {
+            name: "flow",
+            type: {
+              kind: "NON_NULL",
+              ofType: {
+                kind: "OBJECT",
+                name: "Flow",
+                ofType: null,
+              },
+            },
+            args: [
+              {
+                name: "id",
+                type: {
+                  kind: "NON_NULL",
+                  ofType: {
+                    kind: "SCALAR",
+                    name: "Any",
+                  },
+                },
+              },
+            ],
+          },
+          {
             name: "flows",
             type: {
               kind: "NON_NULL",
@@ -373,7 +450,29 @@ export default {
             args: [],
           },
           {
+            name: "createdAt",
+            type: {
+              kind: "NON_NULL",
+              ofType: {
+                kind: "SCALAR",
+                name: "Any",
+              },
+            },
+            args: [],
+          },
+          {
             name: "id",
+            type: {
+              kind: "NON_NULL",
+              ofType: {
+                kind: "SCALAR",
+                name: "Any",
+              },
+            },
+            args: [],
+          },
+          {
+            name: "message",
             type: {
               kind: "NON_NULL",
               ofType: {

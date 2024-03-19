@@ -2,6 +2,7 @@ import { formatDistance } from "date-fns";
 import { useState } from "react";
 
 import { Icon } from "@/components/Icon/Icon";
+import { TaskStatus } from "@/generated/graphql";
 
 import { Button } from "../Button/Button";
 import {
@@ -23,18 +24,11 @@ export enum MessageType {
   Done,
 }
 
-export enum MessageStatus {
-  InProgress,
-  Finished,
-  Stopped,
-  Failed,
-}
-
 type MessageProps = {
   message: string;
   time: Date;
   type: MessageType;
-  status: MessageStatus;
+  status: TaskStatus;
   output: string;
 };
 
@@ -66,7 +60,7 @@ export const Message = ({
         </div>
         <div
           className={
-            status !== MessageStatus.Failed
+            status !== TaskStatus.Failed
               ? messageStyles.Regular
               : messageStyles.Failed
           }
@@ -75,7 +69,7 @@ export const Message = ({
           <div className={contentStyles}>
             <span
               className={
-                status !== MessageStatus.Failed
+                status !== TaskStatus.Failed
                   ? iconStyles.Regular
                   : iconStyles.Failed
               }
@@ -84,7 +78,7 @@ export const Message = ({
             </span>
             <div>{message}</div>
           </div>
-          {status === MessageStatus.InProgress && (
+          {status === TaskStatus.InProgress && (
             <Button size="small" hierarchy="danger">
               Stop
             </Button>

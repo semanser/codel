@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"time"
 )
 
 type Flow struct {
@@ -24,11 +25,13 @@ type Subscription struct {
 }
 
 type Task struct {
-	ID      uint       `json:"id"`
-	Type    TaskType   `json:"type"`
-	Status  TaskStatus `json:"status"`
-	Args    string     `json:"args"`
-	Results string     `json:"results"`
+	ID        uint       `json:"id"`
+	Message   string     `json:"message"`
+	CreatedAt time.Time  `json:"createdAt"`
+	Type      TaskType   `json:"type"`
+	Status    TaskStatus `json:"status"`
+	Args      string     `json:"args"`
+	Results   string     `json:"results"`
 }
 
 type TaskStatus string

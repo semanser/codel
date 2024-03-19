@@ -1,9 +1,11 @@
 fragment taskFragment on Task {
   id
   type
+  message
   status
   args
   results
+  createdAt
 }
 
 fragment flowFragment on Flow {
@@ -14,8 +16,8 @@ fragment flowFragment on Flow {
   }
 }
 
-query flows {
-  flows {
+query flow($id: Uint!) {
+  flow(id: $id) {
     ...flowFragment
   }
 }

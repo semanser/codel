@@ -30,12 +30,12 @@ const (
 
 type Task struct {
 	gorm.Model
-	ID          uint
-	Description string
-	Type        TaskType
-	Status      TaskStatus
-	Args        datatypes.JSON
-	Results     datatypes.JSON
-	FlowID      uint
-	Flow        Flow
+	ID      uint
+	Message string
+	Type    TaskType
+	Status  TaskStatus
+	Args    datatypes.JSON
+	Results datatypes.JSON
+	FlowID  uint
+	Flow    Flow
 }

@@ -1,0 +1,10 @@
+fragment flowOverviewFragment on Flow {
+  id
+  name
+}
+
+query flows {
+  flows {
+    ...flowOverviewFragment
+  }
+}

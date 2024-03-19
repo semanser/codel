@@ -27,6 +27,7 @@ func (r *mutationResolver) CreateFlow(ctx context.Context) (*gmodel.Flow, error)
 
 	return &gmodel.Flow{
 		ID:    flow.ID,
+		Name:  flow.Name,
 		Tasks: []*gmodel.Task{},
 	}, nil
 }
@@ -50,10 +51,11 @@ func (r *mutationResolver) CreateTask(ctx context.Context, id uint, query string
 	}
 
 	task := models.Task{
-		Type:   models.Input,
-		Status: models.Finished,
-		Args:   datatypes.JSON(arg),
-		FlowID: id,
+		Type:    models.Input,
+		Message: query,
+		Status:  models.Finished,
+		Args:    datatypes.JSON(arg),
+		FlowID:  id,
 	}
 
 	tx := r.Db.Create(&task)
@@ -63,10 +65,12 @@ func (r *mutationResolver) CreateTask(ctx context.Context, id uint, query string
 	}
 
 	return &gmodel.Task{
-		ID:     task.ID,
-		Type:   gmodel.TaskType(task.Type),
-		Status: gmodel.TaskStatus(task.Status),
-		Args:   task.Args.String(),
+		ID:        task.ID,
+		Message:   task.Message,
+		Type:      gmodel.TaskType(task.Type),
+		Status:    gmodel.TaskStatus(task.Status),
+		Args:      task.Args.String(),
+		CreatedAt: task.CreatedAt,
 	}, nil
 }
 
@@ -92,11 +96,13 @@ func (r *queryResolver) Flows(ctx context.Context) ([]*gmodel.Flow, error) {
 
 		for _, task := range flow.Tasks {
 			gTasks = append(gTasks, &gmodel.Task{
-				ID:      task.ID,
-				Type:    gmodel.TaskType(task.Type),
-				Status:  gmodel.TaskStatus(task.Status),
-				Args:    task.Args.String(),
-				Results: task.Results.String(),
+				ID:        task.ID,
+				Message:   task.Message,
+				Type:      gmodel.TaskType(task.Type),
+				Status:    gmodel.TaskStatus(task.Status),
+				Args:      task.Args.String(),
+				Results:   task.Results.String(),
+				CreatedAt: task.CreatedAt,
 			})
 		}
 
@@ -108,6 +114,40 @@ func (r *queryResolver) Flows(ctx context.Context) ([]*gmodel.Flow, error) {
 	}
 
 	return gFlows, nil
+}
+
+// Flow is the resolver for the flow field.
+func (r *queryResolver) Flow(ctx context.Context, id uint) (*gmodel.Flow, error) {
+	flow := models.Flow{}
+
+	tx := r.Db.First(&models.Flow{}, id).Preload("Tasks").Find(&flow)
+
+	if tx.Error != nil {
+		return nil, fmt.Errorf("failed to fetch flows: %w", tx.Error)
+	}
+
+	var gFlow *gmodel.Flow
+	var gTasks []*gmodel.Task
+
+	for _, task := range flow.Tasks {
+		gTasks = append(gTasks, &gmodel.Task{
+			ID:        task.ID,
+			Message:   task.Message,
+			Type:      gmodel.TaskType(task.Type),
+			Status:    gmodel.TaskStatus(task.Status),
+			Args:      task.Args.String(),
+			Results:   task.Results.String(),
+			CreatedAt: task.CreatedAt,
+		})
+	}
+
+	gFlow = &gmodel.Flow{
+		ID:    flow.ID,
+		Name:  flow.Name,
+		Tasks: gTasks,
+	}
+
+	return gFlow, nil
 }
 
 // TaskAdded is the resolver for the taskAdded field.

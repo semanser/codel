@@ -7,8 +7,8 @@ import {
 } from "react-router-dom";
 import { Provider as GraphqlProvider } from "urql";
 
-import { AppLayout } from "./assets/layouts/AppLayout/AppLayout";
 import { graphqlClient } from "./graphql";
+import { AppLayout } from "./layouts/AppLayout/AppLayout";
 import { ChatPage } from "./pages/ChatPage/ChatPage";
 import "./styles/font.css.ts";
 import "./styles/global.css.ts";
@@ -18,7 +18,7 @@ export const router = createBrowserRouter(
   createRoutesFromElements(
     <>
       <Route element={<AppLayout />}>
-        <Route path="/chat" element={<ChatPage />} />
+        <Route path="/chat/:id?" element={<ChatPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/chat" />} />
     </>,

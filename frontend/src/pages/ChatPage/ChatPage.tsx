@@ -1,10 +1,7 @@
 import * as Tabs from "@radix-ui/react-tabs";
+import { useParams } from "react-router-dom";
 
-import {
-  Message,
-  MessageStatus,
-  MessageType,
-} from "@/components/Message/Message";
+import { Message, MessageType } from "@/components/Message/Message";
 import { Panel } from "@/components/Panel/Panel";
 import {
   tabsContentStyles,
@@ -13,63 +10,34 @@ import {
   tabsTriggerStyles,
 } from "@/components/Tabs/Tabs.css";
 import { Terminal } from "@/components/Terminal/Terminal";
+import { useFlowQuery } from "@/generated/graphql";
 
 import { messagesWrapper, titleStyles, wrapperStyles } from "./ChatPage.css";
 
-const fakeData = {
-  title: "This is a chat",
-  messages: [
-    {
-      id: 1,
-      message: "This is a test message",
-      time: new Date("2024-01-10"),
-      type: MessageType.Browser,
-      output: "This is the output of the message",
-      status: MessageStatus.Finished,
-    },
-    {
-      id: 2,
-      message:
-        "This is a some pretty long message. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum placerat felis ante, non semper mi hendrerit id. Praesent sodales est dui, ut semper sem consectetur nec. Praesent vitae euismod metus. Interdum et malesuada fames ac ante ipsum primis in faucibus. Maecenas vitae ante interdum erat blandit eleifend.",
-      time: new Date("2024-03-18"),
-      output: "This is the output of the message",
-      type: MessageType.Terminal,
-      status: MessageStatus.Finished,
-    },
-    {
-      id: 3,
-      message: "This is some random message",
-      time: new Date("2024-03-18"),
-      output: "This is the output of the message",
-      type: MessageType.Code,
-      status: MessageStatus.Finished,
-    },
-    {
-      id: 4,
-      message: "This is some ask message",
-      time: new Date("2024-03-18"),
-      output: "This is the output of the message",
-      type: MessageType.Ask,
-      status: MessageStatus.Failed,
-    },
-    {
-      id: 5,
-      message: "This task is done",
-      time: new Date("2024-03-18"),
-      output: "This is the output of the message",
-      type: MessageType.Done,
-      status: MessageStatus.InProgress,
-    },
-  ],
-};
-
 export const ChatPage = () => {
+  const { id } = useParams<{ id: string }>();
+  const [{ data }] = useFlowQuery({
+    pause: !id,
+    variables: { id: id },
+  });
+
+  const messages =
+    data?.flow?.tasks.map((task) => ({
+      id: task.id,
+      message: task.message,
+      time: task.createdAt,
+      status: task.status,
+      // TODO Add the correct type and output
+      type: MessageType.Terminal,
+      output: "Test output",
+    })) ?? [];
+
   return (
     <div className={wrapperStyles}>
       <Panel>
-        <div className={titleStyles}>{fakeData.title}</div>
+        <div className={titleStyles}>{data?.flow.name}</div>
         <div className={messagesWrapper}>
-          {fakeData.messages.map((message) => (
+          {messages.map((message) => (
             <Message key={message.id} {...message} />
           ))}
         </div>
