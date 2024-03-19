@@ -22,7 +22,7 @@ export const rightColumnStyles = style({
 export const timeStyles = style([
   font.textXsRegular,
   {
-    color: vars.color.primary8,
+    color: vars.color.gray8,
   },
 ]);
 
