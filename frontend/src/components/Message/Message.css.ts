@@ -94,3 +94,18 @@ globalStyle(`${iconStyles.Failed} svg`, {
   height: 16,
   color: vars.color.error9,
 });
+
+export const outputStyles = style([
+  font.textSmRegular,
+  {
+    padding: "10px 14px",
+    borderRadius: 8,
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    color: vars.color.gray11,
+    marginTop: -2,
+    border: `1px solid ${vars.color.gray3}`,
+    background: vars.color.gray2,
+  },
+]);

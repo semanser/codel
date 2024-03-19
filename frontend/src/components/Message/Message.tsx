@@ -1,4 +1,5 @@
 import { formatDistance } from "date-fns";
+import { useState } from "react";
 
 import { Icon } from "@/components/Icon/Icon";
 
@@ -8,6 +9,7 @@ import {
   contentStyles,
   iconStyles,
   messageStyles,
+  outputStyles,
   rightColumnStyles,
   timeStyles,
   wrapperStyles,
@@ -33,9 +35,22 @@ type MessageProps = {
   time: Date;
   type: MessageType;
   status: MessageStatus;
+  output: string;
 };
 
-export const Message = ({ time, message, type, status }: MessageProps) => {
+export const Message = ({
+  time,
+  message,
+  type,
+  status,
+  output,
+}: MessageProps) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  const toggleExpand = () => {
+    setIsExpanded((prev) => !prev);
+  };
+
   return (
     <div className={wrapperStyles}>
       <img
@@ -55,6 +70,7 @@ export const Message = ({ time, message, type, status }: MessageProps) => {
               ? messageStyles.Regular
               : messageStyles.Failed
           }
+          onClick={toggleExpand}
         >
           <div className={contentStyles}>
             <span
@@ -74,6 +90,7 @@ export const Message = ({ time, message, type, status }: MessageProps) => {
             </Button>
           )}
         </div>
+        {isExpanded && <div className={outputStyles}>{output}</div>}
       </div>
     </div>
   );
