@@ -1,17 +1,29 @@
+import { Icon } from "@/components/Icon/Icon";
+
 import {
   avatarStyles,
+  iconStyles,
   messageStyles,
   rightColumnStyles,
   timeStyles,
   wrapperStyles,
 } from "./Message.css";
 
+export enum MessageType {
+  Browser,
+  Terminal,
+  Code,
+  Ask,
+  Done,
+}
+
 type MessageProps = {
   message: string;
   time: Date;
+  type: MessageType;
 };
 
-export const Message = ({ time, message }: MessageProps) => {
+export const Message = ({ time, message, type }: MessageProps) => {
   return (
     <div className={wrapperStyles}>
       <img
@@ -23,8 +35,35 @@ export const Message = ({ time, message }: MessageProps) => {
       />
       <div className={rightColumnStyles}>
         <div className={timeStyles}>{time.toDateString()}</div>
-        <div className={messageStyles}>{message}</div>
+        <div className={messageStyles}>
+          <span className={iconStyles}>{getIcon(type)}</span>
+          <div>{message}</div>
+        </div>
       </div>
     </div>
   );
+};
+
+const getIcon = (type: MessageType) => {
+  let icon = null;
+
+  switch (type) {
+    case MessageType.Browser:
+      icon = <Icon.Browser />;
+      break;
+    case MessageType.Terminal:
+      icon = <Icon.Terminal />;
+      break;
+    case MessageType.Code:
+      icon = <Icon.Code />;
+      break;
+    case MessageType.Ask:
+      icon = <Icon.MessageQuestion />;
+      break;
+    case MessageType.Done:
+      icon = <Icon.CheckCircle />;
+      break;
+  }
+
+  return icon;
 };

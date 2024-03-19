@@ -1,4 +1,4 @@
-import { style } from "@vanilla-extract/css";
+import { globalStyle, style } from "@vanilla-extract/css";
 
 import { font } from "@/styles/font.css";
 import { vars } from "@/styles/theme.css";
@@ -33,5 +33,18 @@ export const messageStyles = style([
     background: vars.color.gray1,
     borderRadius: "0 8px 8px 8px",
     border: `1px solid ${vars.color.gray3}`,
+    display: "flex",
+    gap: 8,
   },
 ]);
+
+export const iconStyles = style({
+  marginTop: 2,
+  height: 16,
+});
+
+globalStyle(`${iconStyles} svg`, {
+  width: 16,
+  height: 16,
+  color: vars.color.primary10,
+});
