@@ -1,5 +1,5 @@
-import { Message, MessageType } from "@/components/Message/Message/Message";
-import { Panel } from "@/components/Panel/Panel/Panel";
+import { Message, MessageType } from "@/components/Message/Message";
+import { Panel } from "@/components/Panel/Panel";
 
 import { messagesWrapper, titleStyles, wrapperStyles } from "./ChatPage.css";
 
