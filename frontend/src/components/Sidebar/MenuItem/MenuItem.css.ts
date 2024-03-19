@@ -12,12 +12,6 @@ export const wrapperStyles = style([
       color: vars.color.gray12,
       backgroundColor: vars.color.gray2,
     },
-    selectors: {
-      "&.active": {
-        color: vars.color.gray12,
-        backgroundColor: vars.color.gray2,
-      },
-    },
   },
 ]);
 
@@ -26,4 +20,11 @@ export const linkStyles = style({
   textDecoration: "none",
   display: "block",
   padding: "9px 16px",
+
+  selectors: {
+    "&.active": {
+      color: vars.color.gray12,
+      backgroundColor: vars.color.gray2,
+    },
+  },
 });

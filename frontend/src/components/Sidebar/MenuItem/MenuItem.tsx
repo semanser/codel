@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 
 import { linkStyles, wrapperStyles } from "./MenuItem.css";
 
@@ -10,9 +10,9 @@ export type MenuItemProps = {
 export const MenuItem = ({ title, id }: MenuItemProps) => {
   return (
     <div className={wrapperStyles}>
-      <Link to={`/chat/${id}`} className={linkStyles}>
+      <NavLink to={`/chat/${id}`} className={linkStyles}>
         {title}
-      </Link>
+      </NavLink>
     </div>
   );
 };
