@@ -11,7 +11,7 @@ export const Sidebar = ({ items = [] }: SidebarProps) => {
     <div className={wrapperStyles}>
       <NewTask />
       {items.map((item) => (
-        <MenuItem {...item} />
+        <MenuItem key={item.id} {...item} />
       ))}
     </div>
   );
