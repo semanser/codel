@@ -21,12 +21,15 @@ export const ChatPage = () => {
     variables: { id: id },
   });
 
-  const tasks = id && id !== "new" ? data?.flow.tasks ?? [] : [];
+  const isNew = id === "new";
+
+  const tasks = id && !isNew ? data?.flow.tasks ?? [] : [];
+  const name = id && !isNew ? data?.flow.name ?? "" : "";
 
   return (
     <div className={wrapperStyles}>
       <Panel>
-        <Messages tasks={tasks} name={data?.flow.name ?? ""} />
+        <Messages tasks={tasks} name={name} />
       </Panel>
       <Panel>
         <Tabs.Root className={tabsRootStyles} defaultValue="terminal">

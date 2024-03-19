@@ -27,7 +27,7 @@ export const Messages = ({ tasks, name }: MessagesProps) => {
 
   return (
     <div className={messagesWrapper}>
-      <div className={titleStyles}>{name}</div>
+      {name && <div className={titleStyles}>{name}</div>}
       <div className={messagesListWrapper}>
         {messages.map((message) => (
           <Message key={message.id} {...message} />
