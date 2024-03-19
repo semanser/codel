@@ -43,11 +43,11 @@ export const messageStyles = styleVariants({
   Regular: [
     messageStylesBase,
     {
-      border: `1px solid ${vars.color.gray3}`,
-      background: vars.color.gray1,
+      border: `1px solid ${vars.color.gray4}`,
+      background: vars.color.gray3,
       ":hover": {
-        background: vars.color.gray2,
-        border: `1px solid ${vars.color.gray5}`,
+        background: vars.color.gray5,
+        border: `1px solid ${vars.color.gray6}`,
       },
     },
   ],

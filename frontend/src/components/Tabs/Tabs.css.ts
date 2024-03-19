@@ -34,7 +34,7 @@ export const tabsTriggerStyles = style([
     selectors: {
       '&[data-state="active"]': {
         color: vars.color.gray12,
-        backgroundColor: vars.color.gray1,
+        backgroundColor: vars.color.gray3,
       },
       '&:hover:not([data-state="active"])': {
         backgroundColor: vars.color.gray3,
