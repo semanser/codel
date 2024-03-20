@@ -1,6 +1,7 @@
 package main
 
 import (
+	"embed"
 	"log"
 	"net/http"
 	"os"
@@ -10,12 +11,17 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 
+	"github.com/semanser/ai-coder/agent"
+	"github.com/semanser/ai-coder/assets"
 	"github.com/semanser/ai-coder/executor"
 	"github.com/semanser/ai-coder/models"
 	"github.com/semanser/ai-coder/router"
 )
 
 const defaultPort = "8080"
+
+//go:embed templates/prompts/*.tmpl
+var promptTemplates embed.FS
 
 func main() {
 	sigChan := make(chan os.Signal, 1)
@@ -36,6 +42,9 @@ func main() {
 	}
 
 	r := router.New(db)
+
+	assets.Init(promptTemplates)
+	agent.Init()
 
 	err = executor.InitDockerClient()
 	if err != nil {
