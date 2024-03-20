@@ -46,7 +46,7 @@ The history of all the previous commands and user inputs:
     "id": {{ .ID }},
     "type": "{{ .Type }}",
     "args": {{ if .Args }}{{ .Args }}{{ else }}{}{{ end }},
-    "result": {{ if .Result }}{{ .Result }}{{ else }}{}{{ end }},
+    "results": {{ if .Results }}{{ .Results }}{{ else }}{}{{ end }},
     "description": "{{ .Description }}"
   }
 {{ end }}

@@ -89,7 +89,7 @@ func Cleanup() error {
 	return nil
 }
 
-func ExecCommand(container string, cmd []string, dst io.Writer) (err error) {
+func execCommand(container string, cmd []string, dst io.Writer) (err error) {
 	// Create options for starting the exec process
 	createResp, err := dockerClient.ContainerExecCreate(context.Background(), container, types.ExecConfig{
 		Cmd:          cmd,

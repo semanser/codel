@@ -51,6 +51,8 @@ func main() {
 		log.Fatalf("failed to initialize Docker client: %v", err)
 	}
 
+	executor.ProcessQueue(db)
+
 	// Run the server in a separate goroutine
 	go func() {
 		log.Printf("connect to http://localhost:%s/playground for GraphQL playground", port)

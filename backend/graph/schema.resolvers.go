@@ -9,12 +9,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 
-	gorillaWs "github.com/gorilla/websocket"
+	"github.com/semanser/ai-coder/agent"
 	"github.com/semanser/ai-coder/executor"
 	gmodel "github.com/semanser/ai-coder/graph/model"
 	"github.com/semanser/ai-coder/models"
-	"github.com/semanser/ai-coder/websocket"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
@@ -76,34 +76,19 @@ func (r *mutationResolver) CreateTask(ctx context.Context, id uint, query string
 		return nil, fmt.Errorf("failed to create task: %w", tx.Error)
 	}
 
-	flowId := fmt.Sprint(id)
+	log.Println("!!!!!!!!!task: ", task)
 
-	// Send the input to the websocket channel
-	err = websocket.SendToChannel(flowId, websocket.FormatTerminalInput(query))
-	if err != nil {
-		return nil, fmt.Errorf("failed to send message to channel: %w", err)
-	}
-
-	conn, err := websocket.GetConnection(flowId)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get connection: %w", err)
-	}
-	w, err := conn.NextWriter(gorillaWs.BinaryMessage)
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to get writer: %w", err)
-	}
-
-	err = executor.ExecCommand(executor.GenerateContainerName(id), []string{query}, w)
+	executor.AddCommand(&agent.Command{
+		ID:          task.ID,
+		FlowID:      task.FlowID,
+		Type:        agent.Input,
+		Args:        task.Args,
+		Results:     task.Results,
+		Description: task.Message,
+	})
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute command: %w", err)
-	}
-
-	err = w.Close()
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to send message to channel: %w", err)
 	}
 
 	return &gmodel.Task{

@@ -25,10 +25,11 @@ const (
 )
 
 type Command struct {
-	ID          int         `json:"id"`
+	ID          uint `json:"id"`
+	FlowID      uint
 	Type        CommandType `json:"type"`
 	Args        interface{} `json:"args,omitempty"`
-	Result      interface{} `json:"result,omitempty"`
+	Results     interface{} `json:"result,omitempty"`
 	Description string      `json:"description"`
 }
 
@@ -42,36 +43,6 @@ func Init() {
 	if OPEN_AI_KEY == "" {
 		log.Fatal("OPEN_AI_KEY is not set")
 	}
-
-	commands := []Command{
-		{
-			ID:   1,
-			Type: Input,
-			Args: InputArgs{
-				Query: "Create a new game of tic-tac-toe in react",
-			},
-		},
-		{
-			ID:   2,
-			Type: Terminal,
-			Args: TerminalArgs{
-				Input:       "npx create-react-app tic-tac-toe",
-				Description: "I'm trying to create a new react app using create-react-app template.",
-			},
-			Result: "Create React App was successfully created!",
-		},
-	}
-
-	c, err := NextCommand(AgentPrompt{
-		Commands: commands,
-	})
-
-	if err != nil {
-		log.Fatalf("Failed to get next command: %v", err)
-	}
-
-	log.Printf("Command: %v", c)
-	log.Printf("Command Args: %v", c.Args)
 }
 
 type Description string
@@ -126,6 +97,8 @@ type AgentPrompt struct {
 }
 
 func NextCommand(args AgentPrompt) (*Command, error) {
+	log.Println("Getting next command")
+
 	prompt, err := templates.Render(assets.PromptTemplates, "prompts/agent.tmpl", args)
 	if err != nil {
 		return nil, err
@@ -194,11 +167,32 @@ func NextCommand(args AgentPrompt) (*Command, error) {
 		return nil, fmt.Errorf("completion error: %v", err)
 	}
 
-	tool := resp.Choices[0].Message.ToolCalls[0]
+	log.Println("resp: ", resp)
+	choices := resp.Choices
+
+	log.Println("choices: ", choices)
+
+	if len(choices) == 0 {
+		return nil, fmt.Errorf("no choices found")
+	}
+
+	toolCalls := choices[0].Message.ToolCalls
+
+	log.Println("toolCalls: ", toolCalls)
+
+	if len(toolCalls) == 0 {
+		return nil, fmt.Errorf("no tool calls found")
+	}
+
+	tool := toolCalls[0]
+
+	log.Println("tool: ", tool)
 
 	if tool.Function.Name == "" {
 		return nil, fmt.Errorf("no tool found")
 	}
+
+	log.Println("tool.Function.Name: ", tool.Function.Name)
 
 	command := Command{
 		Type: CommandType(tool.Function.Name),
