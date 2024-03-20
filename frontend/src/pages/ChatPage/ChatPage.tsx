@@ -39,7 +39,7 @@ export const ChatPage = () => {
 
       const flowId = result?.data?.createFlow.id;
       if (flowId) {
-        createTaskMutation({
+        await createTaskMutation({
           id: flowId,
           query: message,
         });
