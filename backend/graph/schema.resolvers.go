@@ -10,9 +10,11 @@ import (
 	"errors"
 	"fmt"
 
+	gorillaWs "github.com/gorilla/websocket"
 	"github.com/semanser/ai-coder/executor"
 	gmodel "github.com/semanser/ai-coder/graph/model"
 	"github.com/semanser/ai-coder/models"
+	"github.com/semanser/ai-coder/websocket"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
@@ -29,7 +31,7 @@ func (r *mutationResolver) CreateFlow(ctx context.Context) (*gmodel.Flow, error)
 		return nil, tx.Error
 	}
 
-	_, err := executor.SpawnContainer("flow-" + fmt.Sprint(flow.ID))
+	_, err := executor.SpawnContainer(executor.GenerateContainerName(flow.ID))
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to spawn container: %w", err)
@@ -72,6 +74,36 @@ func (r *mutationResolver) CreateTask(ctx context.Context, id uint, query string
 
 	if tx.Error != nil {
 		return nil, fmt.Errorf("failed to create task: %w", tx.Error)
+	}
+
+	flowId := fmt.Sprint(id)
+
+	// Send the input to the websocket channel
+	err = websocket.SendToChannel(flowId, websocket.FormatTerminalInput(query))
+	if err != nil {
+		return nil, fmt.Errorf("failed to send message to channel: %w", err)
+	}
+
+	conn, err := websocket.GetConnection(flowId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get connection: %w", err)
+	}
+	w, err := conn.NextWriter(gorillaWs.BinaryMessage)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to get writer: %w", err)
+	}
+
+	err = executor.ExecCommand(executor.GenerateContainerName(id), []string{query}, w)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute command: %w", err)
+	}
+
+	err = w.Close()
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to send message to channel: %w", err)
 	}
 
 	return &gmodel.Task{

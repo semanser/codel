@@ -1,11 +1,8 @@
-package main
+package router
 
 import (
-	"time"
-
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"github.com/gorilla/websocket"
 	"gorm.io/gorm"
 
 	"github.com/99designs/gqlgen/graphql/handler"
@@ -13,9 +10,10 @@ import (
 	"github.com/99designs/gqlgen/graphql/playground"
 
 	"github.com/semanser/ai-coder/graph"
+	"github.com/semanser/ai-coder/websocket"
 )
 
-func newRouter(db *gorm.DB) *gin.Engine {
+func New(db *gorm.DB) *gin.Engine {
 	// Initialize Gin router
 	r := gin.Default()
 
@@ -33,7 +31,7 @@ func newRouter(db *gorm.DB) *gin.Engine {
 	r.GET("/playground", playgroundHandler())
 
 	// WebSocket endpoint for Docker daemon
-	r.GET("/terminal", wsHandler())
+	r.GET("/terminal/:id", wsHandler())
 
 	return r
 }
@@ -58,23 +56,6 @@ func playgroundHandler() gin.HandlerFunc {
 
 func wsHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Upgrade HTTP connection to WebSocket
-		conn, err := websocket.Upgrade(c.Writer, c.Request, nil, 1024, 1024)
-		if err != nil {
-			c.AbortWithError(400, err)
-			return
-		}
-		defer conn.Close()
-
-		// Use a ticker to send the message every 1 second
-		ticker := time.NewTicker(1 * time.Second)
-		defer ticker.Stop()
-
-		for range ticker.C {
-			err := conn.WriteMessage(websocket.TextMessage, []byte("Hello, world!\r\n"))
-			if err != nil {
-				return
-			}
-		}
+		websocket.HandleWebsocket(c)
 	}
 }

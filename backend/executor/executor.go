@@ -2,8 +2,11 @@ package executor
 
 import (
 	"context"
+	"fmt"
+	"io"
 	"log"
 
+	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 )
@@ -84,4 +87,40 @@ func Cleanup() error {
 		}
 	}
 	return nil
+}
+
+func ExecCommand(container string, cmd []string, dst io.Writer) (err error) {
+	// Create options for starting the exec process
+	createResp, err := dockerClient.ContainerExecCreate(context.Background(), container, types.ExecConfig{
+		Cmd:          cmd,
+		AttachStdout: true,
+		AttachStderr: true,
+	})
+	if err != nil {
+		return fmt.Errorf("Error creating exec process: %w", err)
+	}
+
+	// Attach to the exec process
+	resp, err := dockerClient.ContainerExecAttach(context.Background(), createResp.ID, types.ExecStartCheck{})
+	if err != nil {
+		return fmt.Errorf("Error attaching to exec process: %w", err)
+	}
+	defer resp.Close()
+
+	_, err = io.Copy(dst, resp.Reader)
+	if err != nil && err != io.EOF {
+		return fmt.Errorf("Error copying output: %w", err)
+	}
+
+	// Wait for the exec process to finish
+	_, err = dockerClient.ContainerExecInspect(context.Background(), createResp.ID)
+	if err != nil {
+		return fmt.Errorf("Error inspecting exec process: %w", err)
+	}
+
+	return nil
+}
+
+func GenerateContainerName(flowID uint) string {
+	return fmt.Sprintf("flow-%d", flowID)
 }

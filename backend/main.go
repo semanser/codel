@@ -12,6 +12,7 @@ import (
 
 	"github.com/semanser/ai-coder/executor"
 	"github.com/semanser/ai-coder/models"
+	"github.com/semanser/ai-coder/router"
 )
 
 const defaultPort = "8080"
@@ -34,7 +35,7 @@ func main() {
 		port = defaultPort
 	}
 
-	r := newRouter(db)
+	r := router.New(db)
 
 	err = executor.InitDockerClient()
 	if err != nil {

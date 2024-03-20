@@ -76,11 +76,7 @@ export const ChatPage = () => {
             </Tabs.Trigger>
           </Tabs.List>
           <Tabs.Content className={tabsContentStyles} value="terminal">
-            <Terminal
-              options={{
-                allowProposedApi: true,
-              }}
-            />
+            <Terminal key={id} id={isNew ? "" : id} />
           </Tabs.Content>
           <Tabs.Content className={tabsContentStyles} value="browser">
             browser

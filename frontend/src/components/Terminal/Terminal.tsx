@@ -8,6 +8,7 @@ import { CanvasAddon } from "xterm-addon-canvas";
 import { Unicode11Addon } from "xterm-addon-unicode11";
 import { WebLinksAddon } from "xterm-addon-web-links";
 import { WebglAddon } from "xterm-addon-webgl";
+import { Broadcast } from "xterm-theme";
 import "xterm/css/xterm.css";
 
 const isWebGl2Supported = !!document
@@ -73,7 +74,6 @@ const addons: ITerminalAddon[] = [
 export const Terminal = ({
   id,
   className,
-  options,
   onBell,
   onBinary,
   onCursorMove,
@@ -88,26 +88,31 @@ export const Terminal = ({
   onWriteParsed,
   customKeyEventHandler,
   onInit,
-  onDispose,
 }: XTermProps) => {
   const divRef = useRef<HTMLDivElement | null>(null);
   const xtermRef = useRef<XTerminal | null>(null);
+  const connectedRef = useRef(false);
 
   useEffect(() => {
-    if (!divRef.current) return;
-    const xterm = new XTerminal(options);
+    if (!divRef.current || xtermRef.current) return;
+    const xterm = new XTerminal({
+      convertEol: true,
+      allowProposedApi: true,
+      theme: Broadcast,
+    });
 
     // Load addons if the prop exists.
-    if (addons) {
-      addons.forEach((addon) => {
-        xterm.loadAddon(addon);
-      });
+    addons.forEach((addon) => {
+      xterm.loadAddon(addon);
+    });
 
+    if (id && !connectedRef.current) {
       const socket = new WebSocket(
-        "ws://" + import.meta.env.VITE_API_URL + "/terminal",
+        "ws://" + import.meta.env.VITE_API_URL + "/terminal/" + id,
       );
-      const attachAddon = new AttachAddon(socket);
-      xterm.loadAddon(attachAddon);
+      xterm.loadAddon(new AttachAddon(socket));
+      connectedRef.current = true;
+      console.log(`Connected to terminal #${id}`);
     }
 
     // Add Custom Key Event Handler if provided
@@ -117,17 +122,7 @@ export const Terminal = ({
 
     xtermRef.current = xterm;
     xterm.open(divRef.current);
-
-    return () => {
-      if (typeof onDispose === "function") onDispose(xterm);
-      try {
-        xterm.dispose();
-      } catch (e) {
-        console.log(e);
-      }
-      xtermRef.current = null;
-    };
-  }, [options]);
+  }, [id]);
 
   useBind(xtermRef, onBell, "onBell");
   useBind(xtermRef, onBinary, "onBinary");
