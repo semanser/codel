@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/semanser/ai-coder/executor"
 	gmodel "github.com/semanser/ai-coder/graph/model"
 	"github.com/semanser/ai-coder/models"
 	"gorm.io/datatypes"
@@ -26,6 +27,12 @@ func (r *mutationResolver) CreateFlow(ctx context.Context) (*gmodel.Flow, error)
 
 	if tx.Error != nil {
 		return nil, tx.Error
+	}
+
+	_, err := executor.SpawnContainer("flow-" + fmt.Sprint(flow.ID))
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to spawn container: %w", err)
 	}
 
 	return &gmodel.Flow{

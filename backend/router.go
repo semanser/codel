@@ -22,7 +22,7 @@ func newRouter(db *gorm.DB) *gin.Engine {
 	// Configure CORS middleware
 	config := cors.DefaultConfig()
 	// TODO change to only allow specific origins
-	config.AllowOrigins = []string{"*"}
+	config.AllowAllOrigins = true
 	config.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
 	r.Use(cors.New(config))
 

@@ -36,7 +36,7 @@ const wsClient = createWSClient({
 });
 
 export const graphqlClient = createClient({
-  url: "http://" + import.meta.env.VITE_API_URL + "/graphql",
+  url: window.location.origin + "/graphql",
   fetchOptions: {},
   exchanges: [
     devtoolsExchange,
