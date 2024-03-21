@@ -82,18 +82,26 @@ func (e TaskStatus) MarshalGQL(w io.Writer) {
 type TaskType string
 
 const (
-	TaskTypeInput  TaskType = "input"
-	TaskTypeAction TaskType = "action"
+	TaskTypeInput    TaskType = "input"
+	TaskTypeTerminal TaskType = "terminal"
+	TaskTypeBrowser  TaskType = "browser"
+	TaskTypeCode     TaskType = "code"
+	TaskTypeAsk      TaskType = "ask"
+	TaskTypeDone     TaskType = "done"
 )
 
 var AllTaskType = []TaskType{
 	TaskTypeInput,
-	TaskTypeAction,
+	TaskTypeTerminal,
+	TaskTypeBrowser,
+	TaskTypeCode,
+	TaskTypeAsk,
+	TaskTypeDone,
 }
 
 func (e TaskType) IsValid() bool {
 	switch e {
-	case TaskTypeInput, TaskTypeAction:
+	case TaskTypeInput, TaskTypeTerminal, TaskTypeBrowser, TaskTypeCode, TaskTypeAsk, TaskTypeDone:
 		return true
 	}
 	return false

@@ -9,9 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 
-	"github.com/semanser/ai-coder/agent"
 	"github.com/semanser/ai-coder/executor"
 	gmodel "github.com/semanser/ai-coder/graph/model"
 	"github.com/semanser/ai-coder/models"
@@ -76,16 +74,7 @@ func (r *mutationResolver) CreateTask(ctx context.Context, id uint, query string
 		return nil, fmt.Errorf("failed to create task: %w", tx.Error)
 	}
 
-	log.Println("!!!!!!!!!task: ", task)
-
-	executor.AddCommand(&agent.Command{
-		ID:          task.ID,
-		FlowID:      task.FlowID,
-		Type:        agent.Input,
-		Args:        task.Args,
-		Results:     task.Results,
-		Description: task.Message,
-	})
+	executor.AddCommand(task)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute command: %w", err)

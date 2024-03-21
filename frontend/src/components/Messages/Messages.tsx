@@ -1,6 +1,6 @@
 import { Task } from "@/generated/graphql";
 
-import { Message, MessageType } from "./Message/Message";
+import { Message } from "./Message/Message";
 import {
   messagesListWrapper,
   messagesWrapper,
@@ -21,8 +21,7 @@ export const Messages = ({ tasks, name, onSubmit }: MessagesProps) => {
       message: task.message,
       time: task.createdAt,
       status: task.status,
-      // TODO Add the correct type and output
-      type: MessageType.Terminal,
+      type: task.type,
       output: "Test output",
     })) ?? [];
 

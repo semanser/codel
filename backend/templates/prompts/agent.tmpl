@@ -20,7 +20,8 @@ These are the possible types of commands for your next steps:
 - `stop` - stops another action specified by it's id.  Eg, when you need to stop some long-running command.
 - `done` - mark the current flow as done
 
-Each command should have a `description` field that shortly describes what are you planning to achieve with this command.
+Each command should have a `message` field that shortly describes what are you planning to achieve with this command. Use conversation-like (chat) style of communication.
+For example: "My plan is to read the documentation. Looking for it on the web." or "Let me try to use terminal to do that."
 
 Each command has a set of arguments that you always have to include:
 - `terminal`
@@ -41,13 +42,13 @@ Each command has a set of arguments that you always have to include:
 - `done`. No arguments are needed.
 
 The history of all the previous commands and user inputs:
-{{ range .Commands }}
+{{ range .Tasks }}
   {
     "id": {{ .ID }},
     "type": "{{ .Type }}",
     "args": {{ if .Args }}{{ .Args }}{{ else }}{}{{ end }},
     "results": {{ if .Results }}{{ .Results }}{{ else }}{}{{ end }},
-    "description": "{{ .Description }}"
+    "message": "{{ .Message }}"
   }
 {{ end }}
 

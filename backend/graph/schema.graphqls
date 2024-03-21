@@ -4,7 +4,11 @@ scalar Time
 
 enum TaskType {
   input
-  action
+  terminal
+  browser
+  code
+  ask
+  done
 }
 
 enum TaskStatus {

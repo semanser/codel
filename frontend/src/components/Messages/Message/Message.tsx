@@ -3,7 +3,7 @@ import { useState } from "react";
 
 import { Button } from "@/components/Button/Button";
 import { Icon } from "@/components/Icon/Icon";
-import { TaskStatus } from "@/generated/graphql";
+import { TaskStatus, TaskType } from "@/generated/graphql";
 
 import {
   avatarStyles,
@@ -16,18 +16,10 @@ import {
   wrapperStyles,
 } from "./Message.css";
 
-export enum MessageType {
-  Browser,
-  Terminal,
-  Code,
-  Ask,
-  Done,
-}
-
 type MessageProps = {
   message: string;
   time: Date;
-  type: MessageType;
+  type: TaskType;
   status: TaskStatus;
   output: string;
 };
@@ -90,23 +82,23 @@ export const Message = ({
   );
 };
 
-const getIcon = (type: MessageType) => {
+const getIcon = (type: TaskType) => {
   let icon = null;
 
   switch (type) {
-    case MessageType.Browser:
+    case TaskType.Browser:
       icon = <Icon.Browser />;
       break;
-    case MessageType.Terminal:
+    case TaskType.Terminal:
       icon = <Icon.Terminal />;
       break;
-    case MessageType.Code:
+    case TaskType.Code:
       icon = <Icon.Code />;
       break;
-    case MessageType.Ask:
+    case TaskType.Ask:
       icon = <Icon.MessageQuestion />;
       break;
-    case MessageType.Done:
+    case TaskType.Done:
       icon = <Icon.CheckCircle />;
       break;
   }

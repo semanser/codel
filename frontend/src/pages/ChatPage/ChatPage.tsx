@@ -39,11 +39,14 @@ export const ChatPage = () => {
 
       const flowId = result?.data?.createFlow.id;
       if (flowId) {
-        await createTaskMutation({
-          id: flowId,
-          query: message,
-        });
         navigate(`/chat/${flowId}`, { replace: true });
+
+        setTimeout(() => {
+          createTaskMutation({
+            id: flowId,
+            query: message,
+          });
+        }, 1000);
       }
     } else {
       createTaskMutation({

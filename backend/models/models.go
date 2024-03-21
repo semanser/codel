@@ -15,8 +15,12 @@ type Flow struct {
 type TaskType string
 
 const (
-	Input  TaskType = "input"
-	Action TaskType = "action"
+	Input    TaskType = "input"
+	Terminal TaskType = "terminal"
+	Browser  TaskType = "browser"
+	Code     TaskType = "code"
+	Ask      TaskType = "ask"
+	Done     TaskType = "done"
 )
 
 type TaskStatus = string
