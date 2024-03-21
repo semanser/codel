@@ -40,6 +40,15 @@ const messageStylesBase = style([
 ]);
 
 export const messageStyles = styleVariants({
+  Input: [
+    messageStylesBase,
+    {
+      border: `1px solid ${vars.color.gray3}`,
+      background: vars.color.gray1,
+      cursor: "auto",
+      color: vars.color.gray12,
+    },
+  ],
   Regular: [
     messageStylesBase,
     {

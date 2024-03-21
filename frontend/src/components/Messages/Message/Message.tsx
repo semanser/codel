@@ -52,9 +52,11 @@ export const Message = ({
         </div>
         <div
           className={
-            status !== TaskStatus.Failed
-              ? messageStyles.Regular
-              : messageStyles.Failed
+            type === TaskType.Input
+              ? messageStyles.Input
+              : status !== TaskStatus.Failed
+                ? messageStyles.Regular
+                : messageStyles.Failed
           }
           onClick={toggleExpand}
         >
