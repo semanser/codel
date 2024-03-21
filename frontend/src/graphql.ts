@@ -27,6 +27,19 @@ export const cache = cacheExchange({
         }
       },
     },
+    Subscription: {
+      taskAdded: (result, _args, cache) => {
+        const flowId = _args.flowId;
+        const flowEntityKey = `Flow:${flowId}`
+        const tasks = cache.resolve(flowEntityKey, "tasks");
+        const task = result.taskAdded as Data;
+
+        if (Array.isArray(tasks)) {
+          tasks.push(task);
+          cache.link(flowEntityKey, "tasks", tasks as Data[]);
+        }
+      }
+    }
   },
   keys: {},
 });

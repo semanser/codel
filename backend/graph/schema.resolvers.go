@@ -127,9 +127,10 @@ func (r *queryResolver) Flows(ctx context.Context) ([]*gmodel.Flow, error) {
 				Type:      gmodel.TaskType(task.Type),
 				Status:    gmodel.TaskStatus(task.Status),
 				Args:      task.Args.String(),
-				Results:   task.Results.String(),
+				Results:   task.Results,
 				CreatedAt: task.CreatedAt,
 			})
+
 		}
 
 		gFlows = append(gFlows, &gmodel.Flow{
@@ -162,7 +163,7 @@ func (r *queryResolver) Flow(ctx context.Context, id uint) (*gmodel.Flow, error)
 			Type:      gmodel.TaskType(task.Type),
 			Status:    gmodel.TaskStatus(task.Status),
 			Args:      task.Args.String(),
-			Results:   task.Results.String(),
+			Results:   task.Results,
 			CreatedAt: task.CreatedAt,
 		})
 	}

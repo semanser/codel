@@ -39,7 +39,7 @@ type Task struct {
 	Type    TaskType
 	Status  TaskStatus
 	Args    datatypes.JSON
-	Results datatypes.JSON
+	Results string
 	FlowID  uint
 	Flow    Flow
 }

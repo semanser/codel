@@ -24,7 +24,7 @@ export const ChatPage = () => {
   const { id } = useParams<{ id: string }>();
   const [, createFlowMutation] = useCreateFlowMutation();
   const [, createTaskMutation] = useCreateTaskMutation();
-  const shouldPause = !id && id !== "new";
+  const shouldPause = !id || id === "new";
 
   const [{ data }] = useFlowQuery({
     pause: shouldPause,
@@ -37,7 +37,7 @@ export const ChatPage = () => {
   const name = id && !isNew ? data?.flow.name ?? "" : "";
 
   useTaskAddedSubscription({
-    variables: { flowId: id },
+    variables: { flowId: Number(id) },
     pause: shouldPause,
   });
 

@@ -6,9 +6,12 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"strings"
 
 	gorillaWs "github.com/gorilla/websocket"
 	"github.com/semanser/ai-coder/agent"
+	gmodel "github.com/semanser/ai-coder/graph/model"
+	"github.com/semanser/ai-coder/graph/subscriptions"
 	"github.com/semanser/ai-coder/models"
 	"github.com/semanser/ai-coder/websocket"
 	"gorm.io/gorm"
@@ -36,6 +39,7 @@ func ProcessQueue(db *gorm.DB) {
 
 				if err != nil {
 					log.Printf("failed to process input: %w", err)
+					continue
 				}
 
 				AddCommand(*nextTask)
@@ -44,8 +48,19 @@ func ProcessQueue(db *gorm.DB) {
 			if task.Type == models.Ask {
 				err := processAskTask(db, task)
 
+				subscriptions.BroadcastTaskAdded(task.FlowID, &gmodel.Task{
+					ID:        task.ID,
+					Message:   task.Message,
+					Type:      gmodel.TaskType(task.Type),
+					CreatedAt: task.CreatedAt,
+					Status:    gmodel.TaskStatus(task.Status),
+					Args:      task.Args.String(),
+					Results:   task.Results,
+				})
+
 				if err != nil {
 					log.Printf("failed to process ask: %w", err)
+					continue
 				}
 			}
 
@@ -54,6 +69,7 @@ func ProcessQueue(db *gorm.DB) {
 
 				if err != nil {
 					log.Printf("failed to process terminal: %w", err)
+					continue
 				}
 				nextTask, err := getNextTask(db, task.FlowID)
 
@@ -61,6 +77,16 @@ func ProcessQueue(db *gorm.DB) {
 					log.Printf("failed to get next task: %w", err)
 					continue
 				}
+
+				subscriptions.BroadcastTaskAdded(task.FlowID, &gmodel.Task{
+					ID:        nextTask.ID,
+					Message:   nextTask.Message,
+					Type:      gmodel.TaskType(nextTask.Type),
+					CreatedAt: nextTask.CreatedAt,
+					Status:    gmodel.TaskStatus(nextTask.Status),
+					Args:      nextTask.Args.String(),
+					Results:   nextTask.Results,
+				})
 
 				AddCommand(*nextTask)
 			}
@@ -70,6 +96,7 @@ func ProcessQueue(db *gorm.DB) {
 
 				if err != nil {
 					log.Printf("failed to process code: %w", err)
+					continue
 				}
 
 				nextTask, err := getNextTask(db, task.FlowID)
@@ -79,6 +106,16 @@ func ProcessQueue(db *gorm.DB) {
 					continue
 				}
 
+				subscriptions.BroadcastTaskAdded(task.FlowID, &gmodel.Task{
+					ID:        nextTask.ID,
+					Message:   nextTask.Message,
+					Type:      gmodel.TaskType(nextTask.Type),
+					CreatedAt: nextTask.CreatedAt,
+					Status:    gmodel.TaskStatus(nextTask.Status),
+					Args:      nextTask.Args.String(),
+					Results:   nextTask.Results,
+				})
+
 				AddCommand(*nextTask)
 			}
 		}
@@ -86,7 +123,6 @@ func ProcessQueue(db *gorm.DB) {
 }
 
 func processAskTask(db *gorm.DB, task models.Task) error {
-	// TODO Send the subscription with the ask to the client
 	tx := db.Updates(models.Task{
 		ID:     task.ID,
 		Status: models.Finished,
@@ -122,7 +158,7 @@ func processTerminalTask(db *gorm.DB, task models.Task) error {
 	w, err := conn.NextWriter(gorillaWs.BinaryMessage)
 
 	// Write the terminal output to both to the websocket and to the database
-	result := new(bytes.Buffer)
+	var result = &bytes.Buffer{}
 	multi := io.MultiWriter(w, result)
 
 	if err != nil {
@@ -135,11 +171,12 @@ func processTerminalTask(db *gorm.DB, task models.Task) error {
 		return fmt.Errorf("failed to execute command: %w", err)
 	}
 
-	// Mark the current task as finished and save the output
-	log.Printf("Terminal output: %s", result.Bytes())
+	results := result.String()
+	// https://stackoverflow.com/questions/1347646/postgres-error-on-insert-error-invalid-byte-sequence-for-encoding-utf8-0x0
+	results = strings.ReplaceAll(results, "\x00", "")
 	db.Updates(models.Task{
 		ID:      task.ID,
-		Results: result.Bytes(),
+		Results: results,
 		Status:  models.Finished,
 	})
 
@@ -176,9 +213,12 @@ func processCodeTask(db *gorm.DB, task models.Task) error {
 		return fmt.Errorf("failed to execute command: %w", err)
 	}
 
+	results := r.String()
+	// https://stackoverflow.com/questions/1347646/postgres-error-on-insert-error-invalid-byte-sequence-for-encoding-utf8-0x0
+	results = strings.ReplaceAll(results, "\x00", "")
 	db.Updates(models.Task{
 		ID:      task.ID,
-		Results: r.Bytes(),
+		Results: results,
 	})
 
 	return nil

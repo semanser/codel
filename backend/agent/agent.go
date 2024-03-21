@@ -65,7 +65,6 @@ type CodeArgs struct {
 }
 
 type AskArgs struct {
-	Input string
 	Message
 }
 
@@ -130,17 +129,19 @@ func NextTask(args AgentPrompt) (*models.Task, error) {
 
 	req := openai.ChatCompletionRequest{
 		Temperature: 0.0,
-		Model:       openai.GPT3Dot5Turbo0125,
+		Model:       openai.GPT4Turbo0125,
 		Messages: []openai.ChatCompletionMessage{
 			{
-				Role:    openai.ChatMessageRoleUser,
+				Role:    openai.ChatMessageRoleSystem,
 				Content: prompt,
 			},
 		},
 		ResponseFormat: &openai.ChatCompletionResponseFormat{
 			Type: openai.ChatCompletionResponseFormatTypeJSONObject,
 		},
+		TopP:  0.2,
 		Tools: tools,
+		N:     1,
 	}
 
 	resp, err := openAIclient.CreateChatCompletion(context.Background(), req)

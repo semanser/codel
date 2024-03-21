@@ -22,7 +22,7 @@ func subscribe[B any](flowID uint, subscriptions map[uint]chan B) (channel chan 
 	ch := make(chan B)
 
 	if _, ok := subscriptions[flowID]; !ok {
-		subscriptions[flowID] = make(chan B)
+		subscriptions[flowID] = ch
 	}
 
 	unsubscribe = func() {
@@ -32,7 +32,6 @@ func subscribe[B any](flowID uint, subscriptions map[uint]chan B) (channel chan 
 
 		if c, ok := subscriptions[flowID]; ok {
 			if c == ch {
-				close(c)
 				subscriptions[flowID] = nil
 			}
 		}
