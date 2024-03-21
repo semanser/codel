@@ -30,7 +30,7 @@ export const cache = cacheExchange({
     Subscription: {
       taskAdded: (result, _args, cache) => {
         const flowId = _args.flowId;
-        const flowEntityKey = `Flow:${flowId}`
+        const flowEntityKey = `Flow:${flowId}`;
         const tasks = cache.resolve(flowEntityKey, "tasks");
         const task = result.taskAdded as Data;
 
@@ -38,8 +38,8 @@ export const cache = cacheExchange({
           tasks.push(task);
           cache.link(flowEntityKey, "tasks", tasks as Data[]);
         }
-      }
-    }
+      },
+    },
   },
   keys: {},
 });

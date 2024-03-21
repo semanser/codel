@@ -1,3 +1,5 @@
+import { useEffect, useRef } from "react";
+
 import { Task } from "@/generated/graphql";
 
 import { Message } from "./Message/Message";
@@ -22,8 +24,11 @@ export const Messages = ({ tasks, name, onSubmit }: MessagesProps) => {
       time: task.createdAt,
       status: task.status,
       type: task.type,
-      output: "Test output",
+      output: task.results,
     })) ?? [];
+
+  const messagesRef = useRef<HTMLDivElement>(null);
+  const autoScrollEnabledRef = useRef(true);
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -37,10 +42,41 @@ export const Messages = ({ tasks, name, onSubmit }: MessagesProps) => {
     }
   };
 
+  useEffect(() => {
+    const messagesDiv = messagesRef.current;
+    if (!messagesDiv) return;
+
+    const scrollHandler = () => {
+      if (
+        messagesDiv.scrollTop + messagesDiv.clientHeight + 50 >=
+        messagesDiv.scrollHeight
+      ) {
+        autoScrollEnabledRef.current = true;
+      } else {
+        autoScrollEnabledRef.current = false;
+      }
+    };
+
+    messagesDiv.addEventListener("scroll", scrollHandler);
+
+    return () => {
+      messagesDiv.removeEventListener("scroll", scrollHandler);
+    };
+  }, []);
+
+  useEffect(() => {
+    const messagesDiv = messagesRef.current;
+    if (!messagesDiv) return;
+
+    if (autoScrollEnabledRef.current) {
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+  }, [tasks]);
+
   return (
     <div className={messagesWrapper}>
       {name && <div className={titleStyles}>{name}</div>}
-      <div className={messagesListWrapper}>
+      <div className={messagesListWrapper} ref={messagesRef}>
         {messages.map((message) => (
           <Message key={message.id} {...message} />
         ))}
