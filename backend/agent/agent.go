@@ -5,26 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"os"
 
 	"github.com/invopop/jsonschema"
 	openai "github.com/sashabaranov/go-openai"
 	"github.com/semanser/ai-coder/assets"
 	"github.com/semanser/ai-coder/models"
+	"github.com/semanser/ai-coder/services"
 	"github.com/semanser/ai-coder/templates"
 )
-
-var openAIclient *openai.Client
-var OPEN_AI_KEY string
-
-func Init() {
-	OPEN_AI_KEY := os.Getenv("OPEN_AI_KEY")
-	openAIclient = openai.NewClient(OPEN_AI_KEY)
-
-	if OPEN_AI_KEY == "" {
-		log.Fatal("OPEN_AI_KEY is not set")
-	}
-}
 
 type Message string
 
@@ -144,7 +132,7 @@ func NextTask(args AgentPrompt) (*models.Task, error) {
 		N:     1,
 	}
 
-	resp, err := openAIclient.CreateChatCompletion(context.Background(), req)
+	resp, err := services.OpenAIclient.CreateChatCompletion(context.Background(), req)
 	if err != nil {
 		return nil, fmt.Errorf("completion error: %v", err)
 	}

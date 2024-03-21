@@ -42,6 +42,11 @@ export type Mutation_ExecArgs = {
 };
 
 
+export type MutationCreateFlowArgs = {
+  query: Scalars['String']['input'];
+};
+
+
 export type MutationCreateTaskArgs = {
   id: Scalars['Uint']['input'];
   query: Scalars['String']['input'];
@@ -150,12 +155,15 @@ export function useFlowQuery(options: Omit<Urql.UseQueryArgs<FlowQueryVariables>
   return Urql.useQuery<FlowQuery, FlowQueryVariables>({ query: FlowDocument, ...options });
 };
 export const CreateFlowDocument = gql`
-    mutation createFlow {
-  createFlow {
+    mutation createFlow($query: String!) {
+  createFlow(query: $query) {
     id
+    tasks {
+      ...taskFragment
+    }
   }
 }
-    `;
+    ${TaskFragmentFragmentDoc}`;
 
 export function useCreateFlowMutation() {
   return Urql.useMutation<CreateFlowMutation, CreateFlowMutationVariables>(CreateFlowDocument);
@@ -200,10 +208,12 @@ export type FlowQueryVariables = Exact<{
 
 export type FlowQuery = { __typename?: 'Query', flow: { __typename?: 'Flow', id: any, name: string, tasks: Array<{ __typename?: 'Task', id: any, type: TaskType, message: string, status: TaskStatus, args: any, results: any, createdAt: any }> } };
 
-export type CreateFlowMutationVariables = Exact<{ [key: string]: never; }>;
+export type CreateFlowMutationVariables = Exact<{
+  query: Scalars['String']['input'];
+}>;
 
 
-export type CreateFlowMutation = { __typename?: 'Mutation', createFlow: { __typename?: 'Flow', id: any } };
+export type CreateFlowMutation = { __typename?: 'Mutation', createFlow: { __typename?: 'Flow', id: any, tasks: Array<{ __typename?: 'Task', id: any, type: TaskType, message: string, status: TaskStatus, args: any, results: any, createdAt: any }> } };
 
 export type CreateTaskMutationVariables = Exact<{
   id: Scalars['Uint']['input'];
@@ -326,7 +336,18 @@ export default {
                 "ofType": null
               }
             },
-            "args": []
+            "args": [
+              {
+                "name": "query",
+                "type": {
+                  "kind": "NON_NULL",
+                  "ofType": {
+                    "kind": "SCALAR",
+                    "name": "Any"
+                  }
+                }
+              }
+            ]
           },
           {
             "name": "createTask",

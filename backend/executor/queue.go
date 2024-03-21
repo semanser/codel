@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"strings"
 
 	gorillaWs "github.com/gorilla/websocket"
 	"github.com/semanser/ai-coder/agent"
@@ -171,12 +170,9 @@ func processTerminalTask(db *gorm.DB, task models.Task) error {
 		return fmt.Errorf("failed to execute command: %w", err)
 	}
 
-	results := result.String()
-	// https://stackoverflow.com/questions/1347646/postgres-error-on-insert-error-invalid-byte-sequence-for-encoding-utf8-0x0
-	results = strings.ReplaceAll(results, "\x00", "")
 	db.Updates(models.Task{
 		ID:      task.ID,
-		Results: results,
+		Results: result.String(),
 		Status:  models.Finished,
 	})
 
@@ -213,12 +209,9 @@ func processCodeTask(db *gorm.DB, task models.Task) error {
 		return fmt.Errorf("failed to execute command: %w", err)
 	}
 
-	results := r.String()
-	// https://stackoverflow.com/questions/1347646/postgres-error-on-insert-error-invalid-byte-sequence-for-encoding-utf8-0x0
-	results = strings.ReplaceAll(results, "\x00", "")
 	db.Updates(models.Task{
 		ID:      task.ID,
-		Results: results,
+		Results: r.String(),
 	})
 
 	return nil
@@ -230,6 +223,11 @@ func getNextTask(db *gorm.DB, flowId uint) (*models.Task, error) {
 
 	if tx.Error != nil {
 		return nil, fmt.Errorf("failed to find flow with id %d: %w", flowId, tx.Error)
+	}
+
+	for _, task := range flow.Tasks {
+		// Limit the number of result characters since some output commands can have a lot of output
+		task.Results = task.Results[1000:]
 	}
 
 	c, err := agent.NextTask(agent.AgentPrompt{

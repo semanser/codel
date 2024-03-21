@@ -5,6 +5,7 @@ import React, { useEffect, useRef } from "react";
 import { ITerminalAddon, ITerminalOptions, Terminal as XTerminal } from "xterm";
 import { AttachAddon } from "xterm-addon-attach";
 import { CanvasAddon } from "xterm-addon-canvas";
+import { FitAddon } from "xterm-addon-fit";
 import { Unicode11Addon } from "xterm-addon-unicode11";
 import { WebLinksAddon } from "xterm-addon-web-links";
 import { WebglAddon } from "xterm-addon-webgl";
@@ -91,7 +92,27 @@ export const Terminal = ({
 }: XTermProps) => {
   const divRef = useRef<HTMLDivElement | null>(null);
   const xtermRef = useRef<XTerminal | null>(null);
-  const connectedRef = useRef(false);
+  const connectedRefSocket = useRef<WebSocket>();
+
+  useEffect(() => {
+    if (!xtermRef.current) return;
+
+    xtermRef.current.clear();
+
+    if (connectedRefSocket.current) {
+      console.log(`Closing connection to the terminal`);
+      connectedRefSocket.current.close();
+    }
+
+    if (id) {
+      const socket = new WebSocket(
+        "ws://" + import.meta.env.VITE_API_URL + "/terminal/" + id,
+      );
+      xtermRef.current.loadAddon(new AttachAddon(socket));
+      connectedRefSocket.current = socket;
+      console.log(`Connected to terminal #${id}`);
+    }
+  }, [id]);
 
   useEffect(() => {
     if (!divRef.current || xtermRef.current) return;
@@ -106,14 +127,8 @@ export const Terminal = ({
       xterm.loadAddon(addon);
     });
 
-    if (id && !connectedRef.current) {
-      const socket = new WebSocket(
-        "ws://" + import.meta.env.VITE_API_URL + "/terminal/" + id,
-      );
-      xterm.loadAddon(new AttachAddon(socket));
-      connectedRef.current = true;
-      console.log(`Connected to terminal #${id}`);
-    }
+    const fitAddon = new FitAddon();
+    xterm.loadAddon(fitAddon);
 
     // Add Custom Key Event Handler if provided
     if (customKeyEventHandler) {
@@ -122,6 +137,7 @@ export const Terminal = ({
 
     xtermRef.current = xterm;
     xterm.open(divRef.current);
+    fitAddon.fit();
   }, [id]);
 
   useBind(xtermRef, onBell, "onBell");

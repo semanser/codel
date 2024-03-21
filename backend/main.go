@@ -11,11 +11,11 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 
-	"github.com/semanser/ai-coder/agent"
 	"github.com/semanser/ai-coder/assets"
 	"github.com/semanser/ai-coder/executor"
 	"github.com/semanser/ai-coder/models"
 	"github.com/semanser/ai-coder/router"
+	"github.com/semanser/ai-coder/services"
 )
 
 const defaultPort = "8080"
@@ -44,7 +44,7 @@ func main() {
 	r := router.New(db)
 
 	assets.Init(promptTemplates)
-	agent.Init()
+	services.Init()
 
 	err = executor.InitDockerClient()
 	if err != nil {

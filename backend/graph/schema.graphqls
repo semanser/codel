@@ -40,7 +40,7 @@ type Query {
 }
 
 type Mutation {
-  createFlow: Flow!
+  createFlow(query: String!): Flow!
   createTask(id: Uint!, query: String!): Task!
   stopTask(id: Uint!): Task!
 

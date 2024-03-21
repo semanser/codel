@@ -43,18 +43,13 @@ export const ChatPage = () => {
 
   const handleSubmit = async (message: string) => {
     if (isNew) {
-      const result = await createFlowMutation({});
+      const result = await createFlowMutation({
+        query: message,
+      });
 
       const flowId = result?.data?.createFlow.id;
       if (flowId) {
         navigate(`/chat/${flowId}`, { replace: true });
-
-        setTimeout(() => {
-          createTaskMutation({
-            id: flowId,
-            query: message,
-          });
-        }, 1000);
       }
     } else {
       createTaskMutation({
@@ -87,7 +82,7 @@ export const ChatPage = () => {
             </Tabs.Trigger>
           </Tabs.List>
           <Tabs.Content className={tabsContentStyles} value="terminal">
-            <Terminal key={id} id={isNew ? "" : id} />
+            <Terminal id={isNew ? "" : id} />
           </Tabs.Content>
           <Tabs.Content className={tabsContentStyles} value="browser">
             browser

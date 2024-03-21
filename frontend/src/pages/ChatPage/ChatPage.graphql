@@ -22,9 +22,12 @@ query flow($id: Uint!) {
   }
 }
 
-mutation createFlow {
-  createFlow {
+mutation createFlow($query: String!) {
+  createFlow(query: $query) {
     id
+    tasks {
+      ...taskFragment
+    }
   }
 }
 

@@ -15,32 +15,45 @@ import (
 	gmodel "github.com/semanser/ai-coder/graph/model"
 	"github.com/semanser/ai-coder/graph/subscriptions"
 	"github.com/semanser/ai-coder/models"
+	"github.com/semanser/ai-coder/services"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
 // CreateFlow is the resolver for the createFlow field.
-func (r *mutationResolver) CreateFlow(ctx context.Context) (*gmodel.Flow, error) {
-	flow := models.Flow{
-		// TODO generate flow name based on the first message
-		Name: "New Flow",
+func (r *mutationResolver) CreateFlow(ctx context.Context, query string) (*gmodel.Flow, error) {
+	summary, err := services.GetMessageSummary(query, 10)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to get message summary: %w", err)
 	}
+
+	flow := models.Flow{
+		Name: summary,
+	}
+
 	tx := r.Db.Create(&flow)
 
 	if tx.Error != nil {
 		return nil, tx.Error
 	}
 
-	_, err := executor.SpawnContainer(executor.GenerateContainerName(flow.ID))
+	_, err = executor.SpawnContainer(executor.GenerateContainerName(flow.ID))
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to spawn container: %w", err)
 	}
 
+	task, err := r.CreateTask(ctx, flow.ID, query)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to create the inital task: %w", err)
+	}
+
 	return &gmodel.Flow{
 		ID:    flow.ID,
 		Name:  flow.Name,
-		Tasks: []*gmodel.Task{},
+		Tasks: []*gmodel.Task{task},
 	}, nil
 }
 

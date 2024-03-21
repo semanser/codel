@@ -1,7 +1,7 @@
 import { style } from "@vanilla-extract/css";
 
 export const wrapperStyles = style({
-  width: "250px",
+  width: "280px",
   display: "flex",
   flexDirection: "column",
   gap: 8,

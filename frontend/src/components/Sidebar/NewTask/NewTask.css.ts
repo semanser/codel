@@ -17,6 +17,13 @@ export const wrapperStyles = style([
     marginBottom: 16,
     borderRadius: 6,
 
+    selectors: {
+      "&.active": {
+        color: vars.color.primary9,
+        backgroundColor: vars.color.gray2,
+      },
+    },
+
     ":hover": {
       color: vars.color.primary9,
       backgroundColor: vars.color.gray2,

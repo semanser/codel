@@ -103,25 +103,26 @@ func Cleanup() error {
 
 func ExecCommand(container string, command string, dst io.Writer) (err error) {
 	// Create options for starting the exec process
-	c := fmt.Sprintf("\"%s\"", command)
-
 	cmd := []string{
 		"sh",
 		"-c",
-		c,
+		command,
 	}
 
 	createResp, err := dockerClient.ContainerExecCreate(context.Background(), container, types.ExecConfig{
 		Cmd:          cmd,
 		AttachStdout: true,
 		AttachStderr: true,
+		Tty:          true,
 	})
 	if err != nil {
 		return fmt.Errorf("Error creating exec process: %w", err)
 	}
 
 	// Attach to the exec process
-	resp, err := dockerClient.ContainerExecAttach(context.Background(), createResp.ID, types.ExecStartCheck{})
+	resp, err := dockerClient.ContainerExecAttach(context.Background(), createResp.ID, types.ExecStartCheck{
+		Tty: true,
+	})
 	if err != nil {
 		return fmt.Errorf("Error attaching to exec process: %w", err)
 	}
