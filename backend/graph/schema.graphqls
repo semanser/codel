@@ -43,6 +43,9 @@ type Mutation {
   createFlow: Flow!
   createTask(id: Uint!, query: String!): Task!
   stopTask(id: Uint!): Task!
+
+  # Use only for development purposes
+  _exec(containerId: String!, command: String!): String!
 }
 
 type Subscription {

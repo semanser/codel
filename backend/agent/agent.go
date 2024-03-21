@@ -182,6 +182,7 @@ func NextTask(args AgentPrompt) (*models.Task, error) {
 		}
 		command.Args = args
 		command.Message = string(params.Message)
+		command.Status = models.InProgress
 
 	case string(models.Browser):
 		params, err := extractArgs(tool.Function.Arguments, &BrowserArgs{})
