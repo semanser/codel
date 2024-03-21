@@ -17,7 +17,7 @@ var (
 	containers   []string
 )
 
-const imageName = "alpine"
+const imageName = "debian:bookworm"
 
 func InitDockerClient() error {
 	cli, err := client.NewClientWithOpts(client.FromEnv)
