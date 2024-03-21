@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"sync"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -67,6 +68,8 @@ func StopContainer(containerID string) error {
 }
 
 func DeleteContainer(containerID string) error {
+	log.Printf("Deleting container %s...\n", containerID)
+
 	if err := StopContainer(containerID); err != nil {
 		return err
 	}
@@ -81,11 +84,20 @@ func DeleteContainer(containerID string) error {
 func Cleanup() error {
 	log.Println("Cleaning up containers")
 
+	var wg sync.WaitGroup
+
 	for _, containerID := range containers {
-		if err := DeleteContainer(containerID); err != nil {
-			return err
-		}
+		wg.Add(1)
+		go func() {
+			if err := DeleteContainer(containerID); err != nil {
+				log.Printf("Error deleting container %s: %s\n", containerID, err)
+			}
+			wg.Done()
+		}()
 	}
+
+	wg.Wait()
+
 	return nil
 }
 
