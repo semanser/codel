@@ -29,9 +29,16 @@ export type Flow = {
 
 export type Mutation = {
   __typename?: 'Mutation';
+  _exec: Scalars['String']['output'];
   createFlow: Flow;
   createTask: Task;
   stopTask: Task;
+};
+
+
+export type Mutation_ExecArgs = {
+  command: Scalars['String']['input'];
+  containerId: Scalars['String']['input'];
 };
 
 
@@ -60,6 +67,11 @@ export type Subscription = {
   __typename?: 'Subscription';
   taskAdded: Task;
   taskUpdated: Task;
+};
+
+
+export type SubscriptionTaskAddedArgs = {
+  flowId: Scalars['Uint']['input'];
 };
 
 export type Task = {
@@ -159,6 +171,17 @@ export const CreateTaskDocument = gql`
 export function useCreateTaskMutation() {
   return Urql.useMutation<CreateTaskMutation, CreateTaskMutationVariables>(CreateTaskDocument);
 };
+export const TaskAddedDocument = gql`
+    subscription taskAdded($flowId: Uint!) {
+  taskAdded(flowId: $flowId) {
+    ...taskFragment
+  }
+}
+    ${TaskFragmentFragmentDoc}`;
+
+export function useTaskAddedSubscription<TData = TaskAddedSubscription>(options: Omit<Urql.UseSubscriptionArgs<TaskAddedSubscriptionVariables>, 'query'>, handler?: Urql.SubscriptionHandler<TaskAddedSubscription, TData>) {
+  return Urql.useSubscription<TaskAddedSubscription, TData, TaskAddedSubscriptionVariables>({ query: TaskAddedDocument, ...options }, handler);
+};
 export type FlowOverviewFragmentFragment = { __typename?: 'Flow', id: any, name: string };
 
 export type FlowsQueryVariables = Exact<{ [key: string]: never; }>;
@@ -189,6 +212,13 @@ export type CreateTaskMutationVariables = Exact<{
 
 
 export type CreateTaskMutation = { __typename?: 'Mutation', createTask: { __typename?: 'Task', id: any, type: TaskType, message: string, status: TaskStatus, args: any, results: any, createdAt: any } };
+
+export type TaskAddedSubscriptionVariables = Exact<{
+  flowId: Scalars['Uint']['input'];
+}>;
+
+
+export type TaskAddedSubscription = { __typename?: 'Subscription', taskAdded: { __typename?: 'Task', id: any, type: TaskType, message: string, status: TaskStatus, args: any, results: any, createdAt: any } };
 
 import { IntrospectionQuery } from 'graphql';
 export default {
@@ -254,6 +284,38 @@ export default {
         "kind": "OBJECT",
         "name": "Mutation",
         "fields": [
+          {
+            "name": "_exec",
+            "type": {
+              "kind": "NON_NULL",
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "Any"
+              }
+            },
+            "args": [
+              {
+                "name": "command",
+                "type": {
+                  "kind": "NON_NULL",
+                  "ofType": {
+                    "kind": "SCALAR",
+                    "name": "Any"
+                  }
+                }
+              },
+              {
+                "name": "containerId",
+                "type": {
+                  "kind": "NON_NULL",
+                  "ofType": {
+                    "kind": "SCALAR",
+                    "name": "Any"
+                  }
+                }
+              }
+            ]
+          },
           {
             "name": "createFlow",
             "type": {
@@ -387,7 +449,18 @@ export default {
                 "ofType": null
               }
             },
-            "args": []
+            "args": [
+              {
+                "name": "flowId",
+                "type": {
+                  "kind": "NON_NULL",
+                  "ofType": {
+                    "kind": "SCALAR",
+                    "name": "Any"
+                  }
+                }
+              }
+            ]
           },
           {
             "name": "taskUpdated",

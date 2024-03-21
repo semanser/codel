@@ -31,16 +31,8 @@ func ProcessQueue(db *gorm.DB) {
 
 			log.Printf("Processing command %d of type %s", task.ID, task.Type)
 
-			if task.Type == models.Ask {
-				err := processAsk(db, task)
-
-				if err != nil {
-					log.Printf("failed to process ask: %w", err)
-				}
-			}
-
 			if task.Type == models.Input {
-				nextTask, err := processInput(db, task)
+				nextTask, err := getNextTask(db, task.FlowID)
 
 				if err != nil {
 					log.Printf("failed to process input: %w", err)
@@ -49,11 +41,42 @@ func ProcessQueue(db *gorm.DB) {
 				AddCommand(*nextTask)
 			}
 
+			if task.Type == models.Ask {
+				err := processAskTask(db, task)
+
+				if err != nil {
+					log.Printf("failed to process ask: %w", err)
+				}
+			}
+
 			if task.Type == models.Terminal {
-				nextTask, err := processTerminal(db, task)
+				err := processTerminalTask(db, task)
 
 				if err != nil {
 					log.Printf("failed to process terminal: %w", err)
+				}
+				nextTask, err := getNextTask(db, task.FlowID)
+
+				if err != nil {
+					log.Printf("failed to get next task: %w", err)
+					continue
+				}
+
+				AddCommand(*nextTask)
+			}
+
+			if task.Type == models.Code {
+				err := processCodeTask(db, task)
+
+				if err != nil {
+					log.Printf("failed to process code: %w", err)
+				}
+
+				nextTask, err := getNextTask(db, task.FlowID)
+
+				if err != nil {
+					log.Printf("failed to get next task: %w", err)
+					continue
 				}
 
 				AddCommand(*nextTask)
@@ -62,7 +85,7 @@ func ProcessQueue(db *gorm.DB) {
 	}()
 }
 
-func processAsk(db *gorm.DB, task models.Task) error {
+func processAskTask(db *gorm.DB, task models.Task) error {
 	// TODO Send the subscription with the ask to the client
 	tx := db.Updates(models.Task{
 		ID:     task.ID,
@@ -76,45 +99,12 @@ func processAsk(db *gorm.DB, task models.Task) error {
 	return nil
 }
 
-func processInput(db *gorm.DB, task models.Task) (nextTask *models.Task, err error) {
-	flow := models.Flow{}
-	tx := db.First(&models.Flow{}, task.FlowID).Preload("Tasks").Find(&flow)
-
-	if tx.Error != nil {
-		return nil, fmt.Errorf("failed to find flow with id %d: %w", task.ID, tx.Error)
-	}
-
-	c, err := agent.NextTask(agent.AgentPrompt{
-		Tasks: flow.Tasks,
-	})
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to get next command: %w", err)
-	}
-
-	nextTask = &models.Task{
-		Args:    c.Args,
-		Message: c.Message,
-		Type:    c.Type,
-		Status:  models.Finished,
-		FlowID:  task.FlowID,
-	}
-
-	tx = db.Save(nextTask)
-
-	if tx.Error != nil {
-		return nil, fmt.Errorf("failed to save command: %w", tx.Error)
-	}
-
-	return nextTask, nil
-}
-
-func processTerminal(db *gorm.DB, task models.Task) (nextTask *models.Task, err error) {
+func processTerminalTask(db *gorm.DB, task models.Task) error {
 	flowId := fmt.Sprint(task.FlowID)
 	var args = agent.TerminalArgs{}
-	err = json.Unmarshal(task.Args, &args)
+	err := json.Unmarshal(task.Args, &args)
 	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal args: %v", err)
+		return fmt.Errorf("failed to unmarshal args: %v", err)
 	}
 
 	// Send the input to the websocket channel
@@ -126,7 +116,7 @@ func processTerminal(db *gorm.DB, task models.Task) (nextTask *models.Task, err 
 
 	conn, err := websocket.GetConnection(flowId)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get connection: %w", err)
+		return fmt.Errorf("failed to get connection: %w", err)
 	}
 
 	w, err := conn.NextWriter(gorillaWs.BinaryMessage)
@@ -136,16 +126,17 @@ func processTerminal(db *gorm.DB, task models.Task) (nextTask *models.Task, err 
 	multi := io.MultiWriter(w, result)
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to get writer: %w", err)
+		return fmt.Errorf("failed to get writer: %w", err)
 	}
 
 	err = ExecCommand(GenerateContainerName(task.FlowID), args.Input, multi)
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to execute command: %w", err)
+		return fmt.Errorf("failed to execute command: %w", err)
 	}
 
 	// Mark the current task as finished and save the output
+	log.Printf("Terminal output: %s", result.Bytes())
 	db.Updates(models.Task{
 		ID:      task.ID,
 		Results: result.Bytes(),
@@ -155,14 +146,50 @@ func processTerminal(db *gorm.DB, task models.Task) (nextTask *models.Task, err 
 	err = w.Close()
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to close writer: %w", err)
+		return fmt.Errorf("failed to close writer: %w", err)
 	}
 
+	return nil
+}
+
+func processCodeTask(db *gorm.DB, task models.Task) error {
+	var args = agent.CodeArgs{}
+	err := json.Unmarshal(task.Args, &args)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal args: %v", err)
+	}
+
+	var cmd = ""
+	var r = bytes.Buffer{}
+
+	if args.Action == agent.ReadFile {
+		cmd = fmt.Sprintf("cat %s", args.Path)
+	}
+
+	if args.Action == agent.UpdateFile {
+		cmd = fmt.Sprintf("echo %s > %s", args.Content, args.Path)
+	}
+
+	err = ExecCommand(GenerateContainerName(task.FlowID), cmd, &r)
+
+	if err != nil {
+		return fmt.Errorf("failed to execute command: %w", err)
+	}
+
+	db.Updates(models.Task{
+		ID:      task.ID,
+		Results: r.Bytes(),
+	})
+
+	return nil
+}
+
+func getNextTask(db *gorm.DB, flowId uint) (*models.Task, error) {
 	flow := models.Flow{}
-	tx := db.First(&models.Flow{}, task.FlowID).Preload("Tasks").Find(&flow)
+	tx := db.First(&models.Flow{}, flowId).Preload("Tasks").Find(&flow)
 
 	if tx.Error != nil {
-		return nil, fmt.Errorf("failed to find flow with id %d: %w", task.ID, tx.Error)
+		return nil, fmt.Errorf("failed to find flow with id %d: %w", flowId, tx.Error)
 	}
 
 	c, err := agent.NextTask(agent.AgentPrompt{
@@ -173,12 +200,12 @@ func processTerminal(db *gorm.DB, task models.Task) (nextTask *models.Task, err 
 		return nil, fmt.Errorf("failed to get next command: %w", err)
 	}
 
-	nextTask = &models.Task{
+	nextTask := &models.Task{
 		Args:    c.Args,
 		Message: c.Message,
 		Type:    c.Type,
 		Status:  models.InProgress,
-		FlowID:  task.FlowID,
+		FlowID:  flowId,
 	}
 
 	tx = db.Save(nextTask)

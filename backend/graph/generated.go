@@ -69,7 +69,7 @@ type ComplexityRoot struct {
 	}
 
 	Subscription struct {
-		TaskAdded   func(childComplexity int) int
+		TaskAdded   func(childComplexity int, flowID uint) int
 		TaskUpdated func(childComplexity int) int
 	}
 
@@ -95,7 +95,7 @@ type QueryResolver interface {
 	Flow(ctx context.Context, id uint) (*gmodel.Flow, error)
 }
 type SubscriptionResolver interface {
-	TaskAdded(ctx context.Context) (<-chan *gmodel.Task, error)
+	TaskAdded(ctx context.Context, flowID uint) (<-chan *gmodel.Task, error)
 	TaskUpdated(ctx context.Context) (<-chan *gmodel.Task, error)
 }
 
@@ -206,7 +206,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			break
 		}
 
-		return e.complexity.Subscription.TaskAdded(childComplexity), true
+		args, err := ec.field_Subscription_taskAdded_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Subscription.TaskAdded(childComplexity, args["flowId"].(uint)), true
 
 	case "Subscription.taskUpdated":
 		if e.complexity.Subscription.TaskUpdated == nil {
@@ -494,6 +499,21 @@ func (ec *executionContext) field_Query_flow_args(ctx context.Context, rawArgs m
 		}
 	}
 	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Subscription_taskAdded_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 uint
+	if tmp, ok := rawArgs["flowId"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("flowId"))
+		arg0, err = ec.unmarshalNUint2uint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["flowId"] = arg0
 	return args, nil
 }
 
@@ -1190,7 +1210,7 @@ func (ec *executionContext) _Subscription_taskAdded(ctx context.Context, field g
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Subscription().TaskAdded(rctx)
+		return ec.resolvers.Subscription().TaskAdded(rctx, fc.Args["flowId"].(uint))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1246,6 +1266,17 @@ func (ec *executionContext) fieldContext_Subscription_taskAdded(ctx context.Cont
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Task", field.Name)
 		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Subscription_taskAdded_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }

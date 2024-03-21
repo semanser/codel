@@ -14,6 +14,7 @@ import {
   useCreateFlowMutation,
   useCreateTaskMutation,
   useFlowQuery,
+  useTaskAddedSubscription,
 } from "@/generated/graphql";
 
 import { wrapperStyles } from "./ChatPage.css";
@@ -23,8 +24,10 @@ export const ChatPage = () => {
   const { id } = useParams<{ id: string }>();
   const [, createFlowMutation] = useCreateFlowMutation();
   const [, createTaskMutation] = useCreateTaskMutation();
+  const shouldPause = !id && id !== "new";
+
   const [{ data }] = useFlowQuery({
-    pause: !id && id !== "new",
+    pause: shouldPause,
     variables: { id: id },
   });
 
@@ -32,6 +35,11 @@ export const ChatPage = () => {
 
   const tasks = id && !isNew ? data?.flow.tasks ?? [] : [];
   const name = id && !isNew ? data?.flow.name ?? "" : "";
+
+  useTaskAddedSubscription({
+    variables: { flowId: id },
+    pause: shouldPause,
+  });
 
   const handleSubmit = async (message: string) => {
     if (isNew) {

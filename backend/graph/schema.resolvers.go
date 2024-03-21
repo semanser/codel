@@ -13,6 +13,7 @@ import (
 
 	"github.com/semanser/ai-coder/executor"
 	gmodel "github.com/semanser/ai-coder/graph/model"
+	"github.com/semanser/ai-coder/graph/subscriptions"
 	"github.com/semanser/ai-coder/models"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
@@ -176,8 +177,8 @@ func (r *queryResolver) Flow(ctx context.Context, id uint) (*gmodel.Flow, error)
 }
 
 // TaskAdded is the resolver for the taskAdded field.
-func (r *subscriptionResolver) TaskAdded(ctx context.Context) (<-chan *gmodel.Task, error) {
-	panic(fmt.Errorf("not implemented: TaskAdded - taskAdded"))
+func (r *subscriptionResolver) TaskAdded(ctx context.Context, flowID uint) (<-chan *gmodel.Task, error) {
+	return subscriptions.TaskAdded(ctx, flowID)
 }
 
 // TaskUpdated is the resolver for the taskUpdated field.

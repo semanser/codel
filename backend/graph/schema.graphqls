@@ -49,6 +49,6 @@ type Mutation {
 }
 
 type Subscription {
-  taskAdded: Task!
+  taskAdded(flowId: Uint!): Task!
   taskUpdated: Task!
 }
