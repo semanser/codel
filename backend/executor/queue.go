@@ -227,7 +227,9 @@ func getNextTask(db *gorm.DB, flowId uint) (*models.Task, error) {
 
 	for _, task := range flow.Tasks {
 		// Limit the number of result characters since some output commands can have a lot of output
-		task.Results = task.Results[2000:]
+		if len(task.Results) > 2000 {
+			task.Results = task.Results[1999:]
+		}
 	}
 
 	c, err := agent.NextTask(agent.AgentPrompt{
