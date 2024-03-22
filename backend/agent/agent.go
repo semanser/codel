@@ -71,7 +71,8 @@ func NextTask(args AgentPrompt) (*models.Task, error) {
 
 	prompt, err := templates.Render(assets.PromptTemplates, "prompts/agent.tmpl", args)
 
-	if len(args.Tasks) > 30000 {
+	// TODO In case of lots of tasks, we should try to get a summary using gpt-3.5
+	if len(prompt) > 30000 {
 		return nil, fmt.Errorf("too big prompt")
 	}
 
@@ -124,7 +125,7 @@ func NextTask(args AgentPrompt) (*models.Task, error) {
 
 	req := openai.ChatCompletionRequest{
 		Temperature: 0.0,
-		Model:       openai.GPT4Turbo0125,
+		Model:       openai.GPT3Dot5Turbo,
 		Messages: []openai.ChatCompletionMessage{
 			{
 				Role:    openai.ChatMessageRoleSystem,

@@ -33,15 +33,19 @@ func ProcessQueue(db *gorm.DB) {
 
 			log.Printf("Processing command %d of type %s", task.ID, task.Type)
 
-			subscriptions.BroadcastTaskAdded(task.FlowID, &gmodel.Task{
-				ID:        task.ID,
-				Message:   task.Message,
-				Type:      gmodel.TaskType(task.Type),
-				CreatedAt: task.CreatedAt,
-				Status:    gmodel.TaskStatus(task.Status),
-				Args:      task.Args.String(),
-				Results:   task.Results,
-			})
+			// Input tasks are added by the user optimistically on the client
+			// so they should not be broadcasted back to the client
+			if task.Type != models.Input {
+				subscriptions.BroadcastTaskAdded(task.FlowID, &gmodel.Task{
+					ID:        task.ID,
+					Message:   task.Message,
+					Type:      gmodel.TaskType(task.Type),
+					CreatedAt: task.CreatedAt,
+					Status:    gmodel.TaskStatus(task.Status),
+					Args:      task.Args.String(),
+					Results:   task.Results,
+				})
+			}
 
 			if task.Type == models.Input {
 				nextTask, err := getNextTask(db, task.FlowID)
@@ -206,11 +210,11 @@ func getNextTask(db *gorm.DB, flowId uint) (*models.Task, error) {
 	}
 
 	const maxResultsLength = 4000
-	for _, task := range flow.Tasks {
+	for i, task := range flow.Tasks {
 		// Limit the number of result characters since some output commands can have a lot of output
 		if len(task.Results) > maxResultsLength {
 			// Get the last N symbols from the output
-			task.Results = task.Results[len(task.Results)-maxResultsLength:]
+			flow.Tasks[i].Results = flow.Tasks[i].Results[len(flow.Tasks[i].Results)-maxResultsLength:]
 		}
 	}
 

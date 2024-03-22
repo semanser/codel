@@ -197,7 +197,9 @@ func (r *queryResolver) Flows(ctx context.Context) ([]*gmodel.Flow, error) {
 func (r *queryResolver) Flow(ctx context.Context, id uint) (*gmodel.Flow, error) {
 	flow := models.Flow{}
 
-	tx := r.Db.First(&models.Flow{}, id).Preload("Tasks").Find(&flow)
+  tx := r.Db.First(&models.Flow{}, id).Preload("Tasks", func(db *gorm.DB) *gorm.DB {
+    return db.Order("tasks.created_at ASC")
+  }).Find(&flow)
 
 	if tx.Error != nil {
 		return nil, fmt.Errorf("failed to fetch flows: %w", tx.Error)
