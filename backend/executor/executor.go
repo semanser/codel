@@ -17,8 +17,6 @@ var (
 	containers   []string
 )
 
-const imageName = "debian:bookworm"
-
 func InitDockerClient() error {
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
@@ -36,22 +34,52 @@ func InitDockerClient() error {
 	return nil
 }
 
-func SpawnContainer(name string) (containerID string, err error) {
-	log.Printf("Spawning container %s\n", name)
+func SpawnContainer(name string, dockerImage string) (containerID string, err error) {
+	log.Printf("Spawning container %s \"%s\"\n", dockerImage, name)
 
+	images, err := dockerClient.ImageList(context.Background(), types.ImageListOptions{})
+
+	if err != nil {
+		return "", fmt.Errorf("Error listing images: %w", err)
+	}
+
+	imageFound := false
+
+	log.Printf("Checking if image %s exists...\n", dockerImage)
+	for _, image := range images {
+		for _, tag := range image.RepoTags {
+			if tag == dockerImage {
+				imageFound = true
+			}
+		}
+	}
+
+	log.Printf("Image %s found: %t\n", dockerImage, imageFound)
+
+	if !imageFound {
+		log.Printf("Pulling image %s...\n", dockerImage)
+		_, err = dockerClient.ImagePull(context.Background(), dockerImage, types.ImagePullOptions{})
+
+		if err != nil {
+			return "", fmt.Errorf("Error pulling image: %w", err)
+		}
+	}
+
+	log.Printf("Creating container %s...\n", name)
 	resp, err := dockerClient.ContainerCreate(context.Background(), &container.Config{
-		Image: imageName,
+		Image: dockerImage,
 		Cmd:   []string{"tail", "-f", "/dev/null"},
 	}, nil, nil, nil, name)
 
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("Error creating container: %w", err)
 	}
+
 	log.Printf("Container %s created\n", name)
 
 	containerID = resp.ID
 	if err := dockerClient.ContainerStart(context.Background(), containerID, container.StartOptions{}); err != nil {
-		return "", err
+		return "", fmt.Errorf("Error starting container: %w", err)
 	}
 	log.Printf("Container %s started\n", name)
 

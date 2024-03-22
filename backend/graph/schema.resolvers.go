@@ -28,8 +28,15 @@ func (r *mutationResolver) CreateFlow(ctx context.Context, query string) (*gmode
 		return nil, fmt.Errorf("failed to get message summary: %w", err)
 	}
 
+	dockerImage, err := services.GetDockerImageName(query)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to get docker image name: %w", err)
+	}
+
 	flow := models.Flow{
-		Name: summary,
+		Name:        summary,
+		DockerImage: dockerImage,
 	}
 
 	tx := r.Db.Create(&flow)
@@ -38,7 +45,7 @@ func (r *mutationResolver) CreateFlow(ctx context.Context, query string) (*gmode
 		return nil, tx.Error
 	}
 
-	_, err = executor.SpawnContainer(executor.GenerateContainerName(flow.ID))
+	_, err = executor.SpawnContainer(executor.GenerateContainerName(flow.ID), dockerImage)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to spawn container: %w", err)

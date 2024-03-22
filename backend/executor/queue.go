@@ -33,6 +33,16 @@ func ProcessQueue(db *gorm.DB) {
 
 			log.Printf("Processing command %d of type %s", task.ID, task.Type)
 
+			subscriptions.BroadcastTaskAdded(task.FlowID, &gmodel.Task{
+				ID:        task.ID,
+				Message:   task.Message,
+				Type:      gmodel.TaskType(task.Type),
+				CreatedAt: task.CreatedAt,
+				Status:    gmodel.TaskStatus(task.Status),
+				Args:      task.Args.String(),
+				Results:   task.Results,
+			})
+
 			if task.Type == models.Input {
 				nextTask, err := getNextTask(db, task.FlowID)
 
@@ -46,16 +56,6 @@ func ProcessQueue(db *gorm.DB) {
 
 			if task.Type == models.Ask {
 				err := processAskTask(db, task)
-
-				subscriptions.BroadcastTaskAdded(task.FlowID, &gmodel.Task{
-					ID:        task.ID,
-					Message:   task.Message,
-					Type:      gmodel.TaskType(task.Type),
-					CreatedAt: task.CreatedAt,
-					Status:    gmodel.TaskStatus(task.Status),
-					Args:      task.Args.String(),
-					Results:   task.Results,
-				})
 
 				if err != nil {
 					log.Printf("failed to process ask: %w", err)
@@ -77,16 +77,6 @@ func ProcessQueue(db *gorm.DB) {
 					continue
 				}
 
-				subscriptions.BroadcastTaskAdded(task.FlowID, &gmodel.Task{
-					ID:        nextTask.ID,
-					Message:   nextTask.Message,
-					Type:      gmodel.TaskType(nextTask.Type),
-					CreatedAt: nextTask.CreatedAt,
-					Status:    gmodel.TaskStatus(nextTask.Status),
-					Args:      nextTask.Args.String(),
-					Results:   nextTask.Results,
-				})
-
 				AddCommand(*nextTask)
 			}
 
@@ -104,16 +94,6 @@ func ProcessQueue(db *gorm.DB) {
 					log.Printf("failed to get next task: %w", err)
 					continue
 				}
-
-				subscriptions.BroadcastTaskAdded(task.FlowID, &gmodel.Task{
-					ID:        nextTask.ID,
-					Message:   nextTask.Message,
-					Type:      gmodel.TaskType(nextTask.Type),
-					CreatedAt: nextTask.CreatedAt,
-					Status:    gmodel.TaskStatus(nextTask.Status),
-					Args:      nextTask.Args.String(),
-					Results:   nextTask.Results,
-				})
 
 				AddCommand(*nextTask)
 			}
@@ -225,15 +205,18 @@ func getNextTask(db *gorm.DB, flowId uint) (*models.Task, error) {
 		return nil, fmt.Errorf("failed to find flow with id %d: %w", flowId, tx.Error)
 	}
 
+	const maxResultsLength = 4000
 	for _, task := range flow.Tasks {
 		// Limit the number of result characters since some output commands can have a lot of output
-		if len(task.Results) > 2000 {
-			task.Results = task.Results[1999:]
+		if len(task.Results) > maxResultsLength {
+			// Get the last N symbols from the output
+			task.Results = task.Results[len(task.Results)-maxResultsLength:]
 		}
 	}
 
 	c, err := agent.NextTask(agent.AgentPrompt{
-		Tasks: flow.Tasks,
+		Tasks:       flow.Tasks,
+		DockerImage: flow.DockerImage,
 	})
 
 	if err != nil {

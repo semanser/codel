@@ -2,12 +2,14 @@ package router
 
 import (
 	"context"
+	"log"
 	"net/http"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
+	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/handler/extension"
 	"github.com/99designs/gqlgen/graphql/handler/lru"
@@ -48,6 +50,21 @@ func graphqlHandler(db *gorm.DB) gin.HandlerFunc {
 	h := handler.New(graph.NewExecutableSchema(graph.Config{Resolvers: &graph.Resolver{
 		Db: db,
 	}}))
+
+	h.AroundResponses(func(ctx context.Context, next graphql.ResponseHandler) *graphql.Response {
+		res := next(ctx)
+		if res == nil {
+			return res
+		}
+
+		err := res.Errors.Error()
+
+		if err != "" {
+			log.Printf("graphql error: %s", err)
+		}
+
+		return res
+	})
 
 	// We can't use the default error handler because it doesn't work with websockets
 	// https://stackoverflow.com/a/75444816

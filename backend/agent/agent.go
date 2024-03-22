@@ -61,7 +61,8 @@ type DoneArgs struct {
 }
 
 type AgentPrompt struct {
-	Tasks []models.Task
+	Tasks       []models.Task
+	DockerImage string
 }
 
 func NextTask(args AgentPrompt) (*models.Task, error) {
@@ -90,7 +91,7 @@ func NextTask(args AgentPrompt) (*models.Task, error) {
 			Type: openai.ToolTypeFunction,
 			Function: &openai.FunctionDefinition{
 				Name:        string(models.Browser),
-				Description: "Opens a browser to loop for additional information",
+				Description: "Opens a browser to look for additional information",
 				Parameters:  jsonschema.Reflect(&BrowserArgs{}).Definitions["BrowserArgs"],
 			},
 		},
@@ -98,7 +99,7 @@ func NextTask(args AgentPrompt) (*models.Task, error) {
 			Type: openai.ToolTypeFunction,
 			Function: &openai.FunctionDefinition{
 				Name:        string(models.Code),
-				Description: "Modifies or retrieves code files",
+				Description: "Modifies or reads code files",
 				Parameters:  jsonschema.Reflect(&CodeArgs{}).Definitions["CodeArgs"],
 			},
 		},
@@ -122,7 +123,7 @@ func NextTask(args AgentPrompt) (*models.Task, error) {
 
 	req := openai.ChatCompletionRequest{
 		Temperature: 0.0,
-		Model:       openai.GPT4Turbo0125,
+		Model:       openai.GPT3Dot5Turbo,
 		Messages: []openai.ChatCompletionMessage{
 			{
 				Role:    openai.ChatMessageRoleSystem,
