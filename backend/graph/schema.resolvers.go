@@ -23,8 +23,13 @@ import (
 
 // CreateFlow is the resolver for the createFlow field.
 func (r *mutationResolver) CreateFlow(ctx context.Context, query string) (*gmodel.Flow, error) {
+	truncatedQuery := query
+	if len(query) > 15 {
+		truncatedQuery = query[:15]
+	}
+
 	flow := models.Flow{
-		Name:        query[:10],
+		Name:        truncatedQuery,
 		DockerImage: "",
 	}
 

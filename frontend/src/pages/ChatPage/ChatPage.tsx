@@ -27,30 +27,31 @@ export const ChatPage = () => {
   const { id } = useParams<{ id: string }>();
   const [, createFlowMutation] = useCreateFlowMutation();
   const [, createTaskMutation] = useCreateTaskMutation();
-  const shouldPause = !id || id === "new";
+  const isNewFlow = !id || id === "new";
 
-  const [{ data }] = useFlowQuery({
-    pause: shouldPause,
-    variables: { id: id },
+  const [{ operation, data }] = useFlowQuery({
+    pause: isNewFlow,
+    variables: { id },
   });
 
-  const isNew = id === "new";
+  // https://github.com/urql-graphql/urql/issues/2507#issuecomment-1159281108
+  const isStaleData = operation?.variables.id !== id;
 
-  const tasks = id && !isNew ? data?.flow.tasks ?? [] : [];
-  const name = id && !isNew ? data?.flow.name ?? "" : "";
+  const tasks = !isStaleData ? data?.flow.tasks ?? [] : [];
+  const name = !isStaleData ? data?.flow.name ?? "" : "";
 
   useTaskAddedSubscription({
     variables: { flowId: Number(id) },
-    pause: shouldPause,
+    pause: isNewFlow,
   });
 
   useFlowUpdatedSubscription({
     variables: { flowId: Number(id) },
-    pause: shouldPause,
+    pause: isNewFlow,
   });
 
   const handleSubmit = async (message: string) => {
-    if (isNew) {
+    if (isNewFlow) {
       const result = await createFlowMutation({
         query: message,
       });
@@ -96,7 +97,7 @@ export const ChatPage = () => {
             </Tabs.Trigger>
           </Tabs.List>
           <Tabs.Content className={tabsContentStyles} value="terminal">
-            <Terminal id={isNew ? "" : id} />
+            <Terminal id={isNewFlow ? "" : id} />
           </Tabs.Content>
           <Tabs.Content className={tabsContentStyles} value="browser">
             browser

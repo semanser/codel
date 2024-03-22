@@ -22,6 +22,10 @@ export const cache = cacheExchange({
         const tasks = cache.resolve(flowEntityKey, "tasks");
 
         if (Array.isArray(tasks)) {
+          // Check if task already exists
+          const taskExists = tasks.some((task) => task.id === (result.createTask as Data).id);
+          if (taskExists) return;
+
           tasks.push(result.createTask as Data);
           cache.link(flowEntityKey, "tasks", tasks as Data[]);
         }
