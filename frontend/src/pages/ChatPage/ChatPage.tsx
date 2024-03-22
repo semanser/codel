@@ -1,9 +1,9 @@
 import * as Tabs from "@radix-ui/react-tabs";
 import { useNavigate, useParams } from "react-router-dom";
 
+import dockerSvg from "@/assets/docker.svg";
 import { Messages } from "@/components/Messages/Messages";
 import { Panel } from "@/components/Panel/Panel";
-import dockerSvg from "@/assets/docker.svg";
 import {
   tabsContentStyles,
   tabsListStyles,
@@ -68,7 +68,7 @@ export const ChatPage = () => {
     }
   };
 
-  const containerName = data?.flow?.containerName;
+  const containerName = !isNewFlow && data?.flow?.containerName;
 
   return (
     <div className={wrapperStyles}>
@@ -80,10 +80,12 @@ export const ChatPage = () => {
           <Tabs.List className={tabsListStyles}>
             <Tabs.Trigger className={tabsTriggerStyles} value="terminal">
               Terminal
-              {containerName && (<div className={tabsPillStyles}>
-                <img src={dockerSvg} alt="Docker" width="14" height="14" />
-                {containerName}
-              </div>)}
+              {containerName && (
+                <div className={tabsPillStyles}>
+                  <img src={dockerSvg} alt="Docker" width="14" height="14" />
+                  {containerName}
+                </div>
+              )}
             </Tabs.Trigger>
             <Tabs.Trigger
               className={tabsTriggerStyles}

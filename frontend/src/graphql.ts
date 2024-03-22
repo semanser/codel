@@ -23,7 +23,9 @@ export const cache = cacheExchange({
 
         if (Array.isArray(tasks)) {
           // Check if task already exists
-          const taskExists = tasks.some((task) => task.id === (result.createTask as Data).id);
+          const taskExists = tasks.some(
+            (task) => task.id === (result.createTask as Data).id,
+          );
           if (taskExists) return;
 
           tasks.push(result.createTask as Data);

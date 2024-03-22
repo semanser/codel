@@ -58,15 +58,18 @@ export const tabsContentStyles = style({
   paddingTop: 24,
 });
 
-export const tabsPillStyles = style([font.textXsSemibold, {
-  backgroundColor: vars.color.gray6,
-  color: vars.color.gray12,
-  padding: "1px 6px",
-  borderRadius: 8,
-  display: "flex",
-  alignItems: "center",
-  gap: 4,
-}])
+export const tabsPillStyles = style([
+  font.textXsSemibold,
+  {
+    backgroundColor: vars.color.gray6,
+    color: vars.color.gray12,
+    padding: "1px 6px",
+    borderRadius: 8,
+    display: "flex",
+    alignItems: "center",
+    gap: 4,
+  },
+]);
 
 globalStyle(`${tabsPillStyles} svg`, {
   width: 14,

@@ -219,9 +219,10 @@ func (r *queryResolver) Flow(ctx context.Context, id uint) (*gmodel.Flow, error)
 	}
 
 	gFlow = &gmodel.Flow{
-		ID:    flow.ID,
-		Name:  flow.Name,
-		Tasks: gTasks,
+		ID:            flow.ID,
+		Name:          flow.Name,
+		Tasks:         gTasks,
+		ContainerName: flow.DockerImage,
 	}
 
 	return gFlow, nil
