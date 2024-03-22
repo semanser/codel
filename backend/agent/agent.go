@@ -68,6 +68,11 @@ func NextTask(args AgentPrompt) (*models.Task, error) {
 	log.Println("Getting next command")
 
 	prompt, err := templates.Render(assets.PromptTemplates, "prompts/agent.tmpl", args)
+
+	if len(args.Tasks) > 30000 {
+		return nil, fmt.Errorf("too big prompt")
+	}
+
 	if err != nil {
 		return nil, err
 	}
