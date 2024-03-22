@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/go-rod/rod"
 	"gorm.io/gorm"
 
 	"github.com/99designs/gqlgen/graphql"
@@ -41,7 +42,32 @@ func New(db *gorm.DB) *gin.Engine {
 	// WebSocket endpoint for Docker daemon
 	r.GET("/terminal/:id", wsHandler())
 
+	r.Any("/stream", streamHandler())
+
 	return r
+}
+
+func streamHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Upgrade HTTP connection to WebSocket
+		conn, err := gorillaWs.Upgrade(c.Writer, c.Request, nil, 1024, 1024)
+		defer conn.Close()
+		if err != nil {
+			c.AbortWithError(400, err)
+			return
+		}
+
+		page := rod.New().MustConnect().MustPage("https://www.wikipedia.org/")
+
+		// Stream screenshot data in chunks
+		screenshot, err := page.MustWaitStable().Screenshot(false, nil)
+
+		if err != nil {
+			log.Fatal("Error taking screenshot:", err)
+		}
+
+		conn.WriteMessage(gorillaWs.BinaryMessage, screenshot)
+	}
 }
 
 func graphqlHandler(db *gorm.DB) gin.HandlerFunc {

@@ -2,6 +2,7 @@ import * as Tabs from "@radix-ui/react-tabs";
 import { useNavigate, useParams } from "react-router-dom";
 
 import dockerSvg from "@/assets/docker.svg";
+import { Browser } from "@/components/Browser/Browser";
 import { Messages } from "@/components/Messages/Messages";
 import { Panel } from "@/components/Panel/Panel";
 import {
@@ -87,12 +88,8 @@ export const ChatPage = () => {
                 </div>
               )}
             </Tabs.Trigger>
-            <Tabs.Trigger
-              className={tabsTriggerStyles}
-              value="browser"
-              disabled
-            >
-              Browser (Soon)
+            <Tabs.Trigger className={tabsTriggerStyles} value="browser">
+              Browser
             </Tabs.Trigger>
             <Tabs.Trigger className={tabsTriggerStyles} value="code" disabled>
               Code (Soon)
@@ -102,7 +99,7 @@ export const ChatPage = () => {
             <Terminal id={isNewFlow ? "" : id} />
           </Tabs.Content>
           <Tabs.Content className={tabsContentStyles} value="browser">
-            browser
+            <Browser />
           </Tabs.Content>
           <Tabs.Content className={tabsContentStyles} value="code">
             code
