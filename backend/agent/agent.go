@@ -177,7 +177,14 @@ func NextTask(args AgentPrompt) (*models.Task, error) {
 			return nil, fmt.Errorf("failed to marshal terminal args: %v", err)
 		}
 		command.Args = args
-		command.Message = string(params.Message)
+
+		// Sometimes the model returns an empty string for the message
+		msg := string(params.Message)
+		if msg != "" {
+			msg = params.Input
+		}
+
+		command.Message = msg
 		command.Status = models.InProgress
 
 	case string(models.Browser):
