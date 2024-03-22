@@ -3,9 +3,11 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import { Messages } from "@/components/Messages/Messages";
 import { Panel } from "@/components/Panel/Panel";
+import dockerSvg from "@/assets/docker.svg";
 import {
   tabsContentStyles,
   tabsListStyles,
+  tabsPillStyles,
   tabsRootStyles,
   tabsTriggerStyles,
 } from "@/components/Tabs/Tabs.css";
@@ -14,6 +16,7 @@ import {
   useCreateFlowMutation,
   useCreateTaskMutation,
   useFlowQuery,
+  useFlowUpdatedSubscription,
   useTaskAddedSubscription,
 } from "@/generated/graphql";
 
@@ -41,6 +44,11 @@ export const ChatPage = () => {
     pause: shouldPause,
   });
 
+  useFlowUpdatedSubscription({
+    variables: { flowId: Number(id) },
+    pause: shouldPause,
+  });
+
   const handleSubmit = async (message: string) => {
     if (isNew) {
       const result = await createFlowMutation({
@@ -59,6 +67,8 @@ export const ChatPage = () => {
     }
   };
 
+  const containerName = data?.flow?.containerName;
+
   return (
     <div className={wrapperStyles}>
       <Panel>
@@ -69,6 +79,10 @@ export const ChatPage = () => {
           <Tabs.List className={tabsListStyles}>
             <Tabs.Trigger className={tabsTriggerStyles} value="terminal">
               Terminal
+              {containerName && (<div className={tabsPillStyles}>
+                <img src={dockerSvg} alt="Docker" width="14" height="14" />
+                {containerName}
+              </div>)}
             </Tabs.Trigger>
             <Tabs.Trigger
               className={tabsTriggerStyles}

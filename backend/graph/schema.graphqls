@@ -32,6 +32,7 @@ type Flow {
   id: Uint!
   name: String!
   tasks: [Task!]!
+  containerName: String!
 }
 
 type Query {
@@ -51,4 +52,5 @@ type Mutation {
 type Subscription {
   taskAdded(flowId: Uint!): Task!
   taskUpdated: Task!
+  flowUpdated(flowId: Uint!): Flow!
 }

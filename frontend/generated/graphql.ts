@@ -22,6 +22,7 @@ export type Scalars = {
 
 export type Flow = {
   __typename?: 'Flow';
+  containerName: Scalars['String']['output'];
   id: Scalars['Uint']['output'];
   name: Scalars['String']['output'];
   tasks: Array<Task>;
@@ -70,8 +71,14 @@ export type QueryFlowArgs = {
 
 export type Subscription = {
   __typename?: 'Subscription';
+  flowUpdated: Flow;
   taskAdded: Task;
   taskUpdated: Task;
+};
+
+
+export type SubscriptionFlowUpdatedArgs = {
+  flowId: Scalars['Uint']['input'];
 };
 
 
@@ -110,6 +117,7 @@ export const FlowOverviewFragmentFragmentDoc = gql`
     fragment flowOverviewFragment on Flow {
   id
   name
+  containerName
 }
     `;
 export const TaskFragmentFragmentDoc = gql`
@@ -127,6 +135,7 @@ export const FlowFragmentFragmentDoc = gql`
     fragment flowFragment on Flow {
   id
   name
+  containerName
   tasks {
     ...taskFragment
   }
@@ -190,23 +199,36 @@ export const TaskAddedDocument = gql`
 export function useTaskAddedSubscription<TData = TaskAddedSubscription>(options: Omit<Urql.UseSubscriptionArgs<TaskAddedSubscriptionVariables>, 'query'>, handler?: Urql.SubscriptionHandler<TaskAddedSubscription, TData>) {
   return Urql.useSubscription<TaskAddedSubscription, TData, TaskAddedSubscriptionVariables>({ query: TaskAddedDocument, ...options }, handler);
 };
-export type FlowOverviewFragmentFragment = { __typename?: 'Flow', id: any, name: string };
+export const FlowUpdatedDocument = gql`
+    subscription flowUpdated($flowId: Uint!) {
+  flowUpdated(flowId: $flowId) {
+    id
+    name
+    containerName
+  }
+}
+    `;
+
+export function useFlowUpdatedSubscription<TData = FlowUpdatedSubscription>(options: Omit<Urql.UseSubscriptionArgs<FlowUpdatedSubscriptionVariables>, 'query'>, handler?: Urql.SubscriptionHandler<FlowUpdatedSubscription, TData>) {
+  return Urql.useSubscription<FlowUpdatedSubscription, TData, FlowUpdatedSubscriptionVariables>({ query: FlowUpdatedDocument, ...options }, handler);
+};
+export type FlowOverviewFragmentFragment = { __typename?: 'Flow', id: any, name: string, containerName: string };
 
 export type FlowsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type FlowsQuery = { __typename?: 'Query', flows: Array<{ __typename?: 'Flow', id: any, name: string }> };
+export type FlowsQuery = { __typename?: 'Query', flows: Array<{ __typename?: 'Flow', id: any, name: string, containerName: string }> };
 
 export type TaskFragmentFragment = { __typename?: 'Task', id: any, type: TaskType, message: string, status: TaskStatus, args: any, results: any, createdAt: any };
 
-export type FlowFragmentFragment = { __typename?: 'Flow', id: any, name: string, tasks: Array<{ __typename?: 'Task', id: any, type: TaskType, message: string, status: TaskStatus, args: any, results: any, createdAt: any }> };
+export type FlowFragmentFragment = { __typename?: 'Flow', id: any, name: string, containerName: string, tasks: Array<{ __typename?: 'Task', id: any, type: TaskType, message: string, status: TaskStatus, args: any, results: any, createdAt: any }> };
 
 export type FlowQueryVariables = Exact<{
   id: Scalars['Uint']['input'];
 }>;
 
 
-export type FlowQuery = { __typename?: 'Query', flow: { __typename?: 'Flow', id: any, name: string, tasks: Array<{ __typename?: 'Task', id: any, type: TaskType, message: string, status: TaskStatus, args: any, results: any, createdAt: any }> } };
+export type FlowQuery = { __typename?: 'Query', flow: { __typename?: 'Flow', id: any, name: string, containerName: string, tasks: Array<{ __typename?: 'Task', id: any, type: TaskType, message: string, status: TaskStatus, args: any, results: any, createdAt: any }> } };
 
 export type CreateFlowMutationVariables = Exact<{
   query: Scalars['String']['input'];
@@ -230,6 +252,13 @@ export type TaskAddedSubscriptionVariables = Exact<{
 
 export type TaskAddedSubscription = { __typename?: 'Subscription', taskAdded: { __typename?: 'Task', id: any, type: TaskType, message: string, status: TaskStatus, args: any, results: any, createdAt: any } };
 
+export type FlowUpdatedSubscriptionVariables = Exact<{
+  flowId: Scalars['Uint']['input'];
+}>;
+
+
+export type FlowUpdatedSubscription = { __typename?: 'Subscription', flowUpdated: { __typename?: 'Flow', id: any, name: string, containerName: string } };
+
 import { IntrospectionQuery } from 'graphql';
 export default {
   "__schema": {
@@ -247,6 +276,17 @@ export default {
         "kind": "OBJECT",
         "name": "Flow",
         "fields": [
+          {
+            "name": "containerName",
+            "type": {
+              "kind": "NON_NULL",
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "Any"
+              }
+            },
+            "args": []
+          },
           {
             "name": "id",
             "type": {
@@ -460,6 +500,29 @@ export default {
         "kind": "OBJECT",
         "name": "Subscription",
         "fields": [
+          {
+            "name": "flowUpdated",
+            "type": {
+              "kind": "NON_NULL",
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "Flow",
+                "ofType": null
+              }
+            },
+            "args": [
+              {
+                "name": "flowId",
+                "type": {
+                  "kind": "NON_NULL",
+                  "ofType": {
+                    "kind": "SCALAR",
+                    "name": "Any"
+                  }
+                }
+              }
+            ]
+          },
           {
             "name": "taskAdded",
             "type": {

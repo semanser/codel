@@ -9,3 +9,9 @@ func BroadcastTaskAdded(flowID uint, task *gmodel.Task) {
 		ch <- task
 	}
 }
+
+func BroadcastFlowUpdated(flowID uint, flow *gmodel.Flow) {
+	if ch, ok := flowUpdatedSubscriptions[flowID]; ok {
+		ch <- flow
+	}
+}

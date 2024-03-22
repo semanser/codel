@@ -11,6 +11,7 @@ fragment taskFragment on Task {
 fragment flowFragment on Flow {
   id
   name
+  containerName
   tasks {
     ...taskFragment
   }
@@ -40,5 +41,13 @@ mutation createTask($id: Uint!, $query: String!) {
 subscription taskAdded($flowId: Uint!) {
   taskAdded(flowId: $flowId) {
     ...taskFragment
+  }
+}
+
+subscription flowUpdated($flowId: Uint!) {
+  flowUpdated(flowId: $flowId) {
+    id
+    name
+    containerName
   }
 }

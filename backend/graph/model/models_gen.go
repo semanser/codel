@@ -10,9 +10,10 @@ import (
 )
 
 type Flow struct {
-	ID    uint    `json:"id"`
-	Name  string  `json:"name"`
-	Tasks []*Task `json:"tasks"`
+	ID            uint    `json:"id"`
+	Name          string  `json:"name"`
+	Tasks         []*Task `json:"tasks"`
+	ContainerName string  `json:"containerName"`
 }
 
 type Mutation struct {

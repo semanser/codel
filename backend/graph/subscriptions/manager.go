@@ -5,18 +5,13 @@ import (
 )
 
 var (
-	taskAddedSubscriptions = make(map[uint]chan *gmodel.Task)
+	taskAddedSubscriptions   = make(map[uint]chan *gmodel.Task)
+	flowUpdatedSubscriptions = make(map[uint]chan *gmodel.Flow)
 )
 
 type Subscription[T any] interface {
 	subscribe() (T, error)
 }
-
-type SubscriptionType string
-
-var (
-	SubscriptionTaskAdded = "taskAdded"
-)
 
 func subscribe[B any](flowID uint, subscriptions map[uint]chan B) (channel chan B, unsubscribe func()) {
 	ch := make(chan B)

@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 
 	"github.com/semanser/ai-coder/executor"
 	gmodel "github.com/semanser/ai-coder/graph/model"
@@ -22,21 +23,9 @@ import (
 
 // CreateFlow is the resolver for the createFlow field.
 func (r *mutationResolver) CreateFlow(ctx context.Context, query string) (*gmodel.Flow, error) {
-	summary, err := services.GetMessageSummary(query, 10)
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to get message summary: %w", err)
-	}
-
-	dockerImage, err := services.GetDockerImageName(query)
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to get docker image name: %w", err)
-	}
-
 	flow := models.Flow{
-		Name:        summary,
-		DockerImage: dockerImage,
+		Name:        query[:10],
+		DockerImage: "",
 	}
 
 	tx := r.Db.Create(&flow)
@@ -45,22 +34,57 @@ func (r *mutationResolver) CreateFlow(ctx context.Context, query string) (*gmode
 		return nil, tx.Error
 	}
 
-	_, err = executor.SpawnContainer(executor.GenerateContainerName(flow.ID), dockerImage)
+	go func() {
+		summary, err := services.GetMessageSummary(query, 10)
 
-	if err != nil {
-		return nil, fmt.Errorf("failed to spawn container: %w", err)
-	}
+		if err != nil {
+			log.Printf("failed to get message summary: %w", err)
+		}
 
-	task, err := r.CreateTask(ctx, flow.ID, query)
+		dockerImage, err := services.GetDockerImageName(query)
 
-	if err != nil {
-		return nil, fmt.Errorf("failed to create the inital task: %w", err)
-	}
+		if err != nil {
+			log.Printf("failed to get docker image name: %w", err)
+			return
+		}
+
+		tx := r.Db.Updates(models.Flow{
+			ID:          flow.ID,
+			Name:        summary,
+			DockerImage: dockerImage,
+		})
+
+		if tx.Error != nil {
+			log.Printf("failed to create flow: %w", tx.Error)
+			return
+		}
+
+		subscriptions.BroadcastFlowUpdated(flow.ID, &gmodel.Flow{
+			ID:            flow.ID,
+			Name:          summary,
+			ContainerName: dockerImage,
+		})
+
+		_, err = executor.SpawnContainer(executor.GenerateContainerName(flow.ID), dockerImage)
+
+		if err != nil {
+			log.Printf("failed to spawn container: %w", err)
+			return
+		}
+
+		_, err = r.CreateTask(ctx, flow.ID, query)
+
+		if err != nil {
+			log.Printf("failed to create task: %w", err)
+			return
+		}
+	}()
 
 	return &gmodel.Flow{
-		ID:    flow.ID,
-		Name:  flow.Name,
-		Tasks: []*gmodel.Task{task},
+		ID:            flow.ID,
+		Name:          flow.Name,
+		ContainerName: flow.DockerImage,
+		Tasks:         []*gmodel.Task{},
 	}, nil
 }
 
@@ -154,9 +178,10 @@ func (r *queryResolver) Flows(ctx context.Context) ([]*gmodel.Flow, error) {
 		}
 
 		gFlows = append(gFlows, &gmodel.Flow{
-			ID:    flow.ID,
-			Name:  flow.Name,
-			Tasks: gTasks,
+			ID:            flow.ID,
+			Name:          flow.Name,
+			ContainerName: flow.DockerImage,
+			Tasks:         gTasks,
 		})
 	}
 
@@ -205,6 +230,11 @@ func (r *subscriptionResolver) TaskAdded(ctx context.Context, flowID uint) (<-ch
 // TaskUpdated is the resolver for the taskUpdated field.
 func (r *subscriptionResolver) TaskUpdated(ctx context.Context) (<-chan *gmodel.Task, error) {
 	panic(fmt.Errorf("not implemented: TaskUpdated - taskUpdated"))
+}
+
+// FlowUpdated is the resolver for the flowUpdated field.
+func (r *subscriptionResolver) FlowUpdated(ctx context.Context, flowID uint) (<-chan *gmodel.Flow, error) {
+	return subscriptions.FlowUpdated(ctx, flowID)
 }
 
 // Mutation returns MutationResolver implementation.
