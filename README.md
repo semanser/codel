@@ -23,9 +23,13 @@
 - docker
 
 ## Environment variables
+### Backend
 - `OPEN_AI_KEY` - OpenAI API key
 - `DATABASE_URL` - PostgreSQL database URL (eg. `postgres://user:password@localhost:5432/database`)
 - `DOCKER_HOST` - Docker SDK API (eg. `DOCKER_HOST=unix:///Users/<my-user>/Library/Containers/com.docker.docker/Data/docker.raw.sock`) [more info](https://stackoverflow.com/a/62757128/5922857)
+### Frontend
+Frontend env variables can be set by creating a `.env.local` file in the `frontend` folder.
+- `VITE_API_URL` - Backend API URL (eg. `localhost:8080`)
 
 ## Steps
 - Run `go run .` in `backend` folder
