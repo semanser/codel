@@ -17,7 +17,10 @@
 - 💅 Modern UI
 
 # How to run
-## Prerequisites: golang, nodejs, docker.
+## Prerequisites
+- golang
+- nodejs
+- docker
 
 ## Environment variables
 - `OPEN_AI_KEY` - OpenAI API key
