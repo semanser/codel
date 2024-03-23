@@ -125,7 +125,7 @@ func NextTask(args AgentPrompt) (*models.Task, error) {
 
 	req := openai.ChatCompletionRequest{
 		Temperature: 0.0,
-		Model:       openai.GPT3Dot5Turbo,
+		Model:       openai.GPT4Turbo0125,
 		Messages: []openai.ChatCompletionMessage{
 			{
 				Role:    openai.ChatMessageRoleSystem,
