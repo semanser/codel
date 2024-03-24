@@ -23,6 +23,8 @@
 - docker
 
 ## Environment variables
+Add to `.env` file in the `backend` folder.
+
 ### Backend
 - `OPEN_AI_KEY` - OpenAI API key
 - `DATABASE_URL` - PostgreSQL database URL (eg. `postgres://user:password@localhost:5432/database`)

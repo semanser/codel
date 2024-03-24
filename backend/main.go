@@ -16,6 +16,7 @@ import (
 	"github.com/semanser/ai-coder/models"
 	"github.com/semanser/ai-coder/router"
 	"github.com/semanser/ai-coder/services"
+	"github.com/joho/godotenv"
 )
 
 const defaultPort = "8080"
@@ -26,6 +27,8 @@ var promptTemplates embed.FS
 func main() {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+
+	godotenv.Load()
 
 	dsn := os.Getenv("DATABASE_URL")
 
