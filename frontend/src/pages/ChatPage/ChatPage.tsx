@@ -37,8 +37,8 @@ export const ChatPage = () => {
 
   const tasks = !isStaleData ? data?.flow.tasks ?? [] : [];
   const name = !isStaleData ? data?.flow.name ?? "" : "";
-  const containerName = !isStaleData && data?.flow?.containerName;
   const status = !isStaleData ? data?.flow.status : undefined;
+  const terminal = !isStaleData ? data?.flow.terminal : undefined;
 
   useTaskAddedSubscription({
     variables: { flowId: Number(id) },
@@ -101,9 +101,9 @@ export const ChatPage = () => {
           </Tabs.List>
           <Tabs.Content className={tabsContentStyles} value="terminal">
             <Terminal
-              id={isNewFlow ? "" : id}
+              id={!terminal?.available || isNewFlow ? "" : id}
               status={status}
-              title={containerName}
+              title={terminal?.containerName}
             />
           </Tabs.Content>
           <Tabs.Content className={tabsContentStyles} value="browser">

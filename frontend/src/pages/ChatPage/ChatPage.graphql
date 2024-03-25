@@ -11,8 +11,11 @@ fragment taskFragment on Task {
 fragment flowFragment on Flow {
   id
   name
-  containerName
   status
+  terminal {
+    containerName
+    available
+  }
   tasks {
     ...taskFragment
   }
@@ -47,6 +50,9 @@ subscription flowUpdated($flowId: Uint!) {
   flowUpdated(flowId: $flowId) {
     id
     name
-    containerName
+    terminal {
+      containerName
+      available
+    }
   }
 }

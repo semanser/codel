@@ -2,6 +2,7 @@ package router
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -125,9 +126,14 @@ func wsHandler(db *database.Queries) gin.HandlerFunc {
 		}
 
 		if flow.Status.String != "in_progress" {
-			c.AbortWithError(404, err)
+			c.AbortWithError(404, fmt.Errorf("flow is not in progress"))
 			return
 		}
+
+    if flow.ContainerStatus.String != "running" {
+      c.AbortWithError(404, fmt.Errorf("container is not running"))
+      return
+    }
 
 		websocket.HandleWebsocket(c)
 	}

@@ -102,6 +102,8 @@ export const Terminal = ({
   const connectedRefSocket = useRef<WebSocket>();
   const [isConnected, setIsConnected] = React.useState(false);
 
+  console.log(id, isConnected);
+
   useEffect(() => {
     if (!xtermRef.current) return;
 

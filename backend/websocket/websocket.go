@@ -3,7 +3,6 @@ package websocket
 import (
 	"fmt"
 	"strconv"
-	"sync"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -11,7 +10,6 @@ import (
 
 var (
 	connections   map[int64]*websocket.Conn // Map to store WebSocket connections
-	connectionsMu sync.Mutex                // Mutex to synchronize access to the connections map
 )
 
 func HandleWebsocket(c *gin.Context) {

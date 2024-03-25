@@ -51,11 +51,11 @@ type DirectiveRoot struct {
 
 type ComplexityRoot struct {
 	Flow struct {
-		ContainerName func(childComplexity int) int
-		ID            func(childComplexity int) int
-		Name          func(childComplexity int) int
-		Status        func(childComplexity int) int
-		Tasks         func(childComplexity int) int
+		ID       func(childComplexity int) int
+		Name     func(childComplexity int) int
+		Status   func(childComplexity int) int
+		Tasks    func(childComplexity int) int
+		Terminal func(childComplexity int) int
 	}
 
 	Mutation struct {
@@ -83,6 +83,11 @@ type ComplexityRoot struct {
 		Results   func(childComplexity int) int
 		Status    func(childComplexity int) int
 		Type      func(childComplexity int) int
+	}
+
+	Terminal struct {
+		Available     func(childComplexity int) int
+		ContainerName func(childComplexity int) int
 	}
 }
 
@@ -120,13 +125,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 	_ = ec
 	switch typeName + "." + field {
 
-	case "Flow.containerName":
-		if e.complexity.Flow.ContainerName == nil {
-			break
-		}
-
-		return e.complexity.Flow.ContainerName(childComplexity), true
-
 	case "Flow.id":
 		if e.complexity.Flow.ID == nil {
 			break
@@ -154,6 +152,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Flow.Tasks(childComplexity), true
+
+	case "Flow.terminal":
+		if e.complexity.Flow.Terminal == nil {
+			break
+		}
+
+		return e.complexity.Flow.Terminal(childComplexity), true
 
 	case "Mutation.createFlow":
 		if e.complexity.Mutation.CreateFlow == nil {
@@ -284,6 +289,20 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Task.Type(childComplexity), true
+
+	case "Terminal.available":
+		if e.complexity.Terminal.Available == nil {
+			break
+		}
+
+		return e.complexity.Terminal.Available(childComplexity), true
+
+	case "Terminal.containerName":
+		if e.complexity.Terminal.ContainerName == nil {
+			break
+		}
+
+		return e.complexity.Terminal.ContainerName(childComplexity), true
 
 	}
 	return 0, false
@@ -719,8 +738,8 @@ func (ec *executionContext) fieldContext_Flow_tasks(ctx context.Context, field g
 	return fc, nil
 }
 
-func (ec *executionContext) _Flow_containerName(ctx context.Context, field graphql.CollectedField, obj *gmodel.Flow) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Flow_containerName(ctx, field)
+func (ec *executionContext) _Flow_terminal(ctx context.Context, field graphql.CollectedField, obj *gmodel.Flow) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Flow_terminal(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -733,7 +752,7 @@ func (ec *executionContext) _Flow_containerName(ctx context.Context, field graph
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.ContainerName, nil
+		return obj.Terminal, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -745,19 +764,25 @@ func (ec *executionContext) _Flow_containerName(ctx context.Context, field graph
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(*gmodel.Terminal)
 	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
+	return ec.marshalNTerminal2ᚖgithubᚗcomᚋsemanserᚋaiᚑcoderᚋgraphᚋmodelᚐTerminal(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Flow_containerName(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Flow_terminal(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Flow",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
+			switch field.Name {
+			case "containerName":
+				return ec.fieldContext_Terminal_containerName(ctx, field)
+			case "available":
+				return ec.fieldContext_Terminal_available(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Terminal", field.Name)
 		},
 	}
 	return fc, nil
@@ -852,8 +877,8 @@ func (ec *executionContext) fieldContext_Mutation_createFlow(ctx context.Context
 				return ec.fieldContext_Flow_name(ctx, field)
 			case "tasks":
 				return ec.fieldContext_Flow_tasks(ctx, field)
-			case "containerName":
-				return ec.fieldContext_Flow_containerName(ctx, field)
+			case "terminal":
+				return ec.fieldContext_Flow_terminal(ctx, field)
 			case "status":
 				return ec.fieldContext_Flow_status(ctx, field)
 			}
@@ -1034,8 +1059,8 @@ func (ec *executionContext) fieldContext_Query_flows(ctx context.Context, field 
 				return ec.fieldContext_Flow_name(ctx, field)
 			case "tasks":
 				return ec.fieldContext_Flow_tasks(ctx, field)
-			case "containerName":
-				return ec.fieldContext_Flow_containerName(ctx, field)
+			case "terminal":
+				return ec.fieldContext_Flow_terminal(ctx, field)
 			case "status":
 				return ec.fieldContext_Flow_status(ctx, field)
 			}
@@ -1090,8 +1115,8 @@ func (ec *executionContext) fieldContext_Query_flow(ctx context.Context, field g
 				return ec.fieldContext_Flow_name(ctx, field)
 			case "tasks":
 				return ec.fieldContext_Flow_tasks(ctx, field)
-			case "containerName":
-				return ec.fieldContext_Flow_containerName(ctx, field)
+			case "terminal":
+				return ec.fieldContext_Flow_terminal(ctx, field)
 			case "status":
 				return ec.fieldContext_Flow_status(ctx, field)
 			}
@@ -1459,8 +1484,8 @@ func (ec *executionContext) fieldContext_Subscription_flowUpdated(ctx context.Co
 				return ec.fieldContext_Flow_name(ctx, field)
 			case "tasks":
 				return ec.fieldContext_Flow_tasks(ctx, field)
-			case "containerName":
-				return ec.fieldContext_Flow_containerName(ctx, field)
+			case "terminal":
+				return ec.fieldContext_Flow_terminal(ctx, field)
 			case "status":
 				return ec.fieldContext_Flow_status(ctx, field)
 			}
@@ -1784,6 +1809,94 @@ func (ec *executionContext) fieldContext_Task_results(ctx context.Context, field
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type JSON does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Terminal_containerName(ctx context.Context, field graphql.CollectedField, obj *gmodel.Terminal) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Terminal_containerName(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ContainerName, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Terminal_containerName(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Terminal",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Terminal_available(ctx context.Context, field graphql.CollectedField, obj *gmodel.Terminal) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Terminal_available(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Available, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Terminal_available(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Terminal",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
 		},
 	}
 	return fc, nil
@@ -3596,8 +3709,8 @@ func (ec *executionContext) _Flow(ctx context.Context, sel ast.SelectionSet, obj
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "containerName":
-			out.Values[i] = ec._Flow_containerName(ctx, field, obj)
+		case "terminal":
+			out.Values[i] = ec._Flow_terminal(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -3853,6 +3966,50 @@ func (ec *executionContext) _Task(ctx context.Context, sel ast.SelectionSet, obj
 			}
 		case "results":
 			out.Values[i] = ec._Task_results(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var terminalImplementors = []string{"Terminal"}
+
+func (ec *executionContext) _Terminal(ctx context.Context, sel ast.SelectionSet, obj *gmodel.Terminal) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, terminalImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Terminal")
+		case "containerName":
+			out.Values[i] = ec._Terminal_containerName(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "available":
+			out.Values[i] = ec._Terminal_available(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -4394,6 +4551,16 @@ func (ec *executionContext) unmarshalNTaskType2githubᚗcomᚋsemanserᚋaiᚑco
 
 func (ec *executionContext) marshalNTaskType2githubᚗcomᚋsemanserᚋaiᚑcoderᚋgraphᚋmodelᚐTaskType(ctx context.Context, sel ast.SelectionSet, v gmodel.TaskType) graphql.Marshaler {
 	return v
+}
+
+func (ec *executionContext) marshalNTerminal2ᚖgithubᚗcomᚋsemanserᚋaiᚑcoderᚋgraphᚋmodelᚐTerminal(ctx context.Context, sel ast.SelectionSet, v *gmodel.Terminal) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._Terminal(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNTime2timeᚐTime(ctx context.Context, v interface{}) (time.Time, error) {

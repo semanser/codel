@@ -47,7 +47,9 @@ export const cache = cacheExchange({
       },
     },
   },
-  keys: {},
+  keys: {
+    "Terminal": _ => null,
+  },
 });
 
 const wsClient = createWSClient({

@@ -99,7 +99,10 @@ func (r *queryResolver) Flows(ctx context.Context) ([]*gmodel.Flow, error) {
 		gFlows = append(gFlows, &gmodel.Flow{
 			ID:            uint(flow.ID),
 			Name:          flow.Name.String,
-			ContainerName: flow.ContainerName.String,
+      Terminal: &gmodel.Terminal{
+        ContainerName: flow.ContainerName.String,
+        Available: false,
+      },
 			Tasks:         gTasks,
 			Status:        gmodel.FlowStatus(flow.Status.String),
 		})
@@ -141,7 +144,10 @@ func (r *queryResolver) Flow(ctx context.Context, id uint) (*gmodel.Flow, error)
 		ID:            uint(flow.ID),
 		Name:          flow.Name.String,
 		Tasks:         gTasks,
-		ContainerName: flow.ContainerName.String,
+    Terminal: &gmodel.Terminal{
+      ContainerName: flow.ContainerName.String,
+      Available: flow.ContainerStatus.String == "running",
+    },
 		Status:        gmodel.FlowStatus(flow.Status.String),
 	}
 

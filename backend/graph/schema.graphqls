@@ -33,11 +33,16 @@ enum FlowStatus {
   finished
 }
 
+type Terminal {
+  containerName: String!
+  available: Boolean!
+}
+
 type Flow {
   id: Uint!
   name: String!
   tasks: [Task!]!
-  containerName: String!
+  terminal: Terminal!
   status: FlowStatus!
 }
 

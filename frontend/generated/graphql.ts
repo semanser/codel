@@ -22,11 +22,11 @@ export type Scalars = {
 
 export type Flow = {
   __typename?: 'Flow';
-  containerName: Scalars['String']['output'];
   id: Scalars['Uint']['output'];
   name: Scalars['String']['output'];
   status: FlowStatus;
   tasks: Array<Task>;
+  terminal: Terminal;
 };
 
 export enum FlowStatus {
@@ -108,11 +108,16 @@ export enum TaskType {
   Terminal = 'terminal'
 }
 
+export type Terminal = {
+  __typename?: 'Terminal';
+  available: Scalars['Boolean']['output'];
+  containerName: Scalars['String']['output'];
+};
+
 export const FlowOverviewFragmentFragmentDoc = gql`
     fragment flowOverviewFragment on Flow {
   id
   name
-  containerName
   status
 }
     `;
@@ -131,8 +136,11 @@ export const FlowFragmentFragmentDoc = gql`
     fragment flowFragment on Flow {
   id
   name
-  containerName
   status
+  terminal {
+    containerName
+    available
+  }
   tasks {
     ...taskFragment
   }
@@ -199,7 +207,10 @@ export const FlowUpdatedDocument = gql`
   flowUpdated(flowId: $flowId) {
     id
     name
-    containerName
+    terminal {
+      containerName
+      available
+    }
   }
 }
     `;
@@ -207,23 +218,23 @@ export const FlowUpdatedDocument = gql`
 export function useFlowUpdatedSubscription<TData = FlowUpdatedSubscription>(options: Omit<Urql.UseSubscriptionArgs<FlowUpdatedSubscriptionVariables>, 'query'>, handler?: Urql.SubscriptionHandler<FlowUpdatedSubscription, TData>) {
   return Urql.useSubscription<FlowUpdatedSubscription, TData, FlowUpdatedSubscriptionVariables>({ query: FlowUpdatedDocument, ...options }, handler);
 };
-export type FlowOverviewFragmentFragment = { __typename?: 'Flow', id: any, name: string, containerName: string, status: FlowStatus };
+export type FlowOverviewFragmentFragment = { __typename?: 'Flow', id: any, name: string, status: FlowStatus };
 
 export type FlowsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type FlowsQuery = { __typename?: 'Query', flows: Array<{ __typename?: 'Flow', id: any, name: string, containerName: string, status: FlowStatus }> };
+export type FlowsQuery = { __typename?: 'Query', flows: Array<{ __typename?: 'Flow', id: any, name: string, status: FlowStatus }> };
 
 export type TaskFragmentFragment = { __typename?: 'Task', id: any, type: TaskType, message: string, status: TaskStatus, args: any, results: any, createdAt: any };
 
-export type FlowFragmentFragment = { __typename?: 'Flow', id: any, name: string, containerName: string, status: FlowStatus, tasks: Array<{ __typename?: 'Task', id: any, type: TaskType, message: string, status: TaskStatus, args: any, results: any, createdAt: any }> };
+export type FlowFragmentFragment = { __typename?: 'Flow', id: any, name: string, status: FlowStatus, terminal: { __typename?: 'Terminal', containerName: string, available: boolean }, tasks: Array<{ __typename?: 'Task', id: any, type: TaskType, message: string, status: TaskStatus, args: any, results: any, createdAt: any }> };
 
 export type FlowQueryVariables = Exact<{
   id: Scalars['Uint']['input'];
 }>;
 
 
-export type FlowQuery = { __typename?: 'Query', flow: { __typename?: 'Flow', id: any, name: string, containerName: string, status: FlowStatus, tasks: Array<{ __typename?: 'Task', id: any, type: TaskType, message: string, status: TaskStatus, args: any, results: any, createdAt: any }> } };
+export type FlowQuery = { __typename?: 'Query', flow: { __typename?: 'Flow', id: any, name: string, status: FlowStatus, terminal: { __typename?: 'Terminal', containerName: string, available: boolean }, tasks: Array<{ __typename?: 'Task', id: any, type: TaskType, message: string, status: TaskStatus, args: any, results: any, createdAt: any }> } };
 
 export type CreateFlowMutationVariables = Exact<{ [key: string]: never; }>;
 
@@ -250,7 +261,7 @@ export type FlowUpdatedSubscriptionVariables = Exact<{
 }>;
 
 
-export type FlowUpdatedSubscription = { __typename?: 'Subscription', flowUpdated: { __typename?: 'Flow', id: any, name: string, containerName: string } };
+export type FlowUpdatedSubscription = { __typename?: 'Subscription', flowUpdated: { __typename?: 'Flow', id: any, name: string, terminal: { __typename?: 'Terminal', containerName: string, available: boolean } } };
 
 import { IntrospectionQuery } from 'graphql';
 export default {
@@ -269,17 +280,6 @@ export default {
         "kind": "OBJECT",
         "name": "Flow",
         "fields": [
-          {
-            "name": "containerName",
-            "type": {
-              "kind": "NON_NULL",
-              "ofType": {
-                "kind": "SCALAR",
-                "name": "Any"
-              }
-            },
-            "args": []
-          },
           {
             "name": "id",
             "type": {
@@ -327,6 +327,18 @@ export default {
                     "ofType": null
                   }
                 }
+              }
+            },
+            "args": []
+          },
+          {
+            "name": "terminal",
+            "type": {
+              "kind": "NON_NULL",
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "Terminal",
+                "ofType": null
               }
             },
             "args": []
@@ -603,6 +615,35 @@ export default {
           },
           {
             "name": "type",
+            "type": {
+              "kind": "NON_NULL",
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "Any"
+              }
+            },
+            "args": []
+          }
+        ],
+        "interfaces": []
+      },
+      {
+        "kind": "OBJECT",
+        "name": "Terminal",
+        "fields": [
+          {
+            "name": "available",
+            "type": {
+              "kind": "NON_NULL",
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "Any"
+              }
+            },
+            "args": []
+          },
+          {
+            "name": "containerName",
             "type": {
               "kind": "NON_NULL",
               "ofType": {

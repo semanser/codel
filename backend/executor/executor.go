@@ -133,7 +133,17 @@ func SpawnContainer(ctx context.Context, name string, dockerImage string, db *da
 
 func StopContainer(containerID string, dbID int64, db *database.Queries) error {
 	if err := dockerClient.ContainerStop(context.Background(), containerID, container.StopOptions{}); err != nil {
-		return fmt.Errorf("Error stopping container: %w", err)
+    if client.IsErrNotFound(err) {
+      log.Printf("Container %s not found. Marking it as stopped.\n", containerID)
+      db.UpdateContainerStatus(context.Background(), database.UpdateContainerStatusParams{
+        Status: database.StringToPgText("stopped"),
+        ID:     dbID,
+      })
+
+      return nil
+    } else {
+      return fmt.Errorf("Error stopping container: %w", err)
+    }
 	}
 
 	_, err := db.UpdateContainerStatus(context.Background(), database.UpdateContainerStatusParams{

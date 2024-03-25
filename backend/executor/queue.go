@@ -176,13 +176,16 @@ func processInputTask(db *database.Queries, task database.Task) error {
 		subscriptions.BroadcastFlowUpdated(flow.ID, &gmodel.Flow{
 			ID:            uint(flow.ID),
 			Name:          summary,
-			ContainerName: dockerImage,
+      Terminal: &gmodel.Terminal{
+        ContainerName: dockerImage,
+        Available:     false,
+      },
 		})
 
 		msg := fmt.Sprintf("Initializing the docker image %s...", dockerImage)
 		err = websocket.SendToChannel(task.FlowID.Int64, websocket.FormatTerminalSystemOutput(msg))
 		if err != nil {
-			log.Printf("failed to send message initializing message to the channel: %w", err)
+			log.Printf("failed to send initializing message to the channel: %w", err)
 		}
 
 		containerName := GenerateContainerName(flow.ID)
@@ -192,6 +195,14 @@ func processInputTask(db *database.Queries, task database.Task) error {
 		if err != nil {
 			return fmt.Errorf("failed to spawn container: %w", err)
 		}
+
+    subscriptions.BroadcastFlowUpdated(flow.ID, &gmodel.Flow{
+      ID:            uint(flow.ID),
+      Name:          summary,
+      Terminal: &gmodel.Terminal{
+        Available:     true,
+      },
+    })
 
 		_, err = db.UpdateFlowContainer(context.Background(), database.UpdateFlowContainerParams{
 			ID:          flow.ID,
