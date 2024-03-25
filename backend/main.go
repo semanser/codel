@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"embed"
 	"log"
 	"net/http"
@@ -8,13 +9,11 @@ import (
 	"os/signal"
 	"syscall"
 
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
-
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 	"github.com/semanser/ai-coder/assets"
+	"github.com/semanser/ai-coder/database"
 	"github.com/semanser/ai-coder/executor"
-	"github.com/semanser/ai-coder/models"
 	"github.com/semanser/ai-coder/router"
 	"github.com/semanser/ai-coder/services"
 )
@@ -36,13 +35,25 @@ func main() {
 		log.Fatal("failed to read DB env variable")
 	}
 
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	poolConfig, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
-		log.Fatalf("failed to connect database: %v", err)
+		log.Fatalf("failed to create a pool: %w", err)
 	}
 
-	// Migrate the schema
-	db.AutoMigrate(&models.Flow{}, &models.Task{}, &models.Container{})
+	dbPool, err := pgxpool.NewWithConfig(context.Background(), poolConfig)
+
+	if err != nil {
+		log.Fatalf("Unable to connect to database: %v\n", err)
+	}
+
+	err = dbPool.Ping(context.Background())
+	if err != nil {
+		log.Fatalf("Unable to ping database: %v\n", err)
+	}
+
+	defer dbPool.Close()
+
+	db := database.New(dbPool)
 
 	port := os.Getenv("PORT")
 	if port == "" {

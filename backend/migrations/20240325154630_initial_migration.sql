@@ -9,9 +9,8 @@ CREATE TABLE containers (
 
 CREATE TABLE flows (
   id BIGSERIAL PRIMARY KEY,
-  created_at timestamp with time zone,
-  updated_at timestamp with time zone,
-  deleted_at timestamp with time zone,
+  created_at timestamp DEFAULT now(),
+  updated_at timestamp DEFAULT now(),
   name text,
   status text,
   container_id bigint REFERENCES containers(id)
@@ -19,9 +18,8 @@ CREATE TABLE flows (
 
 CREATE TABLE tasks (
   id BIGSERIAL PRIMARY KEY,
-  created_at timestamp with time zone,
-  updated_at timestamp with time zone,
-  deleted_at timestamp with time zone,
+  created_at timestamp DEFAULT now(),
+  updated_at timestamp DEFAULT now(),
   type text,
   status text,
   args jsonb DEFAULT '{}'::jsonb,

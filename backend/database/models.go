@@ -17,9 +17,8 @@ type Container struct {
 
 type Flow struct {
 	ID          int64
-	CreatedAt   pgtype.Timestamptz
-	UpdatedAt   pgtype.Timestamptz
-	DeletedAt   pgtype.Timestamptz
+	CreatedAt   pgtype.Timestamp
+	UpdatedAt   pgtype.Timestamp
 	Name        pgtype.Text
 	Status      pgtype.Text
 	ContainerID pgtype.Int8
@@ -27,9 +26,8 @@ type Flow struct {
 
 type Task struct {
 	ID        int64
-	CreatedAt pgtype.Timestamptz
-	UpdatedAt pgtype.Timestamptz
-	DeletedAt pgtype.Timestamptz
+	CreatedAt pgtype.Timestamp
+	UpdatedAt pgtype.Timestamp
 	Type      pgtype.Text
 	Status    pgtype.Text
 	Args      []byte

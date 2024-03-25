@@ -36,6 +36,7 @@ func InitDockerClient() error {
 }
 
 func SpawnContainer(ctx context.Context, name string, dockerImage string) (containerID string, err error) {
+	// TODO Create a new container in the DB
 	log.Printf("Spawning container %s \"%s\"\n", dockerImage, name)
 
 	filters := filters.NewArgs()
@@ -86,6 +87,7 @@ func SpawnContainer(ctx context.Context, name string, dockerImage string) (conta
 	}
 	log.Printf("Container %s started\n", name)
 
+	// TODO Update the container status
 	containers = append(containers, containerID)
 	return containerID, nil
 }
@@ -173,6 +175,6 @@ func ExecCommand(container string, command string, dst io.Writer) (err error) {
 	return nil
 }
 
-func GenerateContainerName(flowID uint) string {
+func GenerateContainerName(flowID int64) string {
 	return fmt.Sprintf("flow-%d", flowID)
 }

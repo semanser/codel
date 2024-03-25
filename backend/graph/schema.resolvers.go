@@ -10,31 +10,28 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/semanser/ai-coder/database"
 	"github.com/semanser/ai-coder/executor"
 	gmodel "github.com/semanser/ai-coder/graph/model"
 	"github.com/semanser/ai-coder/graph/subscriptions"
-	"github.com/semanser/ai-coder/models"
-	"gorm.io/datatypes"
-	"gorm.io/gorm"
 )
 
 // CreateFlow is the resolver for the createFlow field.
 func (r *mutationResolver) CreateFlow(ctx context.Context) (*gmodel.Flow, error) {
-	flow := models.Flow{
-		Status: models.FlowInProgress,
-		Name:   "New Task",
-	}
+	flow, err := r.Db.CreateFlow(ctx, database.CreateFlowParams{
+		Name:   database.StringToPgText("New Task"),
+		Status: database.StringToPgText("in_progress"),
+	})
 
-  tx := r.Db.Create(&flow)
-
-	if tx.Error != nil {
-		return nil, tx.Error
+	if err != nil {
+		return nil, fmt.Errorf("failed to create flow: %w", err)
 	}
 
 	return &gmodel.Flow{
-		ID:     flow.ID,
-		Name:   flow.Name,
-		Status: gmodel.FlowStatus(flow.Status),
+		ID:     uint(flow.ID),
+		Name:   flow.Name.String,
+		Status: gmodel.FlowStatus(flow.Status.String),
 	}, nil
 }
 
@@ -50,18 +47,16 @@ func (r *mutationResolver) CreateTask(ctx context.Context, flowID uint, query st
 		return nil, err
 	}
 
-	task := models.Task{
-		Type:    models.Input,
-		Message: query,
-		Status:  models.TaskFinished,
-		Args:    datatypes.JSON(arg),
-		FlowID:  flowID,
-	}
+	task, err := r.Db.CreateTask(ctx, database.CreateTaskParams{
+		Type:    database.StringToPgText("input"),
+		Message: database.StringToPgText(query),
+		Status:  database.StringToPgText("finished"),
+		Args:    arg,
+		FlowID:  pgtype.Int8{Int64: int64(flowID), Valid: true},
+	})
 
-	tx := r.Db.Create(&task)
-
-	if tx.Error != nil {
-		return nil, fmt.Errorf("failed to create task: %w", tx.Error)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create task: %w", err)
 	}
 
 	executor.AddCommand(task)
@@ -71,12 +66,12 @@ func (r *mutationResolver) CreateTask(ctx context.Context, flowID uint, query st
 	}
 
 	return &gmodel.Task{
-		ID:        task.ID,
-		Message:   task.Message,
-		Type:      gmodel.TaskType(task.Type),
-		Status:    gmodel.TaskStatus(task.Status),
-		Args:      task.Args.String(),
-		CreatedAt: task.CreatedAt,
+		ID:        uint(task.ID),
+		Message:   task.Message.String,
+		Type:      gmodel.TaskType(task.Type.String),
+		Status:    gmodel.TaskStatus(task.Status.String),
+		Args:      string(task.Args),
+		CreatedAt: task.CreatedAt.Time,
 	}, nil
 }
 
@@ -90,12 +85,10 @@ func (r *mutationResolver) Exec(ctx context.Context, containerID string, command
 
 // Flows is the resolver for the flows field.
 func (r *queryResolver) Flows(ctx context.Context) ([]*gmodel.Flow, error) {
-	flows := []models.Flow{}
+	flows, err := r.Db.ReadAllFlows(ctx)
 
-	tx := r.Db.Model(&models.Flow{}).Order("created_at DESC").Preload("Tasks").Preload("Container").Find(&flows)
-
-	if tx.Error != nil {
-		return nil, fmt.Errorf("failed to fetch flows: %w", tx.Error)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch flows: %w", err)
 	}
 
 	var gFlows []*gmodel.Flow
@@ -103,25 +96,12 @@ func (r *queryResolver) Flows(ctx context.Context) ([]*gmodel.Flow, error) {
 	for _, flow := range flows {
 		var gTasks []*gmodel.Task
 
-		for _, task := range flow.Tasks {
-			gTasks = append(gTasks, &gmodel.Task{
-				ID:        task.ID,
-				Message:   task.Message,
-				Type:      gmodel.TaskType(task.Type),
-				Status:    gmodel.TaskStatus(task.Status),
-				Args:      task.Args.String(),
-				Results:   task.Results,
-				CreatedAt: task.CreatedAt,
-			})
-
-		}
-
 		gFlows = append(gFlows, &gmodel.Flow{
-			ID:            flow.ID,
-			Name:          flow.Name,
-			ContainerName: flow.Container.Name,
+			ID:            uint(flow.ID),
+			Name:          flow.Name.String,
+			ContainerName: flow.ContainerName.String,
 			Tasks:         gTasks,
-			Status:        gmodel.FlowStatus(flow.Status),
+			Status:        gmodel.FlowStatus(flow.Status.String),
 		})
 	}
 
@@ -130,37 +110,39 @@ func (r *queryResolver) Flows(ctx context.Context) ([]*gmodel.Flow, error) {
 
 // Flow is the resolver for the flow field.
 func (r *queryResolver) Flow(ctx context.Context, id uint) (*gmodel.Flow, error) {
-	flow := models.Flow{}
+	flow, err := r.Db.ReadFlow(ctx, int64(id))
 
-	tx := r.Db.First(&models.Flow{}, id).Preload("Tasks", func(db *gorm.DB) *gorm.DB {
-		return db.Order("tasks.created_at ASC")
-	}).Preload("Container").Find(&flow)
-
-	if tx.Error != nil {
-		return nil, fmt.Errorf("failed to fetch flows: %w", tx.Error)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch flow: %w", err)
 	}
 
 	var gFlow *gmodel.Flow
 	var gTasks []*gmodel.Task
 
-	for _, task := range flow.Tasks {
+	tasks, err := r.Db.ReadTasksByFlowId(ctx, pgtype.Int8{Int64: int64(id), Valid: true})
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch tasks: %w", err)
+	}
+
+	for _, task := range tasks {
 		gTasks = append(gTasks, &gmodel.Task{
-			ID:        task.ID,
-			Message:   task.Message,
-			Type:      gmodel.TaskType(task.Type),
-			Status:    gmodel.TaskStatus(task.Status),
-			Args:      task.Args.String(),
-			Results:   task.Results,
-			CreatedAt: task.CreatedAt,
+			ID:        uint(task.ID),
+			Message:   task.Message.String,
+			Type:      gmodel.TaskType(task.Type.String),
+			Status:    gmodel.TaskStatus(task.Status.String),
+			Args:      string(task.Args),
+			Results:   task.Results.String,
+			CreatedAt: task.CreatedAt.Time,
 		})
 	}
 
 	gFlow = &gmodel.Flow{
-		ID:            flow.ID,
-		Name:          flow.Name,
+		ID:            uint(flow.ID),
+		Name:          flow.Name.String,
 		Tasks:         gTasks,
-		ContainerName: flow.Container.Name,
-		Status:        gmodel.FlowStatus(flow.Status),
+		ContainerName: flow.ContainerName.String,
+		Status:        gmodel.FlowStatus(flow.Status.String),
 	}
 
 	return gFlow, nil
@@ -168,7 +150,7 @@ func (r *queryResolver) Flow(ctx context.Context, id uint) (*gmodel.Flow, error)
 
 // TaskAdded is the resolver for the taskAdded field.
 func (r *subscriptionResolver) TaskAdded(ctx context.Context, flowID uint) (<-chan *gmodel.Task, error) {
-	return subscriptions.TaskAdded(ctx, flowID)
+	return subscriptions.TaskAdded(ctx, int64(flowID))
 }
 
 // TaskUpdated is the resolver for the taskUpdated field.
@@ -178,7 +160,7 @@ func (r *subscriptionResolver) TaskUpdated(ctx context.Context) (<-chan *gmodel.
 
 // FlowUpdated is the resolver for the flowUpdated field.
 func (r *subscriptionResolver) FlowUpdated(ctx context.Context, flowID uint) (<-chan *gmodel.Flow, error) {
-	return subscriptions.FlowUpdated(ctx, flowID)
+	return subscriptions.FlowUpdated(ctx, int64(flowID))
 }
 
 // Mutation returns MutationResolver implementation.
@@ -193,13 +175,3 @@ func (r *Resolver) Subscription() SubscriptionResolver { return &subscriptionRes
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type subscriptionResolver struct{ *Resolver }
-
-// !!! WARNING !!!
-// The code below was going to be deleted when updating resolvers. It has been copied here so you have
-// one last chance to move it out of harms way if you want. There are two reasons this happens:
-//   - When renaming or deleting a resolver the old code will be put in here. You can safely delete
-//     it when you're done.
-//   - You have helper methods in this file. Move them out to keep these resolver files clean.
-func (r *mutationResolver) StopTask(ctx context.Context, id uint) (*gmodel.Task, error) {
-	panic(fmt.Errorf("not implemented: StopTask - stopTask"))
-}
