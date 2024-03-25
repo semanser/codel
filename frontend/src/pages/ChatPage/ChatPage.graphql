@@ -12,6 +12,7 @@ fragment flowFragment on Flow {
   id
   name
   containerName
+  status
   tasks {
     ...taskFragment
   }

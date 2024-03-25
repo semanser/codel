@@ -110,8 +110,37 @@ func ProcessQueue(db *gorm.DB) {
 
 				AddCommand(*nextTask)
 			}
+
+			if task.Type == models.Done {
+				err := processDoneTask(db, task)
+
+				if err != nil {
+					log.Printf("failed to process done: %w", err)
+					continue
+				}
+			}
 		}
 	}()
+}
+
+func processDoneTask(db *gorm.DB, task models.Task) error {
+	flow := &models.Flow{
+		ID:     task.FlowID,
+		Status: models.FlowFinished,
+	}
+
+	tx := db.Updates(flow)
+
+	if tx.Error != nil {
+		return fmt.Errorf("failed to update flow: %w", tx.Error)
+	}
+
+	subscriptions.BroadcastFlowUpdated(flow.ID, &gmodel.Flow{
+		ID:     flow.ID,
+		Status: gmodel.FlowStatus(flow.Status),
+	})
+
+	return nil
 }
 
 func processInputTask(db *gorm.DB, task models.Task) error {
@@ -163,13 +192,13 @@ func processInputTask(db *gorm.DB, task models.Task) error {
 		}
 		_, err = SpawnContainer(context.Background(), GenerateContainerName(flow.ID), dockerImage)
 
+		if err != nil {
+			return fmt.Errorf("failed to spawn container: %w", err)
+		}
+
 		err = websocket.SendToChannel(flowId, websocket.FormatTerminalSystemOutput("Container initialized. Ready to execute commands."))
 		if err != nil {
 			log.Printf("failed to send message to channel: %w", err)
-		}
-
-		if err != nil {
-			return fmt.Errorf("failed to spawn container: %w", err)
 		}
 	}
 
@@ -179,7 +208,7 @@ func processInputTask(db *gorm.DB, task models.Task) error {
 func processAskTask(db *gorm.DB, task models.Task) error {
 	tx := db.Updates(models.Task{
 		ID:     task.ID,
-		Status: models.Finished,
+		Status: models.TaskFinished,
 	})
 
 	if tx.Error != nil {
@@ -228,7 +257,7 @@ func processTerminalTask(db *gorm.DB, task models.Task) error {
 	db.Updates(models.Task{
 		ID:      task.ID,
 		Results: result.String(),
-		Status:  models.Finished,
+		Status:  models.TaskFinished,
 	})
 
 	err = w.Close()
@@ -302,7 +331,7 @@ func getNextTask(db *gorm.DB, flowId uint) (*models.Task, error) {
 		Args:    c.Args,
 		Message: c.Message,
 		Type:    c.Type,
-		Status:  models.InProgress,
+		Status:  models.TaskInProgress,
 		FlowID:  flowId,
 	}
 

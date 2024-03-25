@@ -1,7 +1,7 @@
 import { Outlet } from "react-router-dom";
 
 import { Sidebar } from "@/components/Sidebar/Sidebar";
-import { useFlowsQuery } from "@/generated/graphql";
+import { FlowStatus, useFlowsQuery } from "@/generated/graphql";
 
 import { wrapperStyles } from "./AppLayout.css";
 
@@ -12,6 +12,7 @@ export const AppLayout = () => {
     data?.flows.map((flow) => ({
       id: flow.id,
       title: flow.name,
+      done: flow.status === FlowStatus.Finished,
     })) ?? [];
 
   return (

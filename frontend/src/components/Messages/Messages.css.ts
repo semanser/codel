@@ -47,5 +47,10 @@ export const newMessageTextarea = style([
       outline: "none",
       borderColor: vars.color.primary5,
     },
+
+    ":disabled": {
+      backgroundColor: vars.color.gray3,
+      borderColor: vars.color.gray4,
+    },
   },
 ]);

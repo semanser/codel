@@ -16,9 +16,11 @@ export const wrapperStyles = style([
 ]);
 
 export const linkStyles = style({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
   color: vars.color.gray11,
   textDecoration: "none",
-  display: "block",
   padding: "9px 16px",
 
   selectors: {
@@ -27,4 +29,8 @@ export const linkStyles = style({
       backgroundColor: vars.color.gray2,
     },
   },
+});
+
+export const checkIconStyles = style({
+  color: vars.color.success9,
 });

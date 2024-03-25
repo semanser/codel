@@ -40,6 +40,7 @@ export const ChatPage = () => {
   const tasks = !isStaleData ? data?.flow.tasks ?? [] : [];
   const name = !isStaleData ? data?.flow.name ?? "" : "";
   const containerName = !isStaleData && data?.flow?.containerName;
+  const status = !isStaleData ? data?.flow.status : undefined;
 
   useTaskAddedSubscription({
     variables: { flowId: Number(id) },
@@ -75,7 +76,13 @@ export const ChatPage = () => {
   return (
     <div className={wrapperStyles}>
       <Panel>
-        <Messages tasks={tasks} name={name} onSubmit={handleSubmit} />
+        <Messages
+          tasks={tasks}
+          name={name}
+          onSubmit={handleSubmit}
+          flowStatus={status}
+          isNew={isNewFlow}
+        />
       </Panel>
       <Panel>
         <Tabs.Root className={tabsRootStyles} defaultValue="terminal">

@@ -25,8 +25,14 @@ export type Flow = {
   containerName: Scalars['String']['output'];
   id: Scalars['Uint']['output'];
   name: Scalars['String']['output'];
+  status: FlowStatus;
   tasks: Array<Task>;
 };
+
+export enum FlowStatus {
+  Finished = 'finished',
+  InProgress = 'inProgress'
+}
 
 export type Mutation = {
   __typename?: 'Mutation';
@@ -107,6 +113,7 @@ export const FlowOverviewFragmentFragmentDoc = gql`
   id
   name
   containerName
+  status
 }
     `;
 export const TaskFragmentFragmentDoc = gql`
@@ -125,6 +132,7 @@ export const FlowFragmentFragmentDoc = gql`
   id
   name
   containerName
+  status
   tasks {
     ...taskFragment
   }
@@ -199,23 +207,23 @@ export const FlowUpdatedDocument = gql`
 export function useFlowUpdatedSubscription<TData = FlowUpdatedSubscription>(options: Omit<Urql.UseSubscriptionArgs<FlowUpdatedSubscriptionVariables>, 'query'>, handler?: Urql.SubscriptionHandler<FlowUpdatedSubscription, TData>) {
   return Urql.useSubscription<FlowUpdatedSubscription, TData, FlowUpdatedSubscriptionVariables>({ query: FlowUpdatedDocument, ...options }, handler);
 };
-export type FlowOverviewFragmentFragment = { __typename?: 'Flow', id: any, name: string, containerName: string };
+export type FlowOverviewFragmentFragment = { __typename?: 'Flow', id: any, name: string, containerName: string, status: FlowStatus };
 
 export type FlowsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type FlowsQuery = { __typename?: 'Query', flows: Array<{ __typename?: 'Flow', id: any, name: string, containerName: string }> };
+export type FlowsQuery = { __typename?: 'Query', flows: Array<{ __typename?: 'Flow', id: any, name: string, containerName: string, status: FlowStatus }> };
 
 export type TaskFragmentFragment = { __typename?: 'Task', id: any, type: TaskType, message: string, status: TaskStatus, args: any, results: any, createdAt: any };
 
-export type FlowFragmentFragment = { __typename?: 'Flow', id: any, name: string, containerName: string, tasks: Array<{ __typename?: 'Task', id: any, type: TaskType, message: string, status: TaskStatus, args: any, results: any, createdAt: any }> };
+export type FlowFragmentFragment = { __typename?: 'Flow', id: any, name: string, containerName: string, status: FlowStatus, tasks: Array<{ __typename?: 'Task', id: any, type: TaskType, message: string, status: TaskStatus, args: any, results: any, createdAt: any }> };
 
 export type FlowQueryVariables = Exact<{
   id: Scalars['Uint']['input'];
 }>;
 
 
-export type FlowQuery = { __typename?: 'Query', flow: { __typename?: 'Flow', id: any, name: string, containerName: string, tasks: Array<{ __typename?: 'Task', id: any, type: TaskType, message: string, status: TaskStatus, args: any, results: any, createdAt: any }> } };
+export type FlowQuery = { __typename?: 'Query', flow: { __typename?: 'Flow', id: any, name: string, containerName: string, status: FlowStatus, tasks: Array<{ __typename?: 'Task', id: any, type: TaskType, message: string, status: TaskStatus, args: any, results: any, createdAt: any }> } };
 
 export type CreateFlowMutationVariables = Exact<{ [key: string]: never; }>;
 
@@ -285,6 +293,17 @@ export default {
           },
           {
             "name": "name",
+            "type": {
+              "kind": "NON_NULL",
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "Any"
+              }
+            },
+            "args": []
+          },
+          {
+            "name": "status",
             "type": {
               "kind": "NON_NULL",
               "ofType": {

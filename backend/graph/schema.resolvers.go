@@ -21,7 +21,8 @@ import (
 // CreateFlow is the resolver for the createFlow field.
 func (r *mutationResolver) CreateFlow(ctx context.Context) (*gmodel.Flow, error) {
 	flow := models.Flow{
-		Name: "New Task",
+		Status: models.FlowInProgress,
+		Name:   "New Task",
 	}
 
 	tx := r.Db.Create(&flow)
@@ -31,8 +32,9 @@ func (r *mutationResolver) CreateFlow(ctx context.Context) (*gmodel.Flow, error)
 	}
 
 	return &gmodel.Flow{
-		ID:   flow.ID,
-		Name: flow.Name,
+		ID:     flow.ID,
+		Name:   flow.Name,
+		Status: gmodel.FlowStatus(flow.Status),
 	}, nil
 }
 
@@ -51,7 +53,7 @@ func (r *mutationResolver) CreateTask(ctx context.Context, flowID uint, query st
 	task := models.Task{
 		Type:    models.Input,
 		Message: query,
-		Status:  models.Finished,
+		Status:  models.TaskFinished,
 		Args:    datatypes.JSON(arg),
 		FlowID:  flowID,
 	}
@@ -119,6 +121,7 @@ func (r *queryResolver) Flows(ctx context.Context) ([]*gmodel.Flow, error) {
 			Name:          flow.Name,
 			ContainerName: flow.DockerImage,
 			Tasks:         gTasks,
+			Status:        gmodel.FlowStatus(flow.Status),
 		})
 	}
 
@@ -157,6 +160,7 @@ func (r *queryResolver) Flow(ctx context.Context, id uint) (*gmodel.Flow, error)
 		Name:          flow.Name,
 		Tasks:         gTasks,
 		ContainerName: flow.DockerImage,
+		Status:        gmodel.FlowStatus(flow.Status),
 	}
 
 	return gFlow, nil

@@ -11,12 +11,12 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 
+	"github.com/joho/godotenv"
 	"github.com/semanser/ai-coder/assets"
 	"github.com/semanser/ai-coder/executor"
 	"github.com/semanser/ai-coder/models"
 	"github.com/semanser/ai-coder/router"
 	"github.com/semanser/ai-coder/services"
-	"github.com/joho/godotenv"
 )
 
 const defaultPort = "8080"

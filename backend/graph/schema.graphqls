@@ -28,11 +28,17 @@ type Task {
   results: JSON!
 }
 
+enum FlowStatus {
+  inProgress
+  finished
+}
+
 type Flow {
   id: Uint!
   name: String!
   tasks: [Task!]!
   containerName: String!
+  status: FlowStatus!
 }
 
 type Query {

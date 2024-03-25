@@ -5,11 +5,19 @@ import (
 	"gorm.io/gorm"
 )
 
+type FlowStatus string
+
+const (
+	FlowInProgress FlowStatus = "in_progress"
+	FlowFinished   FlowStatus = "finished"
+)
+
 type Flow struct {
 	gorm.Model
 	ID          uint
 	Name        string
 	Tasks       []Task
+	Status      FlowStatus
 	DockerImage string
 }
 
@@ -27,10 +35,10 @@ const (
 type TaskStatus = string
 
 const (
-	InProgress TaskStatus = "in_progress"
-	Finished   TaskStatus = "finished"
-	Stopped    TaskStatus = "stopped"
-	Failed     TaskStatus = "failed"
+	TaskInProgress TaskStatus = "in_progress"
+	TaskFinished   TaskStatus = "finished"
+	TaskStopped    TaskStatus = "stopped"
+	TaskFailed     TaskStatus = "failed"
 )
 
 type Task struct {

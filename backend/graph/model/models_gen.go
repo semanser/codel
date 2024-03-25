@@ -10,10 +10,11 @@ import (
 )
 
 type Flow struct {
-	ID            uint    `json:"id"`
-	Name          string  `json:"name"`
-	Tasks         []*Task `json:"tasks"`
-	ContainerName string  `json:"containerName"`
+	ID            uint       `json:"id"`
+	Name          string     `json:"name"`
+	Tasks         []*Task    `json:"tasks"`
+	ContainerName string     `json:"containerName"`
+	Status        FlowStatus `json:"status"`
 }
 
 type Mutation struct {
@@ -33,6 +34,47 @@ type Task struct {
 	Status    TaskStatus `json:"status"`
 	Args      string     `json:"args"`
 	Results   string     `json:"results"`
+}
+
+type FlowStatus string
+
+const (
+	FlowStatusInProgress FlowStatus = "inProgress"
+	FlowStatusFinished   FlowStatus = "finished"
+)
+
+var AllFlowStatus = []FlowStatus{
+	FlowStatusInProgress,
+	FlowStatusFinished,
+}
+
+func (e FlowStatus) IsValid() bool {
+	switch e {
+	case FlowStatusInProgress, FlowStatusFinished:
+		return true
+	}
+	return false
+}
+
+func (e FlowStatus) String() string {
+	return string(e)
+}
+
+func (e *FlowStatus) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = FlowStatus(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid FlowStatus", str)
+	}
+	return nil
+}
+
+func (e FlowStatus) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
 }
 
 type TaskStatus string

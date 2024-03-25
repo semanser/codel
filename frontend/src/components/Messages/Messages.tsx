@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 
-import { Task } from "@/generated/graphql";
+import { FlowStatus, Task } from "@/generated/graphql";
 
 import { Message } from "./Message/Message";
 import {
@@ -14,9 +14,17 @@ type MessagesProps = {
   tasks: Task[];
   name: string;
   onSubmit: (message: string) => void;
+  flowStatus?: FlowStatus;
+  isNew?: boolean;
 };
 
-export const Messages = ({ tasks, name, onSubmit }: MessagesProps) => {
+export const Messages = ({
+  tasks,
+  name,
+  flowStatus,
+  onSubmit,
+  isNew,
+}: MessagesProps) => {
   const messages =
     tasks.map((task) => ({
       id: task.id,
@@ -73,9 +81,15 @@ export const Messages = ({ tasks, name, onSubmit }: MessagesProps) => {
     }
   }, [tasks]);
 
+  const isFlowFinished = flowStatus === FlowStatus.Finished;
+
   return (
     <div className={messagesWrapper}>
-      {name && <div className={titleStyles}>{name}</div>}
+      {name && (
+        <div className={titleStyles}>
+          {name} {isFlowFinished && " (Finished)"}
+        </div>
+      )}
       <div className={messagesListWrapper} ref={messagesRef}>
         {messages.map((message) => (
           <Message key={message.id} {...message} />
@@ -84,8 +98,15 @@ export const Messages = ({ tasks, name, onSubmit }: MessagesProps) => {
       <textarea
         autoFocus
         className={newMessageTextarea}
-        placeholder="Enter your message..."
+        placeholder={
+          isFlowFinished
+            ? "The task is finished."
+            : isNew
+              ? "Type a new message to start the flow..."
+              : "Type a message..."
+        }
         onKeyPress={handleKeyPress}
+        disabled={isFlowFinished}
       />
     </div>
   );
