@@ -60,3 +60,9 @@ func FormatTerminalInput(text string) string {
 	reset := "\033[0m"   // ANSI escape code to reset color
 	return fmt.Sprintf("$ %s%s%s\r\n", yellow, text, reset)
 }
+
+func FormatTerminalSystemOutput(text string) string {
+	blue := "\033[34m" // ANSI escape code for blue color
+	reset := "\033[0m" // ANSI escape code to reset color
+	return fmt.Sprintf("%s%s%s\r\n", blue, text, reset)
+}

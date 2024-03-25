@@ -33,7 +33,6 @@ export type Mutation = {
   _exec: Scalars['String']['output'];
   createFlow: Flow;
   createTask: Task;
-  stopTask: Task;
 };
 
 
@@ -43,19 +42,9 @@ export type Mutation_ExecArgs = {
 };
 
 
-export type MutationCreateFlowArgs = {
-  query: Scalars['String']['input'];
-};
-
-
 export type MutationCreateTaskArgs = {
-  id: Scalars['Uint']['input'];
+  flowId: Scalars['Uint']['input'];
   query: Scalars['String']['input'];
-};
-
-
-export type MutationStopTaskArgs = {
-  id: Scalars['Uint']['input'];
 };
 
 export type Query = {
@@ -164,22 +153,20 @@ export function useFlowQuery(options: Omit<Urql.UseQueryArgs<FlowQueryVariables>
   return Urql.useQuery<FlowQuery, FlowQueryVariables>({ query: FlowDocument, ...options });
 };
 export const CreateFlowDocument = gql`
-    mutation createFlow($query: String!) {
-  createFlow(query: $query) {
+    mutation createFlow {
+  createFlow {
     id
-    tasks {
-      ...taskFragment
-    }
+    name
   }
 }
-    ${TaskFragmentFragmentDoc}`;
+    `;
 
 export function useCreateFlowMutation() {
   return Urql.useMutation<CreateFlowMutation, CreateFlowMutationVariables>(CreateFlowDocument);
 };
 export const CreateTaskDocument = gql`
-    mutation createTask($id: Uint!, $query: String!) {
-  createTask(id: $id, query: $query) {
+    mutation createTask($flowId: Uint!, $query: String!) {
+  createTask(flowId: $flowId, query: $query) {
     ...taskFragment
   }
 }
@@ -230,15 +217,13 @@ export type FlowQueryVariables = Exact<{
 
 export type FlowQuery = { __typename?: 'Query', flow: { __typename?: 'Flow', id: any, name: string, containerName: string, tasks: Array<{ __typename?: 'Task', id: any, type: TaskType, message: string, status: TaskStatus, args: any, results: any, createdAt: any }> } };
 
-export type CreateFlowMutationVariables = Exact<{
-  query: Scalars['String']['input'];
-}>;
+export type CreateFlowMutationVariables = Exact<{ [key: string]: never; }>;
 
 
-export type CreateFlowMutation = { __typename?: 'Mutation', createFlow: { __typename?: 'Flow', id: any, tasks: Array<{ __typename?: 'Task', id: any, type: TaskType, message: string, status: TaskStatus, args: any, results: any, createdAt: any }> } };
+export type CreateFlowMutation = { __typename?: 'Mutation', createFlow: { __typename?: 'Flow', id: any, name: string } };
 
 export type CreateTaskMutationVariables = Exact<{
-  id: Scalars['Uint']['input'];
+  flowId: Scalars['Uint']['input'];
   query: Scalars['String']['input'];
 }>;
 
@@ -376,18 +361,7 @@ export default {
                 "ofType": null
               }
             },
-            "args": [
-              {
-                "name": "query",
-                "type": {
-                  "kind": "NON_NULL",
-                  "ofType": {
-                    "kind": "SCALAR",
-                    "name": "Any"
-                  }
-                }
-              }
-            ]
+            "args": []
           },
           {
             "name": "createTask",
@@ -401,7 +375,7 @@ export default {
             },
             "args": [
               {
-                "name": "id",
+                "name": "flowId",
                 "type": {
                   "kind": "NON_NULL",
                   "ofType": {
@@ -412,29 +386,6 @@ export default {
               },
               {
                 "name": "query",
-                "type": {
-                  "kind": "NON_NULL",
-                  "ofType": {
-                    "kind": "SCALAR",
-                    "name": "Any"
-                  }
-                }
-              }
-            ]
-          },
-          {
-            "name": "stopTask",
-            "type": {
-              "kind": "NON_NULL",
-              "ofType": {
-                "kind": "OBJECT",
-                "name": "Task",
-                "ofType": null
-              }
-            },
-            "args": [
-              {
-                "name": "id",
                 "type": {
                   "kind": "NON_NULL",
                   "ofType": {

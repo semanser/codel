@@ -9,6 +9,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
 )
 
@@ -34,39 +35,41 @@ func InitDockerClient() error {
 	return nil
 }
 
-func SpawnContainer(name string, dockerImage string) (containerID string, err error) {
+func SpawnContainer(ctx context.Context, name string, dockerImage string) (containerID string, err error) {
 	log.Printf("Spawning container %s \"%s\"\n", dockerImage, name)
 
-	images, err := dockerClient.ImageList(context.Background(), types.ImageListOptions{})
+	filters := filters.NewArgs()
+	filters.Add("reference", dockerImage)
+	images, err := dockerClient.ImageList(ctx, types.ImageListOptions{
+		Filters: filters,
+	})
 
 	if err != nil {
 		return "", fmt.Errorf("Error listing images: %w", err)
 	}
 
-	imageFound := false
-
-	log.Printf("Checking if image %s exists...\n", dockerImage)
-	for _, image := range images {
-		for _, tag := range image.RepoTags {
-			if tag == dockerImage {
-				imageFound = true
-			}
-		}
-	}
+	imageFound := len(images) > 0
 
 	log.Printf("Image %s found: %t\n", dockerImage, imageFound)
 
 	if !imageFound {
 		log.Printf("Pulling image %s...\n", dockerImage)
-		_, err = dockerClient.ImagePull(context.Background(), dockerImage, types.ImagePullOptions{})
+		readCloser, err := dockerClient.ImagePull(ctx, dockerImage, types.ImagePullOptions{})
 
 		if err != nil {
 			return "", fmt.Errorf("Error pulling image: %w", err)
 		}
+
+		// Wait for the pull to finish
+		_, err = io.Copy(io.Discard, readCloser)
+
+		if err != nil {
+			return "", fmt.Errorf("Error waiting for image pull: %w", err)
+		}
 	}
 
 	log.Printf("Creating container %s...\n", name)
-	resp, err := dockerClient.ContainerCreate(context.Background(), &container.Config{
+	resp, err := dockerClient.ContainerCreate(ctx, &container.Config{
 		Image: dockerImage,
 		Cmd:   []string{"tail", "-f", "/dev/null"},
 	}, nil, nil, nil, name)
@@ -78,7 +81,7 @@ func SpawnContainer(name string, dockerImage string) (containerID string, err er
 	log.Printf("Container %s created\n", name)
 
 	containerID = resp.ID
-	if err := dockerClient.ContainerStart(context.Background(), containerID, container.StartOptions{}); err != nil {
+	if err := dockerClient.ContainerStart(ctx, containerID, container.StartOptions{}); err != nil {
 		return "", fmt.Errorf("Error starting container: %w", err)
 	}
 	log.Printf("Container %s started\n", name)

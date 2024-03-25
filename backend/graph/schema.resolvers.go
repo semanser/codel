@@ -8,29 +8,20 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"log"
 
 	"github.com/semanser/ai-coder/executor"
 	gmodel "github.com/semanser/ai-coder/graph/model"
 	"github.com/semanser/ai-coder/graph/subscriptions"
 	"github.com/semanser/ai-coder/models"
-	"github.com/semanser/ai-coder/services"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
 // CreateFlow is the resolver for the createFlow field.
-func (r *mutationResolver) CreateFlow(ctx context.Context, query string) (*gmodel.Flow, error) {
-	truncatedQuery := query
-	if len(query) > 15 {
-		truncatedQuery = query[:15]
-	}
-
+func (r *mutationResolver) CreateFlow(ctx context.Context) (*gmodel.Flow, error) {
 	flow := models.Flow{
-		Name:        truncatedQuery,
-		DockerImage: "",
+		Name: "New Task",
 	}
 
 	tx := r.Db.Create(&flow)
@@ -39,62 +30,14 @@ func (r *mutationResolver) CreateFlow(ctx context.Context, query string) (*gmode
 		return nil, tx.Error
 	}
 
-	go func() {
-		summary, err := services.GetMessageSummary(query, 10)
-
-		if err != nil {
-			log.Printf("failed to get message summary: %w", err)
-		}
-
-		dockerImage, err := services.GetDockerImageName(query)
-
-		if err != nil {
-			log.Printf("failed to get docker image name: %w", err)
-			return
-		}
-
-		tx := r.Db.Updates(models.Flow{
-			ID:          flow.ID,
-			Name:        summary,
-			DockerImage: dockerImage,
-		})
-
-		if tx.Error != nil {
-			log.Printf("failed to create flow: %w", tx.Error)
-			return
-		}
-
-		subscriptions.BroadcastFlowUpdated(flow.ID, &gmodel.Flow{
-			ID:            flow.ID,
-			Name:          summary,
-			ContainerName: dockerImage,
-		})
-
-		_, err = executor.SpawnContainer(executor.GenerateContainerName(flow.ID), dockerImage)
-
-		if err != nil {
-			log.Printf("failed to spawn container: %w", err)
-			return
-		}
-
-		_, err = r.CreateTask(ctx, flow.ID, query)
-
-		if err != nil {
-			log.Printf("failed to create task: %w", err)
-			return
-		}
-	}()
-
 	return &gmodel.Flow{
-		ID:            flow.ID,
-		Name:          flow.Name,
-		ContainerName: flow.DockerImage,
-		Tasks:         []*gmodel.Task{},
+		ID:   flow.ID,
+		Name: flow.Name,
 	}, nil
 }
 
 // CreateTask is the resolver for the createTask field.
-func (r *mutationResolver) CreateTask(ctx context.Context, id uint, query string) (*gmodel.Task, error) {
+func (r *mutationResolver) CreateTask(ctx context.Context, flowID uint, query string) (*gmodel.Task, error) {
 	type InputTaskArgs struct {
 		Query string `json:"query"`
 	}
@@ -105,18 +48,12 @@ func (r *mutationResolver) CreateTask(ctx context.Context, id uint, query string
 		return nil, err
 	}
 
-	flowResult := r.Db.First(&models.Flow{}, id)
-
-	if errors.Is(flowResult.Error, gorm.ErrRecordNotFound) {
-		return nil, fmt.Errorf("flow with id %d not found", id)
-	}
-
 	task := models.Task{
 		Type:    models.Input,
 		Message: query,
 		Status:  models.Finished,
 		Args:    datatypes.JSON(arg),
-		FlowID:  id,
+		FlowID:  flowID,
 	}
 
 	tx := r.Db.Create(&task)
@@ -139,11 +76,6 @@ func (r *mutationResolver) CreateTask(ctx context.Context, id uint, query string
 		Args:      task.Args.String(),
 		CreatedAt: task.CreatedAt,
 	}, nil
-}
-
-// StopTask is the resolver for the stopTask field.
-func (r *mutationResolver) StopTask(ctx context.Context, id uint) (*gmodel.Task, error) {
-	panic(fmt.Errorf("not implemented: StopTask - stopTask"))
 }
 
 // Exec is the resolver for the _exec field.
@@ -257,3 +189,13 @@ func (r *Resolver) Subscription() SubscriptionResolver { return &subscriptionRes
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type subscriptionResolver struct{ *Resolver }
+
+// !!! WARNING !!!
+// The code below was going to be deleted when updating resolvers. It has been copied here so you have
+// one last chance to move it out of harms way if you want. There are two reasons this happens:
+//   - When renaming or deleting a resolver the old code will be put in here. You can safely delete
+//     it when you're done.
+//   - You have helper methods in this file. Move them out to keep these resolver files clean.
+func (r *mutationResolver) StopTask(ctx context.Context, id uint) (*gmodel.Task, error) {
+	panic(fmt.Errorf("not implemented: StopTask - stopTask"))
+}

@@ -39,6 +39,7 @@ export const ChatPage = () => {
 
   const tasks = !isStaleData ? data?.flow.tasks ?? [] : [];
   const name = !isStaleData ? data?.flow.name ?? "" : "";
+  const containerName = !isStaleData && data?.flow?.containerName;
 
   useTaskAddedSubscription({
     variables: { flowId: Number(id) },
@@ -52,23 +53,24 @@ export const ChatPage = () => {
 
   const handleSubmit = async (message: string) => {
     if (isNewFlow) {
-      const result = await createFlowMutation({
-        query: message,
-      });
+      const result = await createFlowMutation({});
 
       const flowId = result?.data?.createFlow.id;
       if (flowId) {
         navigate(`/chat/${flowId}`, { replace: true });
+
+        createTaskMutation({
+          flowId: flowId,
+          query: message,
+        });
       }
     } else {
       createTaskMutation({
-        id: id,
+        flowId: id,
         query: message,
       });
     }
   };
-
-  const containerName = !isNewFlow && data?.flow?.containerName;
 
   return (
     <div className={wrapperStyles}>
