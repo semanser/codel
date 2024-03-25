@@ -6,37 +6,29 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 
 	"github.com/semanser/ai-coder/assets"
+	"github.com/semanser/ai-coder/config"
 	"github.com/semanser/ai-coder/executor"
 	"github.com/semanser/ai-coder/models"
 	"github.com/semanser/ai-coder/router"
 	"github.com/semanser/ai-coder/services"
-	"github.com/joho/godotenv"
 )
-
-const defaultPort = "8080"
 
 //go:embed templates/prompts/*.tmpl
 var promptTemplates embed.FS
 
 func main() {
+	config.Init()
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 
-	godotenv.Load()
-
-	dsn := os.Getenv("DATABASE_URL")
-
-	if dsn == "" {
-		log.Fatal("failed to read DB env variable")
-	}
-
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	db, err := gorm.Open(postgres.Open(config.Config.DatabaseUrl), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("failed to connect database: %v", err)
 	}
@@ -44,10 +36,7 @@ func main() {
 	// Migrate the schema
 	db.AutoMigrate(&models.Flow{}, &models.Task{})
 
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = defaultPort
-	}
+	port := strconv.Itoa(config.Config.Port)
 
 	r := router.New(db)
 
