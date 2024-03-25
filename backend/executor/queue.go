@@ -147,7 +147,7 @@ func processInputTask(db *gorm.DB, task models.Task) error {
 	flow := &models.Flow{
 		ID: task.FlowID,
 	}
-	tx := db.Preload("Tasks").First(flow)
+	tx := db.Preload("Container").Preload("Tasks").First(flow)
 
 	if tx.Error != nil {
 		return fmt.Errorf("failed to fetch flow: %w", tx.Error)
@@ -169,9 +169,8 @@ func processInputTask(db *gorm.DB, task models.Task) error {
 		}
 
 		tx := db.Updates(models.Flow{
-			ID:          flow.ID,
-			Name:        summary,
-			DockerImage: dockerImage,
+			ID:   flow.ID,
+			Name: summary,
 		})
 
 		if tx.Error != nil {
@@ -190,10 +189,37 @@ func processInputTask(db *gorm.DB, task models.Task) error {
 		if err != nil {
 			log.Printf("failed to send message to channel: %w", err)
 		}
+
+		containerName := GenerateContainerName(flow.ID)
+
+		flow = &models.Flow{
+			ID: flow.ID,
+			Container: models.Container{
+				Name:   containerName,
+				Image:  dockerImage,
+				Status: models.ContainerStarting,
+			},
+		}
+
+		tx = db.Updates(flow)
+
+		if tx.Error != nil {
+			return fmt.Errorf("failed to update flow: %w", tx.Error)
+		}
+
 		_, err = SpawnContainer(context.Background(), GenerateContainerName(flow.ID), dockerImage)
 
 		if err != nil {
 			return fmt.Errorf("failed to spawn container: %w", err)
+		}
+
+		tx = db.Updates(models.Container{
+			ID:     flow.Container.ID,
+			Status: models.ContainerRunning,
+		})
+
+		if tx.Error != nil {
+			return fmt.Errorf("failed to update container status: %w", tx.Error)
 		}
 
 		err = websocket.SendToChannel(flowId, websocket.FormatTerminalSystemOutput("Container initialized. Ready to execute commands."))
@@ -303,7 +329,7 @@ func processCodeTask(db *gorm.DB, task models.Task) error {
 
 func getNextTask(db *gorm.DB, flowId uint) (*models.Task, error) {
 	flow := models.Flow{}
-	tx := db.First(&models.Flow{}, flowId).Preload("Tasks").Find(&flow)
+	tx := db.First(&models.Flow{}, flowId).Preload("Container").Preload("Tasks").Find(&flow)
 
 	if tx.Error != nil {
 		return nil, fmt.Errorf("failed to find flow with id %d: %w", flowId, tx.Error)
@@ -320,7 +346,7 @@ func getNextTask(db *gorm.DB, flowId uint) (*models.Task, error) {
 
 	c, err := agent.NextTask(agent.AgentPrompt{
 		Tasks:       flow.Tasks,
-		DockerImage: flow.DockerImage,
+		DockerImage: flow.Container.Image,
 	})
 
 	if err != nil {

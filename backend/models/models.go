@@ -18,7 +18,8 @@ type Flow struct {
 	Name        string
 	Tasks       []Task
 	Status      FlowStatus
-	DockerImage string
+	ContainerID uint
+	Container   Container
 }
 
 type TaskType string
@@ -51,4 +52,19 @@ type Task struct {
 	Results string
 	FlowID  uint
 	Flow    Flow
+}
+
+type ContainerStatus = string
+
+const (
+	ContainerStarting ContainerStatus = "starting"
+	ContainerRunning  ContainerStatus = "running"
+	ContainerStopped  ContainerStatus = "stopped"
+)
+
+type Container struct {
+	ID     uint
+	Name   string
+	Image  string
+	Status ContainerStatus `gorm:"default:starting"`
 }

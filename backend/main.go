@@ -42,7 +42,7 @@ func main() {
 	}
 
 	// Migrate the schema
-	db.AutoMigrate(&models.Flow{}, &models.Task{})
+	db.AutoMigrate(&models.Flow{}, &models.Task{}, &models.Container{})
 
 	port := os.Getenv("PORT")
 	if port == "" {

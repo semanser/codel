@@ -25,7 +25,7 @@ func (r *mutationResolver) CreateFlow(ctx context.Context) (*gmodel.Flow, error)
 		Name:   "New Task",
 	}
 
-	tx := r.Db.Create(&flow)
+  tx := r.Db.Create(&flow)
 
 	if tx.Error != nil {
 		return nil, tx.Error
@@ -92,7 +92,7 @@ func (r *mutationResolver) Exec(ctx context.Context, containerID string, command
 func (r *queryResolver) Flows(ctx context.Context) ([]*gmodel.Flow, error) {
 	flows := []models.Flow{}
 
-	tx := r.Db.Model(&models.Flow{}).Order("created_at DESC").Preload("Tasks").Find(&flows)
+	tx := r.Db.Model(&models.Flow{}).Order("created_at DESC").Preload("Tasks").Preload("Container").Find(&flows)
 
 	if tx.Error != nil {
 		return nil, fmt.Errorf("failed to fetch flows: %w", tx.Error)
@@ -119,7 +119,7 @@ func (r *queryResolver) Flows(ctx context.Context) ([]*gmodel.Flow, error) {
 		gFlows = append(gFlows, &gmodel.Flow{
 			ID:            flow.ID,
 			Name:          flow.Name,
-			ContainerName: flow.DockerImage,
+			ContainerName: flow.Container.Name,
 			Tasks:         gTasks,
 			Status:        gmodel.FlowStatus(flow.Status),
 		})
@@ -134,7 +134,7 @@ func (r *queryResolver) Flow(ctx context.Context, id uint) (*gmodel.Flow, error)
 
 	tx := r.Db.First(&models.Flow{}, id).Preload("Tasks", func(db *gorm.DB) *gorm.DB {
 		return db.Order("tasks.created_at ASC")
-	}).Find(&flow)
+	}).Preload("Container").Find(&flow)
 
 	if tx.Error != nil {
 		return nil, fmt.Errorf("failed to fetch flows: %w", tx.Error)
@@ -159,7 +159,7 @@ func (r *queryResolver) Flow(ctx context.Context, id uint) (*gmodel.Flow, error)
 		ID:            flow.ID,
 		Name:          flow.Name,
 		Tasks:         gTasks,
-		ContainerName: flow.DockerImage,
+		ContainerName: flow.Container.Name,
 		Status:        gmodel.FlowStatus(flow.Status),
 	}
 
