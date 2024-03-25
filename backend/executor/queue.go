@@ -2,6 +2,7 @@ package executor
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -12,6 +13,7 @@ import (
 	gmodel "github.com/semanser/ai-coder/graph/model"
 	"github.com/semanser/ai-coder/graph/subscriptions"
 	"github.com/semanser/ai-coder/models"
+	"github.com/semanser/ai-coder/services"
 	"github.com/semanser/ai-coder/websocket"
 	"gorm.io/gorm"
 )
@@ -48,10 +50,17 @@ func ProcessQueue(db *gorm.DB) {
 			}
 
 			if task.Type == models.Input {
-				nextTask, err := getNextTask(db, task.FlowID)
+				err := processInputTask(db, task)
 
 				if err != nil {
 					log.Printf("failed to process input: %w", err)
+					continue
+				}
+
+				nextTask, err := getNextTask(db, task.FlowID)
+
+				if err != nil {
+					log.Printf("failed to get next task: %w", err)
 					continue
 				}
 
@@ -103,6 +112,68 @@ func ProcessQueue(db *gorm.DB) {
 			}
 		}
 	}()
+}
+
+func processInputTask(db *gorm.DB, task models.Task) error {
+	flow := &models.Flow{
+		ID: task.FlowID,
+	}
+	tx := db.Preload("Tasks").First(flow)
+
+	if tx.Error != nil {
+		return fmt.Errorf("failed to fetch flow: %w", tx.Error)
+	}
+
+	// This is the first task in the flow.
+	// We need to get the basic flow data as well as spin up the container
+	if len(flow.Tasks) == 1 {
+		summary, err := services.GetMessageSummary(task.Message, 10)
+
+		if err != nil {
+			return fmt.Errorf("failed to get message summary: %w", err)
+		}
+
+		dockerImage, err := services.GetDockerImageName(task.Message)
+
+		if err != nil {
+			return fmt.Errorf("failed to get docker image name: %w", err)
+		}
+
+		tx := db.Updates(models.Flow{
+			ID:          flow.ID,
+			Name:        summary,
+			DockerImage: dockerImage,
+		})
+
+		if tx.Error != nil {
+			return fmt.Errorf("failed to update flow: %w", tx.Error)
+		}
+
+		subscriptions.BroadcastFlowUpdated(flow.ID, &gmodel.Flow{
+			ID:            flow.ID,
+			Name:          summary,
+			ContainerName: dockerImage,
+		})
+
+		flowId := fmt.Sprint(task.FlowID)
+		msg := fmt.Sprintf("Initializing the docker image %s...", dockerImage)
+		err = websocket.SendToChannel(flowId, websocket.FormatTerminalSystemOutput(msg))
+		if err != nil {
+			log.Printf("failed to send message to channel: %w", err)
+		}
+		_, err = SpawnContainer(context.Background(), GenerateContainerName(flow.ID), dockerImage)
+
+		err = websocket.SendToChannel(flowId, websocket.FormatTerminalSystemOutput("Container initialized. Ready to execute commands."))
+		if err != nil {
+			log.Printf("failed to send message to channel: %w", err)
+		}
+
+		if err != nil {
+			return fmt.Errorf("failed to spawn container: %w", err)
+		}
+	}
+
+	return nil
 }
 
 func processAskTask(db *gorm.DB, task models.Task) error {
