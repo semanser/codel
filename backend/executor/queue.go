@@ -1,14 +1,11 @@
 package executor
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 
-	gorillaWs "github.com/gorilla/websocket"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/semanser/ai-coder/agent"
 	"github.com/semanser/ai-coder/database"
@@ -174,19 +171,16 @@ func processInputTask(db *database.Queries, task database.Task) error {
 		}
 
 		subscriptions.BroadcastFlowUpdated(flow.ID, &gmodel.Flow{
-			ID:            uint(flow.ID),
-			Name:          summary,
-      Terminal: &gmodel.Terminal{
-        ContainerName: dockerImage,
-        Available:     false,
-      },
+			ID:   uint(flow.ID),
+			Name: summary,
+			Terminal: &gmodel.Terminal{
+				ContainerName: dockerImage,
+				Connected:     false,
+			},
 		})
 
 		msg := fmt.Sprintf("Initializing the docker image %s...", dockerImage)
-		err = websocket.SendToChannel(task.FlowID.Int64, websocket.FormatTerminalSystemOutput(msg))
-		if err != nil {
-			log.Printf("failed to send initializing message to the channel: %w", err)
-		}
+		subscriptions.BroadcastTerminalLogsAdded(flow.ID, msg)
 
 		containerName := GenerateContainerName(flow.ID)
 
@@ -196,13 +190,13 @@ func processInputTask(db *database.Queries, task database.Task) error {
 			return fmt.Errorf("failed to spawn container: %w", err)
 		}
 
-    subscriptions.BroadcastFlowUpdated(flow.ID, &gmodel.Flow{
-      ID:            uint(flow.ID),
-      Name:          summary,
-      Terminal: &gmodel.Terminal{
-        Available:     true,
-      },
-    })
+		subscriptions.BroadcastFlowUpdated(flow.ID, &gmodel.Flow{
+			ID:   uint(flow.ID),
+			Name: summary,
+			Terminal: &gmodel.Terminal{
+				Connected: true,
+			},
+		})
 
 		_, err = db.UpdateFlowContainer(context.Background(), database.UpdateFlowContainerParams{
 			ID:          flow.ID,
@@ -213,7 +207,8 @@ func processInputTask(db *database.Queries, task database.Task) error {
 			return fmt.Errorf("failed to update flow container: %w", err)
 		}
 
-		err = websocket.SendToChannel(task.FlowID.Int64, websocket.FormatTerminalSystemOutput("Container initialized. Ready to execute commands."))
+		subscriptions.BroadcastTerminalLogsAdded(flow.ID, "Container initialized. Ready to execute commands.")
+
 		if err != nil {
 			log.Printf("failed to send initialized message to the channel: %w", err)
 		}
@@ -242,29 +237,13 @@ func processTerminalTask(db *database.Queries, task database.Task) error {
 		return fmt.Errorf("failed to unmarshal args: %v", err)
 	}
 
-	// Send the input to the websocket channel
-	err = websocket.SendToChannel(task.FlowID.Int64, websocket.FormatTerminalInput(args.Input))
-
-	if err != nil {
-		log.Printf("failed to send terminal output to the channel: %w", err)
-	}
-
-	conn, err := websocket.GetConnection(task.FlowID.Int64)
-	if err != nil {
-		return fmt.Errorf("failed to get connection: %w", err)
-	}
-
-	w, err := conn.NextWriter(gorillaWs.BinaryMessage)
-
-	// Write the terminal output to both to the websocket and to the database
-	var result = &bytes.Buffer{}
-	multi := io.MultiWriter(w, result)
+	subscriptions.BroadcastTerminalLogsAdded(task.FlowID.Int64, websocket.FormatTerminalInput(args.Input))
 
 	if err != nil {
 		return fmt.Errorf("failed to get writer: %w", err)
 	}
 
-	err = ExecCommand(GenerateContainerName(task.FlowID.Int64), args.Input, multi)
+	results, err := ExecCommand(task.FlowID.Int64, args.Input, db)
 
 	if err != nil {
 		return fmt.Errorf("failed to execute command: %w", err)
@@ -272,18 +251,14 @@ func processTerminalTask(db *database.Queries, task database.Task) error {
 
 	_, err = db.UpdateTaskResults(context.Background(), database.UpdateTaskResultsParams{
 		ID:      task.ID,
-		Results: database.StringToPgText(result.String()),
+		Results: database.StringToPgText(results),
 	})
 
 	if err != nil {
 		return fmt.Errorf("failed to update task results: %w", err)
 	}
 
-	err = w.Close()
-
-	if err != nil {
-		return fmt.Errorf("failed to close writer: %w", err)
-	}
+	subscriptions.BroadcastTerminalLogsAdded(task.FlowID.Int64, websocket.FormatTerminalInput(results))
 
 	return nil
 }
@@ -296,7 +271,6 @@ func processCodeTask(db *database.Queries, task database.Task) error {
 	}
 
 	var cmd = ""
-	var r = bytes.Buffer{}
 
 	if args.Action == agent.ReadFile {
 		cmd = fmt.Sprintf("cat %s", args.Path)
@@ -306,7 +280,7 @@ func processCodeTask(db *database.Queries, task database.Task) error {
 		cmd = fmt.Sprintf("echo %s > %s", args.Content, args.Path)
 	}
 
-	err = ExecCommand(GenerateContainerName(task.FlowID.Int64), cmd, &r)
+	results, err := ExecCommand(task.FlowID.Int64, cmd, db)
 
 	if err != nil {
 		return fmt.Errorf("failed to execute command: %w", err)
@@ -314,7 +288,7 @@ func processCodeTask(db *database.Queries, task database.Task) error {
 
 	_, err = db.UpdateTaskResults(context.Background(), database.UpdateTaskResultsParams{
 		ID:      task.ID,
-		Results: database.StringToPgText(r.String()),
+		Results: database.StringToPgText(results),
 	})
 
 	if err != nil {

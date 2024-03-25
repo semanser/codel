@@ -37,8 +37,9 @@ type Task struct {
 }
 
 type Terminal struct {
-	ContainerName string `json:"containerName"`
-	Available     bool   `json:"available"`
+	ContainerName string   `json:"containerName"`
+	Connected     bool     `json:"connected"`
+	Logs          []string `json:"logs"`
 }
 
 type FlowStatus string

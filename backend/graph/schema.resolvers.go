@@ -78,7 +78,7 @@ func (r *mutationResolver) CreateTask(ctx context.Context, flowID uint, query st
 // Exec is the resolver for the _exec field.
 func (r *mutationResolver) Exec(ctx context.Context, containerID string, command string) (string, error) {
 	b := bytes.Buffer{}
-	executor.ExecCommand(containerID, command, &b)
+	// executor.ExecCommand(containerID, command, &b)
 
 	return b.String(), nil
 }
@@ -95,16 +95,18 @@ func (r *queryResolver) Flows(ctx context.Context) ([]*gmodel.Flow, error) {
 
 	for _, flow := range flows {
 		var gTasks []*gmodel.Task
+		var logs []string
 
 		gFlows = append(gFlows, &gmodel.Flow{
-			ID:            uint(flow.ID),
-			Name:          flow.Name.String,
-      Terminal: &gmodel.Terminal{
-        ContainerName: flow.ContainerName.String,
-        Available: false,
-      },
-			Tasks:         gTasks,
-			Status:        gmodel.FlowStatus(flow.Status.String),
+			ID:   uint(flow.ID),
+			Name: flow.Name.String,
+			Terminal: &gmodel.Terminal{
+				ContainerName: flow.ContainerName.String,
+				Connected:     false,
+				Logs:          logs,
+			},
+			Tasks:  gTasks,
+			Status: gmodel.FlowStatus(flow.Status.String),
 		})
 	}
 
@@ -121,6 +123,7 @@ func (r *queryResolver) Flow(ctx context.Context, id uint) (*gmodel.Flow, error)
 
 	var gFlow *gmodel.Flow
 	var gTasks []*gmodel.Task
+	var gLogs []string
 
 	tasks, err := r.Db.ReadTasksByFlowId(ctx, pgtype.Int8{Int64: int64(id), Valid: true})
 
@@ -139,16 +142,26 @@ func (r *queryResolver) Flow(ctx context.Context, id uint) (*gmodel.Flow, error)
 			CreatedAt: task.CreatedAt.Time,
 		})
 	}
+	logs, err := r.Db.GetLogsByFlowId(ctx, pgtype.Int8{Int64: flow.ID, Valid: true})
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch logs: %w", err)
+	}
+
+	for _, log := range logs {
+		gLogs = append(gLogs, log.Message)
+	}
 
 	gFlow = &gmodel.Flow{
-		ID:            uint(flow.ID),
-		Name:          flow.Name.String,
-		Tasks:         gTasks,
-    Terminal: &gmodel.Terminal{
-      ContainerName: flow.ContainerName.String,
-      Available: flow.ContainerStatus.String == "running",
-    },
-		Status:        gmodel.FlowStatus(flow.Status.String),
+		ID:    uint(flow.ID),
+		Name:  flow.Name.String,
+		Tasks: gTasks,
+		Terminal: &gmodel.Terminal{
+			ContainerName: flow.ContainerName.String,
+			Connected:     flow.ContainerStatus.String == "running",
+			Logs:          gLogs,
+		},
+		Status: gmodel.FlowStatus(flow.Status.String),
 	}
 
 	return gFlow, nil
@@ -167,6 +180,11 @@ func (r *subscriptionResolver) TaskUpdated(ctx context.Context) (<-chan *gmodel.
 // FlowUpdated is the resolver for the flowUpdated field.
 func (r *subscriptionResolver) FlowUpdated(ctx context.Context, flowID uint) (<-chan *gmodel.Flow, error) {
 	return subscriptions.FlowUpdated(ctx, int64(flowID))
+}
+
+// TerminalLogsAdded is the resolver for the terminalLogsAdded field.
+func (r *subscriptionResolver) TerminalLogsAdded(ctx context.Context, flowID uint) (<-chan string, error) {
+	return subscriptions.TerminalLogsAdded(ctx, int64(flowID))
 }
 
 // Mutation returns MutationResolver implementation.

@@ -130,10 +130,10 @@ func wsHandler(db *database.Queries) gin.HandlerFunc {
 			return
 		}
 
-    if flow.ContainerStatus.String != "running" {
-      c.AbortWithError(404, fmt.Errorf("container is not running"))
-      return
-    }
+		if flow.ContainerStatus.String != "running" {
+			c.AbortWithError(404, fmt.Errorf("container is not running"))
+			return
+		}
 
 		websocket.HandleWebsocket(c)
 	}

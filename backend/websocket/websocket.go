@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	connections   map[int64]*websocket.Conn // Map to store WebSocket connections
+	connections map[int64]*websocket.Conn // Map to store WebSocket connections
 )
 
 func HandleWebsocket(c *gin.Context) {

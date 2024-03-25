@@ -25,6 +25,14 @@ type Flow struct {
 	ContainerID pgtype.Int8
 }
 
+type Log struct {
+	ID        int32
+	Message   string
+	CreatedAt pgtype.Timestamp
+	FlowID    pgtype.Int8
+	Type      string
+}
+
 type Task struct {
 	ID        int64
 	CreatedAt pgtype.Timestamp

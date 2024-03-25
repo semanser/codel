@@ -70,6 +70,7 @@ type XTermProps = {
   options?: ITerminalOptions;
   status?: string;
   title?: React.ReactNode;
+  logs?: string[];
 };
 
 const addons: ITerminalAddon[] = [
@@ -96,41 +97,25 @@ export const Terminal = ({
   customKeyEventHandler,
   onInit,
   title,
+  logs = [],
 }: XTermProps) => {
   const divRef = useRef<HTMLDivElement | null>(null);
   const xtermRef = useRef<XTerminal | null>(null);
-  const connectedRefSocket = useRef<WebSocket>();
   const [isConnected, setIsConnected] = React.useState(false);
-
-  console.log(id, isConnected);
 
   useEffect(() => {
     if (!xtermRef.current) return;
 
     xtermRef.current.clear();
-
-    if (connectedRefSocket.current) {
-      console.log(`Closing connection to the terminal`);
-      connectedRefSocket.current.close();
-      setIsConnected(false);
-    }
-
-    if (id) {
-      const socket = new WebSocket(
-        "ws://" + import.meta.env.VITE_API_URL + "/terminal/" + id,
-      );
-      xtermRef.current.loadAddon(new AttachAddon(socket));
-      connectedRefSocket.current = socket;
-
-      socket.onopen = () => {
-        setIsConnected(true);
-      };
-
-      socket.onclose = () => {
-        setIsConnected(false);
-      };
-    }
   }, [id]);
+
+  useEffect(() => {
+    if (!xtermRef.current) return;
+
+    for (const log of logs) {
+      xtermRef.current.writeln(log);
+    }
+  }, [logs]);
 
   useEffect(() => {
     if (!divRef.current || xtermRef.current) return;

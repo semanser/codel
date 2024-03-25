@@ -16,6 +16,7 @@ import {
   useFlowQuery,
   useFlowUpdatedSubscription,
   useTaskAddedSubscription,
+  useTerminalLogsAddedSubscription,
 } from "@/generated/graphql";
 
 import { wrapperStyles } from "./ChatPage.css";
@@ -39,6 +40,11 @@ export const ChatPage = () => {
   const name = !isStaleData ? data?.flow.name ?? "" : "";
   const status = !isStaleData ? data?.flow.status : undefined;
   const terminal = !isStaleData ? data?.flow.terminal : undefined;
+
+  useTerminalLogsAddedSubscription({
+    variables: { flowId: Number(id) },
+    pause: isNewFlow,
+  });
 
   useTaskAddedSubscription({
     variables: { flowId: Number(id) },
@@ -101,9 +107,10 @@ export const ChatPage = () => {
           </Tabs.List>
           <Tabs.Content className={tabsContentStyles} value="terminal">
             <Terminal
-              id={!terminal?.available || isNewFlow ? "" : id}
+              id={isNewFlow ? "" : id}
               status={status}
               title={terminal?.containerName}
+              logs={terminal?.logs ?? []}
             />
           </Tabs.Content>
           <Tabs.Content className={tabsContentStyles} value="browser">

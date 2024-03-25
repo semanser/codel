@@ -5,8 +5,9 @@ import (
 )
 
 var (
-	taskAddedSubscriptions   = make(map[int64]chan *gmodel.Task)
-	flowUpdatedSubscriptions = make(map[int64]chan *gmodel.Flow)
+	taskAddedSubscriptions         = make(map[int64]chan *gmodel.Task)
+	flowUpdatedSubscriptions       = make(map[int64]chan *gmodel.Flow)
+	terminalLogsAddedSubscriptions = make(map[int64]chan string)
 )
 
 type Subscription[T any] interface {

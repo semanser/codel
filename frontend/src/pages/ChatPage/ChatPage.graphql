@@ -14,7 +14,8 @@ fragment flowFragment on Flow {
   status
   terminal {
     containerName
-    available
+    connected
+    logs
   }
   tasks {
     ...taskFragment
@@ -46,13 +47,17 @@ subscription taskAdded($flowId: Uint!) {
   }
 }
 
+subscription terminalLogsAdded($flowId: Uint!) {
+  terminalLogsAdded(flowId: $flowId)
+}
+
 subscription flowUpdated($flowId: Uint!) {
   flowUpdated(flowId: $flowId) {
     id
     name
     terminal {
       containerName
-      available
+      connected
     }
   }
 }
