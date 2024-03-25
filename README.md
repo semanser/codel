@@ -6,6 +6,8 @@
 
 <img src="./.github/demo.png" />
 
+Discord: https://discord.gg/uMaGSHNjzc
+
 # Features
 - 🔓 Secure. Everything is running in a sandboxed Docker environment.
 - 🤖 Autonomous. Automatically detects the next step and performs it.
