@@ -70,7 +70,7 @@ func (r *mutationResolver) CreateFlow(ctx context.Context, query string) (*gmode
 			ContainerName: dockerImage,
 		})
 
-		_, err = executor.SpawnContainer(executor.GenerateContainerName(flow.ID), dockerImage)
+		_, err = executor.SpawnContainer(context.Background(), executor.GenerateContainerName(flow.ID), dockerImage)
 
 		if err != nil {
 			log.Printf("failed to spawn container: %w", err)
