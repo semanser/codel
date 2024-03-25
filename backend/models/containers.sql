@@ -15,3 +15,9 @@ UPDATE containers
 SET status = $1
 WHERE id = $2
 RETURNING *;
+
+-- name: UpdateContainerLocalId :one
+UPDATE containers
+SET local_id = $1
+WHERE id = $2
+RETURNING *;

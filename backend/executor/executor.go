@@ -35,7 +35,7 @@ func InitDockerClient() error {
 	return nil
 }
 
-func SpawnContainer(ctx context.Context, name string, dockerImage string, db *database.Queries) (containerID string, err error) {
+func SpawnContainer(ctx context.Context, name string, dockerImage string, db *database.Queries) (dbContainerID int64, err error) {
 	log.Printf("Spawning container %s \"%s\"\n", dockerImage, name)
 
 	dbContainer, err := db.CreateContainer(ctx, database.CreateContainerParams{
@@ -45,25 +45,36 @@ func SpawnContainer(ctx context.Context, name string, dockerImage string, db *da
 	})
 
 	if err != nil {
-		return "", fmt.Errorf("Error creating container in database: %w", err)
+		return dbContainer.ID, fmt.Errorf("Error creating container in database: %w", err)
 	}
+
+	localContainerID := ""
 
 	defer func() {
 		status := "failed"
 
 		if err != nil {
-			err := StopContainer(containerID)
+			err := StopContainer(localContainerID, dbContainerID, db)
 
 			if err != nil {
-				log.Printf("Error stopping failed container %s: %s\n", containerID, err)
+				log.Printf("Error stopping failed container %s: %s\n", dbContainerID, err)
 			}
 		} else {
 			status = "running"
 		}
 
-		db.UpdateContainerStatus(ctx, database.UpdateContainerStatusParams{
+		_, err := db.UpdateContainerStatus(ctx, database.UpdateContainerStatusParams{
 			ID:     dbContainer.ID,
 			Status: database.StringToPgText(status),
+		})
+
+		if err != nil {
+			log.Printf("Error updating container status: %s\n", err)
+		}
+
+		_, err = db.UpdateContainerLocalId(ctx, database.UpdateContainerLocalIdParams{
+			ID:      dbContainer.ID,
+			LocalID: database.StringToPgText(localContainerID),
 		})
 	}()
 
@@ -74,7 +85,7 @@ func SpawnContainer(ctx context.Context, name string, dockerImage string, db *da
 	})
 
 	if err != nil {
-		return "", fmt.Errorf("Error listing images: %w", err)
+		return dbContainer.ID, fmt.Errorf("Error listing images: %w", err)
 	}
 
 	imageFound := len(images) > 0
@@ -86,14 +97,14 @@ func SpawnContainer(ctx context.Context, name string, dockerImage string, db *da
 		readCloser, err := dockerClient.ImagePull(ctx, dockerImage, types.ImagePullOptions{})
 
 		if err != nil {
-			return "", fmt.Errorf("Error pulling image: %w", err)
+			return dbContainer.ID, fmt.Errorf("Error pulling image: %w", err)
 		}
 
 		// Wait for the pull to finish
 		_, err = io.Copy(io.Discard, readCloser)
 
 		if err != nil {
-			return "", fmt.Errorf("Error waiting for image pull: %w", err)
+			return dbContainer.ID, fmt.Errorf("Error waiting for image pull: %w", err)
 		}
 	}
 
@@ -104,34 +115,44 @@ func SpawnContainer(ctx context.Context, name string, dockerImage string, db *da
 	}, nil, nil, nil, name)
 
 	if err != nil {
-		return "", fmt.Errorf("Error creating container: %w", err)
+		return dbContainer.ID, fmt.Errorf("Error creating container: %w", err)
 	}
 
 	log.Printf("Container %s created\n", name)
 
-	containerID = resp.ID
-	err = dockerClient.ContainerStart(ctx, containerID, container.StartOptions{})
+	localContainerID = resp.ID
+	err = dockerClient.ContainerStart(ctx, localContainerID, container.StartOptions{})
 
 	if err != nil {
-		return "", fmt.Errorf("Error starting container: %w", err)
+		return dbContainer.ID, fmt.Errorf("Error starting container: %w", err)
 	}
 	log.Printf("Container %s started\n", name)
 
-	return containerID, nil
+	return dbContainer.ID, nil
 }
 
-func StopContainer(containerID string) error {
+func StopContainer(containerID string, dbID int64, db *database.Queries) error {
 	if err := dockerClient.ContainerStop(context.Background(), containerID, container.StopOptions{}); err != nil {
 		return err
 	}
+
+	_, err := db.UpdateContainerStatus(context.Background(), database.UpdateContainerStatusParams{
+		Status: database.StringToPgText("stopped"),
+		ID:     dbID,
+	})
+
+	if err != nil {
+		return fmt.Errorf("Error updating container status to stopped: %w", err)
+	}
+
 	log.Printf("Container %s stopped\n", containerID)
 	return nil
 }
 
-func DeleteContainer(containerID string) error {
+func DeleteContainer(containerID string, dbID int64, db *database.Queries) error {
 	log.Printf("Deleting container %s...\n", containerID)
 
-	if err := StopContainer(containerID); err != nil {
+	if err := StopContainer(containerID, dbID, db); err != nil {
 		return err
 	}
 
@@ -156,9 +177,9 @@ func Cleanup(db *database.Queries) error {
 	for _, container := range containers {
 		wg.Add(1)
 		go func() {
-			id := container.LocalID.String
-			if err := DeleteContainer(id); err != nil {
-				log.Printf("Error deleting container %s: %s\n", id, err)
+			localId := container.LocalID.String
+			if err := DeleteContainer(localId, container.ID, db); err != nil {
+				log.Printf("Error deleting container %s: %s\n", localId, err)
 			}
 			wg.Done()
 		}()

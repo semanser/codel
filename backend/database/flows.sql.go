@@ -125,6 +125,32 @@ func (q *Queries) ReadFlow(ctx context.Context, id int64) (ReadFlowRow, error) {
 	return i, err
 }
 
+const updateFlowContainer = `-- name: UpdateFlowContainer :one
+UPDATE flows
+SET container_id = $1
+WHERE id = $2
+RETURNING id, created_at, updated_at, name, status, container_id
+`
+
+type UpdateFlowContainerParams struct {
+	ContainerID pgtype.Int8
+	ID          int64
+}
+
+func (q *Queries) UpdateFlowContainer(ctx context.Context, arg UpdateFlowContainerParams) (Flow, error) {
+	row := q.db.QueryRow(ctx, updateFlowContainer, arg.ContainerID, arg.ID)
+	var i Flow
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Name,
+		&i.Status,
+		&i.ContainerID,
+	)
+	return i, err
+}
+
 const updateFlowName = `-- name: UpdateFlowName :one
 UPDATE flows
 SET name = $1

@@ -190,10 +190,19 @@ func processInputTask(db *database.Queries, task database.Task) error {
 
 		containerName := GenerateContainerName(flow.ID)
 
-		_, err = SpawnContainer(context.Background(), containerName, dockerImage, db)
+		containerID, err := SpawnContainer(context.Background(), containerName, dockerImage, db)
 
 		if err != nil {
 			return fmt.Errorf("failed to spawn container: %w", err)
+		}
+
+		_, err = db.UpdateFlowContainer(context.Background(), database.UpdateFlowContainerParams{
+			ID:          flow.ID,
+			ContainerID: pgtype.Int8{Int64: containerID, Valid: true},
+		})
+
+		if err != nil {
+			return fmt.Errorf("failed to update flow container: %w", err)
 		}
 
 		err = websocket.SendToChannel(flowId, websocket.FormatTerminalSystemOutput("Container initialized. Ready to execute commands."))

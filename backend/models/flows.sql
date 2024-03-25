@@ -35,3 +35,9 @@ UPDATE flows
 SET name = $1
 WHERE id = $2
 RETURNING *;
+
+-- name: UpdateFlowContainer :one
+UPDATE flows
+SET container_id = $1
+WHERE id = $2
+RETURNING *;

@@ -70,6 +70,31 @@ func (q *Queries) GetAllRunningContainers(ctx context.Context) ([]Container, err
 	return items, nil
 }
 
+const updateContainerLocalId = `-- name: UpdateContainerLocalId :one
+UPDATE containers
+SET local_id = $1
+WHERE id = $2
+RETURNING id, name, local_id, image, status
+`
+
+type UpdateContainerLocalIdParams struct {
+	LocalID pgtype.Text
+	ID      int64
+}
+
+func (q *Queries) UpdateContainerLocalId(ctx context.Context, arg UpdateContainerLocalIdParams) (Container, error) {
+	row := q.db.QueryRow(ctx, updateContainerLocalId, arg.LocalID, arg.ID)
+	var i Container
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.LocalID,
+		&i.Image,
+		&i.Status,
+	)
+	return i, err
+}
+
 const updateContainerStatus = `-- name: UpdateContainerStatus :one
 UPDATE containers
 SET status = $1
