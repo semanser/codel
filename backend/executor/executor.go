@@ -21,13 +21,13 @@ var (
 func InitDockerClient() error {
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
-		return err
+		return fmt.Errorf("Error initializing docker client: %w", err)
 	}
 	dockerClient = cli
 	info, err := dockerClient.Info(context.Background())
 
 	if err != nil {
-		return err
+		return fmt.Errorf("Error getting docker info: %w", err)
 	}
 
 	log.Printf("Docker client initialized: %s", info.Name)
@@ -133,7 +133,7 @@ func SpawnContainer(ctx context.Context, name string, dockerImage string, db *da
 
 func StopContainer(containerID string, dbID int64, db *database.Queries) error {
 	if err := dockerClient.ContainerStop(context.Background(), containerID, container.StopOptions{}); err != nil {
-		return err
+		return fmt.Errorf("Error stopping container: %w", err)
 	}
 
 	_, err := db.UpdateContainerStatus(context.Background(), database.UpdateContainerStatusParams{
@@ -153,11 +153,11 @@ func DeleteContainer(containerID string, dbID int64, db *database.Queries) error
 	log.Printf("Deleting container %s...\n", containerID)
 
 	if err := StopContainer(containerID, dbID, db); err != nil {
-		return err
+		return fmt.Errorf("Error stopping container: %w", err)
 	}
 
 	if err := dockerClient.ContainerRemove(context.Background(), containerID, container.RemoveOptions{}); err != nil {
-		return err
+		return fmt.Errorf("Error removing container: %w", err)
 	}
 	log.Printf("Container %s removed\n", containerID)
 	return nil

@@ -37,17 +37,15 @@ func ProcessQueue(db *database.Queries) {
 
 			// Input tasks are added by the user optimistically on the client
 			// so they should not be broadcasted back to the client
-			if task.Type.String != "input" {
-				subscriptions.BroadcastTaskAdded(task.FlowID.Int64, &gmodel.Task{
-					ID:        uint(task.ID),
-					Message:   task.Message.String,
-					Type:      gmodel.TaskType(task.Type.String),
-					CreatedAt: task.CreatedAt.Time,
-					Status:    gmodel.TaskStatus(task.Status.String),
-					Args:      string(task.Args),
-					Results:   task.Results.String,
-				})
-			}
+			subscriptions.BroadcastTaskAdded(task.FlowID.Int64, &gmodel.Task{
+				ID:        uint(task.ID),
+				Message:   task.Message.String,
+				Type:      gmodel.TaskType(task.Type.String),
+				CreatedAt: task.CreatedAt.Time,
+				Status:    gmodel.TaskStatus(task.Status.String),
+				Args:      string(task.Args),
+				Results:   task.Results.String,
+			})
 
 			if task.Type.String == "input" {
 				err := processInputTask(db, task)
@@ -181,11 +179,10 @@ func processInputTask(db *database.Queries, task database.Task) error {
 			ContainerName: dockerImage,
 		})
 
-		flowId := fmt.Sprint(task.FlowID)
 		msg := fmt.Sprintf("Initializing the docker image %s...", dockerImage)
-		err = websocket.SendToChannel(flowId, websocket.FormatTerminalSystemOutput(msg))
+		err = websocket.SendToChannel(task.FlowID.Int64, websocket.FormatTerminalSystemOutput(msg))
 		if err != nil {
-			log.Printf("failed to send message to channel: %w", err)
+			log.Printf("failed to send message initializing message to the channel: %w", err)
 		}
 
 		containerName := GenerateContainerName(flow.ID)
@@ -205,9 +202,9 @@ func processInputTask(db *database.Queries, task database.Task) error {
 			return fmt.Errorf("failed to update flow container: %w", err)
 		}
 
-		err = websocket.SendToChannel(flowId, websocket.FormatTerminalSystemOutput("Container initialized. Ready to execute commands."))
+		err = websocket.SendToChannel(task.FlowID.Int64, websocket.FormatTerminalSystemOutput("Container initialized. Ready to execute commands."))
 		if err != nil {
-			log.Printf("failed to send message to channel: %w", err)
+			log.Printf("failed to send initialized message to the channel: %w", err)
 		}
 	}
 
@@ -228,7 +225,6 @@ func processAskTask(db *database.Queries, task database.Task) error {
 }
 
 func processTerminalTask(db *database.Queries, task database.Task) error {
-	flowId := fmt.Sprint(task.FlowID)
 	var args = agent.TerminalArgs{}
 	err := json.Unmarshal(task.Args, &args)
 	if err != nil {
@@ -236,13 +232,13 @@ func processTerminalTask(db *database.Queries, task database.Task) error {
 	}
 
 	// Send the input to the websocket channel
-	err = websocket.SendToChannel(flowId, websocket.FormatTerminalInput(args.Input))
+	err = websocket.SendToChannel(task.FlowID.Int64, websocket.FormatTerminalInput(args.Input))
 
 	if err != nil {
-		log.Printf("failed to send message to channel: %w", err)
+		log.Printf("failed to send terminal output to the channel: %w", err)
 	}
 
-	conn, err := websocket.GetConnection(flowId)
+	conn, err := websocket.GetConnection(task.FlowID.Int64)
 	if err != nil {
 		return fmt.Errorf("failed to get connection: %w", err)
 	}
