@@ -32,8 +32,8 @@ Add to `.env` file in the `backend` folder.
 - `DATABASE_URL` - PostgreSQL database URL (eg. `postgres://user:password@localhost:5432/database`)
 - `DOCKER_HOST` - Docker SDK API (eg. `DOCKER_HOST=unix:///Users/<my-user>/Library/Containers/com.docker.docker/Data/docker.raw.sock`) [more info](https://stackoverflow.com/a/62757128/5922857)
 ### Frontend
-Frontend env variables can be set by creating a `.env.local` file in the `frontend` folder.
-- `VITE_API_URL` - Backend API URL (eg. `localhost:8080`)
+Frontend environment variables can be set by creating a `.env.local` file in the `frontend` folder.
+- `VITE_API_URL` - Backend API URL. *Omit* the URL scheme (e.g., `localhost:8080` *NOT* `http://localhost:8080`).
 
 ## Steps
 - Run `go run .` in `backend` folder
