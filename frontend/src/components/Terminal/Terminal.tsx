@@ -12,6 +12,10 @@ import { WebglAddon } from "xterm-addon-webgl";
 import { Broadcast } from "xterm-theme";
 import "xterm/css/xterm.css";
 
+import dockerSvg from "@/assets/docker.svg";
+
+import { headerStyles } from "./Terminal.css";
+
 const isWebGl2Supported = !!document
   .createElement("canvas")
   .getContext("webgl2");
@@ -64,6 +68,8 @@ type XTermProps = {
   onTitleChange?: (title: string) => void;
   onWriteParsed?: (data: string) => void;
   options?: ITerminalOptions;
+  status?: string;
+  title?: React.ReactNode;
 };
 
 const addons: ITerminalAddon[] = [
@@ -89,10 +95,12 @@ export const Terminal = ({
   onWriteParsed,
   customKeyEventHandler,
   onInit,
+  title,
 }: XTermProps) => {
   const divRef = useRef<HTMLDivElement | null>(null);
   const xtermRef = useRef<XTerminal | null>(null);
   const connectedRefSocket = useRef<WebSocket>();
+  const [isConnected, setIsConnected] = React.useState(false);
 
   useEffect(() => {
     if (!xtermRef.current) return;
@@ -102,6 +110,7 @@ export const Terminal = ({
     if (connectedRefSocket.current) {
       console.log(`Closing connection to the terminal`);
       connectedRefSocket.current.close();
+      setIsConnected(false);
     }
 
     if (id) {
@@ -110,7 +119,14 @@ export const Terminal = ({
       );
       xtermRef.current.loadAddon(new AttachAddon(socket));
       connectedRefSocket.current = socket;
-      console.log(`Connected to terminal #${id}`);
+
+      socket.onopen = () => {
+        setIsConnected(true);
+      };
+
+      socket.onclose = () => {
+        setIsConnected(false);
+      };
     }
   }, [id]);
 
@@ -163,5 +179,19 @@ export const Terminal = ({
     [xtermRef.current],
   );
 
-  return <div id={id} className={className} ref={divRef} />;
+  return (
+    <>
+      <div className={headerStyles}>
+        {isConnected ? (
+          <>
+            <img src={dockerSvg} alt="Docker" width="14" height="14" />
+            {title} - "Connected"
+          </>
+        ) : (
+          "Disconnected"
+        )}
+      </div>
+      <div id={id} className={className} ref={divRef} />
+    </>
+  );
 };

@@ -1,13 +1,11 @@
 import * as Tabs from "@radix-ui/react-tabs";
 import { useNavigate, useParams } from "react-router-dom";
 
-import dockerSvg from "@/assets/docker.svg";
 import { Messages } from "@/components/Messages/Messages";
 import { Panel } from "@/components/Panel/Panel";
 import {
   tabsContentStyles,
   tabsListStyles,
-  tabsPillStyles,
   tabsRootStyles,
   tabsTriggerStyles,
 } from "@/components/Tabs/Tabs.css";
@@ -89,12 +87,6 @@ export const ChatPage = () => {
           <Tabs.List className={tabsListStyles}>
             <Tabs.Trigger className={tabsTriggerStyles} value="terminal">
               Terminal
-              {containerName && (
-                <div className={tabsPillStyles}>
-                  <img src={dockerSvg} alt="Docker" width="14" height="14" />
-                  {containerName}
-                </div>
-              )}
             </Tabs.Trigger>
             <Tabs.Trigger
               className={tabsTriggerStyles}
@@ -108,7 +100,11 @@ export const ChatPage = () => {
             </Tabs.Trigger>
           </Tabs.List>
           <Tabs.Content className={tabsContentStyles} value="terminal">
-            <Terminal id={isNewFlow ? "" : id} />
+            <Terminal
+              id={isNewFlow ? "" : id}
+              status={status}
+              title={containerName}
+            />
           </Tabs.Content>
           <Tabs.Content className={tabsContentStyles} value="browser">
             browser

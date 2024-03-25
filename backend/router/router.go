@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -18,6 +19,7 @@ import (
 	gorillaWs "github.com/gorilla/websocket"
 
 	"github.com/semanser/ai-coder/graph"
+	"github.com/semanser/ai-coder/models"
 	"github.com/semanser/ai-coder/websocket"
 )
 
@@ -39,7 +41,7 @@ func New(db *gorm.DB) *gin.Engine {
 	r.GET("/playground", playgroundHandler())
 
 	// WebSocket endpoint for Docker daemon
-	r.GET("/terminal/:id", wsHandler())
+	r.GET("/terminal/:id", wsHandler(db))
 
 	return r
 }
@@ -105,8 +107,27 @@ func playgroundHandler() gin.HandlerFunc {
 	}
 }
 
-func wsHandler() gin.HandlerFunc {
+func wsHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		idParam := c.Param("id")
+
+		// convert id to uint
+		id, err := strconv.ParseUint(idParam, 10, 64)
+
+		if err != nil {
+			c.AbortWithError(400, err)
+		}
+
+		flow := models.Flow{
+			ID: uint(id),
+		}
+
+		tx := db.Where("status != ?", "finished").First(&flow)
+
+		if tx.Error != nil {
+			c.AbortWithError(404, tx.Error)
+		}
+
 		websocket.HandleWebsocket(c)
 	}
 }
