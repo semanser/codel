@@ -9,10 +9,11 @@ import (
 )
 
 type Container struct {
-	ID     int64
-	Name   pgtype.Text
-	Image  pgtype.Text
-	Status pgtype.Text
+	ID      int64
+	Name    pgtype.Text
+	LocalID pgtype.Text
+	Image   pgtype.Text
+	Status  pgtype.Text
 }
 
 type Flow struct {

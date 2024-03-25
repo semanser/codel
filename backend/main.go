@@ -85,7 +85,7 @@ func main() {
 	log.Println("Shutting down...")
 
 	// Cleanup resources
-	if err := executor.Cleanup(); err != nil {
+	if err := executor.Cleanup(db); err != nil {
 		log.Printf("Error during cleanup: %v", err)
 	}
 

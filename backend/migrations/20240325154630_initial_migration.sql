@@ -3,6 +3,7 @@
 CREATE TABLE containers (
   id BIGSERIAL PRIMARY KEY,
   name text,
+  local_id text,
   image text,
   status text DEFAULT 'starting'::text
 );

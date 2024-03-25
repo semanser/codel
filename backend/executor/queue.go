@@ -190,7 +190,7 @@ func processInputTask(db *database.Queries, task database.Task) error {
 
 		containerName := GenerateContainerName(flow.ID)
 
-		_, err = SpawnContainer(context.Background(), containerName, dockerImage)
+		_, err = SpawnContainer(context.Background(), containerName, dockerImage, db)
 
 		if err != nil {
 			return fmt.Errorf("failed to spawn container: %w", err)

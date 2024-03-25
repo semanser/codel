@@ -11,11 +11,11 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
+	"github.com/semanser/ai-coder/database"
 )
 
 var (
 	dockerClient *client.Client
-	containers   []string
 )
 
 func InitDockerClient() error {
@@ -35,9 +35,37 @@ func InitDockerClient() error {
 	return nil
 }
 
-func SpawnContainer(ctx context.Context, name string, dockerImage string) (containerID string, err error) {
-	// TODO Create a new container in the DB
+func SpawnContainer(ctx context.Context, name string, dockerImage string, db *database.Queries) (containerID string, err error) {
 	log.Printf("Spawning container %s \"%s\"\n", dockerImage, name)
+
+	dbContainer, err := db.CreateContainer(ctx, database.CreateContainerParams{
+		Name:   database.StringToPgText(name),
+		Image:  database.StringToPgText(dockerImage),
+		Status: database.StringToPgText("starting"),
+	})
+
+	if err != nil {
+		return "", fmt.Errorf("Error creating container in database: %w", err)
+	}
+
+	defer func() {
+		status := "failed"
+
+		if err != nil {
+			err := StopContainer(containerID)
+
+			if err != nil {
+				log.Printf("Error stopping failed container %s: %s\n", containerID, err)
+			}
+		} else {
+			status = "running"
+		}
+
+		db.UpdateContainerStatus(ctx, database.UpdateContainerStatusParams{
+			ID:     dbContainer.ID,
+			Status: database.StringToPgText(status),
+		})
+	}()
 
 	filters := filters.NewArgs()
 	filters.Add("reference", dockerImage)
@@ -82,13 +110,13 @@ func SpawnContainer(ctx context.Context, name string, dockerImage string) (conta
 	log.Printf("Container %s created\n", name)
 
 	containerID = resp.ID
-	if err := dockerClient.ContainerStart(ctx, containerID, container.StartOptions{}); err != nil {
+	err = dockerClient.ContainerStart(ctx, containerID, container.StartOptions{})
+
+	if err != nil {
 		return "", fmt.Errorf("Error starting container: %w", err)
 	}
 	log.Printf("Container %s started\n", name)
 
-	// TODO Update the container status
-	containers = append(containers, containerID)
 	return containerID, nil
 }
 
@@ -114,16 +142,23 @@ func DeleteContainer(containerID string) error {
 	return nil
 }
 
-func Cleanup() error {
+func Cleanup(db *database.Queries) error {
 	log.Println("Cleaning up containers")
 
 	var wg sync.WaitGroup
 
-	for _, containerID := range containers {
+	containers, err := db.GetAllRunningContainers(context.Background())
+
+	if err != nil {
+		return fmt.Errorf("Error getting running containers: %w", err)
+	}
+
+	for _, container := range containers {
 		wg.Add(1)
 		go func() {
-			if err := DeleteContainer(containerID); err != nil {
-				log.Printf("Error deleting container %s: %s\n", containerID, err)
+			id := container.LocalID.String
+			if err := DeleteContainer(id); err != nil {
+				log.Printf("Error deleting container %s: %s\n", id, err)
 			}
 			wg.Done()
 		}()
@@ -134,12 +169,28 @@ func Cleanup() error {
 	return nil
 }
 
+func IsContainerRunning(containerID string) (bool, error) {
+	containerInfo, err := dockerClient.ContainerInspect(context.Background(), containerID)
+	return containerInfo.State.Running, err
+}
+
 func ExecCommand(container string, command string, dst io.Writer) (err error) {
 	// Create options for starting the exec process
 	cmd := []string{
 		"sh",
 		"-c",
 		command,
+	}
+
+	// Check if container is running
+	isRunning, err := IsContainerRunning(container)
+
+	if err != nil {
+		return fmt.Errorf("Error inspecting container: %w", err)
+	}
+
+	if !isRunning {
+		return fmt.Errorf("Container is not running")
 	}
 
 	createResp, err := dockerClient.ContainerExecCreate(context.Background(), container, types.ExecConfig{

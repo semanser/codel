@@ -53,6 +53,7 @@ const (
 	ContainerStarting ContainerStatus = "starting"
 	ContainerRunning  ContainerStatus = "running"
 	ContainerStopped  ContainerStatus = "stopped"
+	ContainerFailed   ContainerStatus = "failed"
 )
 
 type Container struct {
