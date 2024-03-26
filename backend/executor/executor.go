@@ -179,7 +179,7 @@ func DeleteContainer(containerID string, dbID int64, db *database.Queries) error
 }
 
 func Cleanup(db *database.Queries) error {
-	log.Println("Cleaning up containers")
+	log.Println("Cleaning up containers and making all flows finished...")
 
 	var wg sync.WaitGroup
 
@@ -201,6 +201,25 @@ func Cleanup(db *database.Queries) error {
 	}
 
 	wg.Wait()
+
+	flows, err := db.ReadAllFlows(context.Background())
+
+	if err != nil {
+		return fmt.Errorf("Error getting all flows: %w", err)
+	}
+
+	for _, flow := range flows {
+		if flow.Status.String == "in_progress" {
+			_, err := db.UpdateFlowStatus(context.Background(), database.UpdateFlowStatusParams{
+				Status: database.StringToPgText("finished"),
+				ID:     flow.ID,
+			})
+
+			if err != nil {
+				log.Printf("Error updating flow status: %s\n", err)
+			}
+		}
+	}
 
 	return nil
 }
