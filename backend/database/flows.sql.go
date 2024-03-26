@@ -93,22 +93,24 @@ SELECT
   f.id, f.created_at, f.updated_at, f.name, f.status, f.container_id,
   c.name AS container_name,
   c.image AS container_image,
-  c.status AS container_status
+  c.status AS container_status,
+  c.local_id AS container_local_id
 FROM flows f
 LEFT JOIN containers c ON f.container_id = c.id
 WHERE f.id = $1
 `
 
 type ReadFlowRow struct {
-	ID              int64
-	CreatedAt       pgtype.Timestamp
-	UpdatedAt       pgtype.Timestamp
-	Name            pgtype.Text
-	Status          pgtype.Text
-	ContainerID     pgtype.Int8
-	ContainerName   pgtype.Text
-	ContainerImage  pgtype.Text
-	ContainerStatus pgtype.Text
+	ID               int64
+	CreatedAt        pgtype.Timestamp
+	UpdatedAt        pgtype.Timestamp
+	Name             pgtype.Text
+	Status           pgtype.Text
+	ContainerID      pgtype.Int8
+	ContainerName    pgtype.Text
+	ContainerImage   pgtype.Text
+	ContainerStatus  pgtype.Text
+	ContainerLocalID pgtype.Text
 }
 
 func (q *Queries) ReadFlow(ctx context.Context, id int64) (ReadFlowRow, error) {
@@ -124,6 +126,7 @@ func (q *Queries) ReadFlow(ctx context.Context, id int64) (ReadFlowRow, error) {
 		&i.ContainerName,
 		&i.ContainerImage,
 		&i.ContainerStatus,
+		&i.ContainerLocalID,
 	)
 	return i, err
 }

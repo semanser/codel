@@ -13,6 +13,7 @@ import { Terminal } from "@/components/Terminal/Terminal";
 import {
   useCreateFlowMutation,
   useCreateTaskMutation,
+  useFinishFlowMutation,
   useFlowQuery,
   useFlowUpdatedSubscription,
   useTaskAddedSubscription,
@@ -26,6 +27,7 @@ export const ChatPage = () => {
   const { id } = useParams<{ id: string }>();
   const [, createFlowMutation] = useCreateFlowMutation();
   const [, createTaskMutation] = useCreateTaskMutation();
+  const [, finishFlowMutation] = useFinishFlowMutation();
   const isNewFlow = !id || id === "new";
 
   const [{ operation, data }] = useFlowQuery({
@@ -77,6 +79,10 @@ export const ChatPage = () => {
     }
   };
 
+  const handleFlowStop = () => {
+    finishFlowMutation({ flowId: id });
+  };
+
   return (
     <div className={wrapperStyles}>
       <Panel>
@@ -86,6 +92,7 @@ export const ChatPage = () => {
           onSubmit={handleSubmit}
           flowStatus={status}
           isNew={isNewFlow}
+          onFlowStop={handleFlowStop}
         />
       </Panel>
       <Panel>

@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/semanser/ai-coder/database"
@@ -28,6 +29,8 @@ func (r *mutationResolver) CreateFlow(ctx context.Context) (*gmodel.Flow, error)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create flow: %w", err)
 	}
+
+	executor.AddQueue(int64(flow.ID), r.Db)
 
 	return &gmodel.Flow{
 		ID:     uint(flow.ID),
@@ -60,7 +63,7 @@ func (r *mutationResolver) CreateTask(ctx context.Context, flowID uint, query st
 		return nil, fmt.Errorf("failed to create task: %w", err)
 	}
 
-	executor.AddCommand(task)
+	executor.AddCommand(int64(flowID), task)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute command: %w", err)
@@ -73,6 +76,44 @@ func (r *mutationResolver) CreateTask(ctx context.Context, flowID uint, query st
 		Status:    gmodel.TaskStatus(task.Status.String),
 		Args:      string(task.Args),
 		CreatedAt: task.CreatedAt.Time,
+	}, nil
+}
+
+// FinishFlow is the resolver for the finishFlow field.
+func (r *mutationResolver) FinishFlow(ctx context.Context, flowID uint) (*gmodel.Flow, error) {
+	// Remove all tasks from the queue
+	executor.CleanQueue(int64(flowID))
+
+	go func() {
+		// Delete the docker container
+		flow, err := r.Db.ReadFlow(context.Background(), int64(flowID))
+
+		if err != nil {
+			log.Printf("Error reading flow: %s\n", err)
+		}
+
+		err = executor.DeleteContainer(flow.ContainerLocalID.String, flow.ContainerID.Int64, r.Db)
+
+		if err != nil {
+			log.Printf("Error deleting container: %s\n", err)
+		}
+	}()
+
+	// Update flow status
+	r.Db.UpdateFlowStatus(ctx, database.UpdateFlowStatusParams{
+		Status: database.StringToPgText("finished"),
+		ID:     int64(flowID),
+	})
+
+	// Broadcast flow update
+	subscriptions.BroadcastFlowUpdated(int64(flowID), &gmodel.Flow{
+		ID:     flowID,
+		Status: gmodel.FlowStatus("finished"),
+	})
+
+	return &gmodel.Flow{
+		ID:     flowID,
+		Status: gmodel.FlowStatus("finished"),
 	}, nil
 }
 

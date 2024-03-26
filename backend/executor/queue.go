@@ -15,103 +15,136 @@ import (
 	"github.com/semanser/ai-coder/websocket"
 )
 
-var queue = make(chan database.Task, 1000)
+var queue = make(map[int64]chan database.Task)
+var stopChannels = make(map[int64]chan any)
 
-func AddCommand(task database.Task) {
-	queue <- task
-	log.Printf("Command %d added to the queue", task.ID)
+func AddQueue(flowId int64, db *database.Queries) {
+	if _, ok := queue[flowId]; !ok {
+		queue[flowId] = make(chan database.Task, 1000)
+
+		stop := make(chan any)
+		stopChannels[flowId] = stop
+		ProcessQueue(flowId, db)
+	}
 }
 
-func ProcessQueue(db *database.Queries) {
-	log.Println("Starting tasks processor")
+func AddCommand(flowId int64, task database.Task) {
+	if queue[flowId] != nil {
+		queue[flowId] <- task
+	}
+	log.Printf("Command %d added to the queue %d", task.ID, flowId)
+}
+
+func CleanQueue(flowId int64) {
+	if _, ok := queue[flowId]; ok {
+		queue[flowId] = nil
+	}
+
+	if _, ok := stopChannels[flowId]; ok {
+		close(stopChannels[flowId])
+		stopChannels[flowId] = nil
+	}
+
+	log.Println(fmt.Sprintf("Queue for flow %d cleaned", flowId))
+}
+
+func ProcessQueue(flowId int64, db *database.Queries) {
+	log.Println("Starting tasks processor for queue %d", flowId)
 
 	go func() {
 		for {
-			log.Println("Waiting for a task")
-			task := <-queue
+			select {
+			case <-stopChannels[flowId]:
+				log.Printf("Stopping task processor for queue %d", flowId)
+				return
+			default:
 
-			log.Printf("Processing command %d of type %s", task.ID, task.Type.String)
+				log.Println("Waiting for a task")
+				task := <-queue[flowId]
 
-			// Input tasks are added by the user optimistically on the client
-			// so they should not be broadcasted back to the client
-			subscriptions.BroadcastTaskAdded(task.FlowID.Int64, &gmodel.Task{
-				ID:        uint(task.ID),
-				Message:   task.Message.String,
-				Type:      gmodel.TaskType(task.Type.String),
-				CreatedAt: task.CreatedAt.Time,
-				Status:    gmodel.TaskStatus(task.Status.String),
-				Args:      string(task.Args),
-				Results:   task.Results.String,
-			})
+				log.Printf("Processing command %d of type %s", task.ID, task.Type.String)
 
-			if task.Type.String == "input" {
-				err := processInputTask(db, task)
+				// Input tasks are added by the user optimistically on the client
+				// so they should not be broadcasted back to the client
+				subscriptions.BroadcastTaskAdded(task.FlowID.Int64, &gmodel.Task{
+					ID:        uint(task.ID),
+					Message:   task.Message.String,
+					Type:      gmodel.TaskType(task.Type.String),
+					CreatedAt: task.CreatedAt.Time,
+					Status:    gmodel.TaskStatus(task.Status.String),
+					Args:      string(task.Args),
+					Results:   task.Results.String,
+				})
 
-				if err != nil {
-					log.Printf("failed to process input: %w", err)
-					continue
+				if task.Type.String == "input" {
+					err := processInputTask(db, task)
+
+					if err != nil {
+						log.Printf("failed to process input: %w", err)
+						continue
+					}
+
+					nextTask, err := getNextTask(db, task.FlowID.Int64)
+
+					if err != nil {
+						log.Printf("failed to get next task: %w", err)
+						continue
+					}
+
+					AddCommand(flowId, *nextTask)
 				}
 
-				nextTask, err := getNextTask(db, task.FlowID.Int64)
+				if task.Type.String == "ask" {
+					err := processAskTask(db, task)
 
-				if err != nil {
-					log.Printf("failed to get next task: %w", err)
-					continue
+					if err != nil {
+						log.Printf("failed to process ask: %w", err)
+						continue
+					}
 				}
 
-				AddCommand(*nextTask)
-			}
+				if task.Type.String == "terminal" {
+					err := processTerminalTask(db, task)
 
-			if task.Type.String == "ask" {
-				err := processAskTask(db, task)
+					if err != nil {
+						log.Printf("failed to process terminal: %w", err)
+						continue
+					}
+					nextTask, err := getNextTask(db, task.FlowID.Int64)
 
-				if err != nil {
-					log.Printf("failed to process ask: %w", err)
-					continue
-				}
-			}
+					if err != nil {
+						log.Printf("failed to get next task: %w", err)
+						continue
+					}
 
-			if task.Type.String == "terminal" {
-				err := processTerminalTask(db, task)
-
-				if err != nil {
-					log.Printf("failed to process terminal: %w", err)
-					continue
-				}
-				nextTask, err := getNextTask(db, task.FlowID.Int64)
-
-				if err != nil {
-					log.Printf("failed to get next task: %w", err)
-					continue
+					AddCommand(flowId, *nextTask)
 				}
 
-				AddCommand(*nextTask)
-			}
+				if task.Type.String == "code" {
+					err := processCodeTask(db, task)
 
-			if task.Type.String == "code" {
-				err := processCodeTask(db, task)
+					if err != nil {
+						log.Printf("failed to process code: %w", err)
+						continue
+					}
 
-				if err != nil {
-					log.Printf("failed to process code: %w", err)
-					continue
+					nextTask, err := getNextTask(db, task.FlowID.Int64)
+
+					if err != nil {
+						log.Printf("failed to get next task: %w", err)
+						continue
+					}
+
+					AddCommand(flowId, *nextTask)
 				}
 
-				nextTask, err := getNextTask(db, task.FlowID.Int64)
+				if task.Type.String == "done" {
+					err := processDoneTask(db, task)
 
-				if err != nil {
-					log.Printf("failed to get next task: %w", err)
-					continue
-				}
-
-				AddCommand(*nextTask)
-			}
-
-			if task.Type.String == "done" {
-				err := processDoneTask(db, task)
-
-				if err != nil {
-					log.Printf("failed to process done: %w", err)
-					continue
+					if err != nil {
+						log.Printf("failed to process done: %w", err)
+						continue
+					}
 				}
 			}
 		}

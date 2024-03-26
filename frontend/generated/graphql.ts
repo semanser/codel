@@ -45,6 +45,7 @@ export type Mutation = {
   _exec: Scalars['String']['output'];
   createFlow: Flow;
   createTask: Task;
+  finishFlow: Flow;
 };
 
 
@@ -57,6 +58,11 @@ export type Mutation_ExecArgs = {
 export type MutationCreateTaskArgs = {
   flowId: Scalars['Uint']['input'];
   query: Scalars['String']['input'];
+};
+
+
+export type MutationFinishFlowArgs = {
+  flowId: Scalars['Uint']['input'];
 };
 
 export type Query = {
@@ -214,6 +220,18 @@ export const CreateTaskDocument = gql`
 export function useCreateTaskMutation() {
   return Urql.useMutation<CreateTaskMutation, CreateTaskMutationVariables>(CreateTaskDocument);
 };
+export const FinishFlowDocument = gql`
+    mutation finishFlow($flowId: Uint!) {
+  finishFlow(flowId: $flowId) {
+    id
+    status
+  }
+}
+    `;
+
+export function useFinishFlowMutation() {
+  return Urql.useMutation<FinishFlowMutation, FinishFlowMutationVariables>(FinishFlowDocument);
+};
 export const TaskAddedDocument = gql`
     subscription taskAdded($flowId: Uint!) {
   taskAdded(flowId: $flowId) {
@@ -284,6 +302,13 @@ export type CreateTaskMutationVariables = Exact<{
 
 
 export type CreateTaskMutation = { __typename?: 'Mutation', createTask: { __typename?: 'Task', id: any, type: TaskType, message: string, status: TaskStatus, args: any, results: any, createdAt: any } };
+
+export type FinishFlowMutationVariables = Exact<{
+  flowId: Scalars['Uint']['input'];
+}>;
+
+
+export type FinishFlowMutation = { __typename?: 'Mutation', finishFlow: { __typename?: 'Flow', id: any, status: FlowStatus } };
 
 export type TaskAddedSubscriptionVariables = Exact<{
   flowId: Scalars['Uint']['input'];
@@ -489,6 +514,29 @@ export default {
               },
               {
                 "name": "query",
+                "type": {
+                  "kind": "NON_NULL",
+                  "ofType": {
+                    "kind": "SCALAR",
+                    "name": "Any"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "name": "finishFlow",
+            "type": {
+              "kind": "NON_NULL",
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "Flow",
+                "ofType": null
+              }
+            },
+            "args": [
+              {
+                "name": "flowId",
                 "type": {
                   "kind": "NON_NULL",
                   "ofType": {

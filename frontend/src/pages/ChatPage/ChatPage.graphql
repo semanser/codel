@@ -48,6 +48,13 @@ mutation createTask($flowId: Uint!, $query: String!) {
   }
 }
 
+mutation finishFlow($flowId: Uint!) {
+  finishFlow(flowId: $flowId) {
+    id
+    status
+  }
+}
+
 subscription taskAdded($flowId: Uint!) {
   taskAdded(flowId: $flowId) {
     ...taskFragment

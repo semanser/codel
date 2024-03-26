@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 
 import { FlowStatus, Task } from "@/generated/graphql";
 
+import { Button } from "../Button/Button";
 import { Message } from "./Message/Message";
 import {
   messagesListWrapper,
@@ -14,6 +15,7 @@ type MessagesProps = {
   tasks: Task[];
   name: string;
   onSubmit: (message: string) => void;
+  onFlowStop: () => void;
   flowStatus?: FlowStatus;
   isNew?: boolean;
 };
@@ -24,6 +26,7 @@ export const Messages = ({
   flowStatus,
   onSubmit,
   isNew,
+  onFlowStop,
 }: MessagesProps) => {
   const messages =
     tasks.map((task) => ({
@@ -87,7 +90,14 @@ export const Messages = ({
     <div className={messagesWrapper}>
       {name && (
         <div className={titleStyles}>
-          {name} {isFlowFinished && " (Finished)"}
+          {name}{" "}
+          {isFlowFinished ? (
+            " (Finished)"
+          ) : (
+            <Button hierarchy="danger" size="small" onClick={onFlowStop}>
+              Finish
+            </Button>
+          )}
         </div>
       )}
       <div className={messagesListWrapper} ref={messagesRef}>

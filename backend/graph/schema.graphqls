@@ -60,6 +60,7 @@ type Query {
 type Mutation {
   createFlow: Flow!
   createTask(flowId: Uint!, query: String!): Task!
+  finishFlow(flowId: Uint!): Flow!
 
   # Use only for development purposes
   _exec(containerId: String!, command: String!): String!

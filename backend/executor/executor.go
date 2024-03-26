@@ -226,6 +226,11 @@ func Cleanup(db *database.Queries) error {
 
 func IsContainerRunning(containerID string) (bool, error) {
 	containerInfo, err := dockerClient.ContainerInspect(context.Background(), containerID)
+
+	if err != nil {
+		return false, fmt.Errorf("Error inspecting container: %w", err)
+	}
+
 	return containerInfo.State.Running, err
 }
 
