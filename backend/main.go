@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"embed"
 	"log"
 	"net/http"
@@ -10,7 +11,9 @@ import (
 	"syscall"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/joho/godotenv"
+	"github.com/pressly/goose/v3"
 	"github.com/semanser/ai-coder/assets"
 	"github.com/semanser/ai-coder/database"
 	"github.com/semanser/ai-coder/executor"
@@ -22,6 +25,9 @@ const defaultPort = "8080"
 
 //go:embed templates/prompts/*.tmpl
 var promptTemplates embed.FS
+
+//go:embed migrations/*.sql
+var embedMigrations embed.FS
 
 func main() {
 	sigChan := make(chan os.Signal, 1)
@@ -54,6 +60,24 @@ func main() {
 	defer dbPool.Close()
 
 	db := database.New(dbPool)
+
+	// Setup migrations
+	dbMigrationsConnection, err := sql.Open("pgx", dsn)
+	if err != nil {
+		log.Fatalf("Unable to connect to database: %v\n", err)
+	}
+
+	goose.SetBaseFS(embedMigrations)
+
+	if err := goose.SetDialect("postgres"); err != nil {
+		log.Fatalf("Unable to set dialect: %v\n", err)
+	}
+
+	if err := goose.Up(dbMigrationsConnection, "migrations"); err != nil {
+		log.Fatalf("Unable to run migrations: %v\n", err)
+	}
+
+	log.Println("Migrations ran successfully")
 
 	port := os.Getenv("PORT")
 	if port == "" {
