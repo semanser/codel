@@ -234,8 +234,8 @@ func IsContainerRunning(containerID string) (bool, error) {
 	return containerInfo.State.Running, err
 }
 
-func ExecCommand(id int64, command string, db *database.Queries) (result string, err error) {
-	container := GenerateContainerName(id)
+func ExecCommand(flowID int64, command string, db *database.Queries) (result string, err error) {
+	container := GenerateContainerName(flowID)
 
 	// Create options for starting the exec process
 	cmd := []string{
@@ -257,7 +257,7 @@ func ExecCommand(id int64, command string, db *database.Queries) (result string,
 
 	// TODO avoid duplicating here and in the flows table
 	log, err := db.CreateLog(context.Background(), database.CreateLogParams{
-		FlowID:  pgtype.Int8{Int64: id, Valid: true},
+		FlowID:  pgtype.Int8{Int64: flowID, Valid: true},
 		Message: command,
 		Type:    "input",
 	})
@@ -266,7 +266,7 @@ func ExecCommand(id int64, command string, db *database.Queries) (result string,
 		return "", fmt.Errorf("Error creating log: %w", err)
 	}
 
-	subscriptions.BroadcastTerminalLogsAdded(id, &gmodel.Log{
+	subscriptions.BroadcastTerminalLogsAdded(flowID, &gmodel.Log{
 		ID:   uint(log.ID),
 		Text: websocket.FormatTerminalInput(command),
 	})
@@ -306,7 +306,7 @@ func ExecCommand(id int64, command string, db *database.Queries) (result string,
 
 	// TODO avoid duplicating here and in the flows table
 	log, err = db.CreateLog(context.Background(), database.CreateLogParams{
-		FlowID:  pgtype.Int8{Int64: id, Valid: true},
+		FlowID:  pgtype.Int8{Int64: flowID, Valid: true},
 		Message: results,
 		Type:    "output",
 	})
@@ -315,7 +315,7 @@ func ExecCommand(id int64, command string, db *database.Queries) (result string,
 		return "", fmt.Errorf("Error creating log: %w", err)
 	}
 
-	subscriptions.BroadcastTerminalLogsAdded(id, &gmodel.Log{
+	subscriptions.BroadcastTerminalLogsAdded(flowID, &gmodel.Log{
 		ID:   uint(log.ID),
 		Text: results,
 	})

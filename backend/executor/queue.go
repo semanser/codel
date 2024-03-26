@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/semanser/ai-coder/agent"
@@ -333,7 +334,10 @@ func processCodeTask(db *database.Queries, task database.Task) error {
 	}
 
 	if args.Action == agent.UpdateFile {
-		cmd = fmt.Sprintf("echo %s > %s", args.Content, args.Path)
+		// Replace all " with \"
+		content := strings.ReplaceAll(args.Content, "\"", "\\\"")
+
+		cmd = fmt.Sprintf("echo %s > %s", content, args.Path)
 	}
 
 	results, err := ExecCommand(task.FlowID.Int64, cmd, db)
