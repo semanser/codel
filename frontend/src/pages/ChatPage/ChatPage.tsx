@@ -1,13 +1,11 @@
 import * as Tabs from "@radix-ui/react-tabs";
 import { useNavigate, useParams } from "react-router-dom";
 
-import dockerSvg from "@/assets/docker.svg";
 import { Messages } from "@/components/Messages/Messages";
 import { Panel } from "@/components/Panel/Panel";
 import {
   tabsContentStyles,
   tabsListStyles,
-  tabsPillStyles,
   tabsRootStyles,
   tabsTriggerStyles,
 } from "@/components/Tabs/Tabs.css";
@@ -15,9 +13,11 @@ import { Terminal } from "@/components/Terminal/Terminal";
 import {
   useCreateFlowMutation,
   useCreateTaskMutation,
+  useFinishFlowMutation,
   useFlowQuery,
   useFlowUpdatedSubscription,
   useTaskAddedSubscription,
+  useTerminalLogsAddedSubscription,
 } from "@/generated/graphql";
 
 import { wrapperStyles } from "./ChatPage.css";
@@ -27,6 +27,7 @@ export const ChatPage = () => {
   const { id } = useParams<{ id: string }>();
   const [, createFlowMutation] = useCreateFlowMutation();
   const [, createTaskMutation] = useCreateTaskMutation();
+  const [, finishFlowMutation] = useFinishFlowMutation();
   const isNewFlow = !id || id === "new";
 
   const [{ operation, data }] = useFlowQuery({
@@ -39,8 +40,13 @@ export const ChatPage = () => {
 
   const tasks = !isStaleData ? data?.flow.tasks ?? [] : [];
   const name = !isStaleData ? data?.flow.name ?? "" : "";
-  const containerName = !isStaleData && data?.flow?.containerName;
   const status = !isStaleData ? data?.flow.status : undefined;
+  const terminal = !isStaleData ? data?.flow.terminal : undefined;
+
+  useTerminalLogsAddedSubscription({
+    variables: { flowId: Number(id) },
+    pause: isNewFlow,
+  });
 
   useTaskAddedSubscription({
     variables: { flowId: Number(id) },
@@ -73,6 +79,10 @@ export const ChatPage = () => {
     }
   };
 
+  const handleFlowStop = () => {
+    finishFlowMutation({ flowId: id });
+  };
+
   return (
     <div className={wrapperStyles}>
       <Panel>
@@ -82,6 +92,7 @@ export const ChatPage = () => {
           onSubmit={handleSubmit}
           flowStatus={status}
           isNew={isNewFlow}
+          onFlowStop={handleFlowStop}
         />
       </Panel>
       <Panel>
@@ -89,12 +100,6 @@ export const ChatPage = () => {
           <Tabs.List className={tabsListStyles}>
             <Tabs.Trigger className={tabsTriggerStyles} value="terminal">
               Terminal
-              {containerName && (
-                <div className={tabsPillStyles}>
-                  <img src={dockerSvg} alt="Docker" width="14" height="14" />
-                  {containerName}
-                </div>
-              )}
             </Tabs.Trigger>
             <Tabs.Trigger
               className={tabsTriggerStyles}
@@ -108,7 +113,13 @@ export const ChatPage = () => {
             </Tabs.Trigger>
           </Tabs.List>
           <Tabs.Content className={tabsContentStyles} value="terminal">
-            <Terminal id={isNewFlow ? "" : id} />
+            <Terminal
+              id={isNewFlow ? "" : id}
+              status={status}
+              title={terminal?.containerName}
+              logs={terminal?.logs ?? []}
+              isRunning={terminal?.connected}
+            />
           </Tabs.Content>
           <Tabs.Content className={tabsContentStyles} value="browser">
             browser

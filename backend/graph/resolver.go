@@ -1,7 +1,7 @@
 package graph
 
 import (
-	"gorm.io/gorm"
+	"github.com/semanser/ai-coder/database"
 )
 
 // This file will not be regenerated automatically.
@@ -9,5 +9,5 @@ import (
 // It serves as dependency injection for your app, add any dependencies you require here.
 
 type Resolver struct {
-	Db *gorm.DB
+	Db *database.Queries
 }

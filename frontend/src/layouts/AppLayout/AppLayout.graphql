@@ -1,7 +1,6 @@
 fragment flowOverviewFragment on Flow {
   id
   name
-  containerName
   status
 }
 

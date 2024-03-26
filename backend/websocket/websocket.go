@@ -2,23 +2,29 @@ package websocket
 
 import (
 	"fmt"
-	"sync"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 )
 
 var (
-	connections   map[string]*websocket.Conn // Map to store WebSocket connections
-	connectionsMu sync.Mutex                 // Mutex to synchronize access to the connections map
+	connections map[int64]*websocket.Conn // Map to store WebSocket connections
 )
 
 func HandleWebsocket(c *gin.Context) {
 	if connections == nil {
-		connections = make(map[string]*websocket.Conn)
+		connections = make(map[int64]*websocket.Conn)
 	}
 
 	id := c.Param("id")
+
+	parsedID, err := strconv.ParseInt(id, 10, 32)
+
+	if err != nil {
+		c.AbortWithError(400, fmt.Errorf("failed to parse id: %w", err))
+		return
+	}
 
 	// Upgrade HTTP connection to WebSocket
 	conn, err := websocket.Upgrade(c.Writer, c.Request, nil, 1024, 1024)
@@ -27,25 +33,19 @@ func HandleWebsocket(c *gin.Context) {
 		return
 	}
 
-	// Lock access to the connections map
-	connectionsMu.Lock()
-	defer connectionsMu.Unlock()
-
 	// Save the connection in the map
-	connections[id] = conn
+	connections[parsedID] = conn
 }
 
-func GetConnection(id string) (*websocket.Conn, error) {
-	connectionsMu.Lock()
-	defer connectionsMu.Unlock()
+func GetConnection(id int64) (*websocket.Conn, error) {
 	conn, ok := connections[id]
 	if !ok {
-		return nil, fmt.Errorf("connection not found for id %s", id)
+		return nil, fmt.Errorf("connection not found for id %d", id)
 	}
 	return conn, nil
 }
 
-func SendToChannel(id string, message string) error {
+func SendToChannel(id int64, message string) error {
 	conn, err := GetConnection(id)
 
 	if err != nil {

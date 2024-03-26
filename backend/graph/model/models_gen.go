@@ -10,11 +10,16 @@ import (
 )
 
 type Flow struct {
-	ID            uint       `json:"id"`
-	Name          string     `json:"name"`
-	Tasks         []*Task    `json:"tasks"`
-	ContainerName string     `json:"containerName"`
-	Status        FlowStatus `json:"status"`
+	ID       uint       `json:"id"`
+	Name     string     `json:"name"`
+	Tasks    []*Task    `json:"tasks"`
+	Terminal *Terminal  `json:"terminal"`
+	Status   FlowStatus `json:"status"`
+}
+
+type Log struct {
+	ID   uint   `json:"id"`
+	Text string `json:"text"`
 }
 
 type Mutation struct {
@@ -34,6 +39,12 @@ type Task struct {
 	Status    TaskStatus `json:"status"`
 	Args      string     `json:"args"`
 	Results   string     `json:"results"`
+}
+
+type Terminal struct {
+	ContainerName string `json:"containerName"`
+	Connected     bool   `json:"connected"`
+	Logs          []*Log `json:"logs"`
 }
 
 type FlowStatus string

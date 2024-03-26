@@ -1,10 +1,5 @@
 package models
 
-import (
-	"gorm.io/datatypes"
-	"gorm.io/gorm"
-)
-
 type FlowStatus string
 
 const (
@@ -13,12 +8,12 @@ const (
 )
 
 type Flow struct {
-	gorm.Model
 	ID          uint
 	Name        string
 	Tasks       []Task
 	Status      FlowStatus
-	DockerImage string
+	ContainerID uint
+	Container   Container
 }
 
 type TaskType string
@@ -42,13 +37,28 @@ const (
 )
 
 type Task struct {
-	gorm.Model
 	ID      uint
 	Message string
 	Type    TaskType
 	Status  TaskStatus
-	Args    datatypes.JSON
+	// Args    datatypes.JSON
 	Results string
 	FlowID  uint
 	Flow    Flow
+}
+
+type ContainerStatus = string
+
+const (
+	ContainerStarting ContainerStatus = "starting"
+	ContainerRunning  ContainerStatus = "running"
+	ContainerStopped  ContainerStatus = "stopped"
+	ContainerFailed   ContainerStatus = "failed"
+)
+
+type Container struct {
+	ID     uint
+	Name   string
+	Image  string
+	Status ContainerStatus
 }

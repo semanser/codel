@@ -1,275 +1,325 @@
 package executor
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 
-	gorillaWs "github.com/gorilla/websocket"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/semanser/ai-coder/agent"
+	"github.com/semanser/ai-coder/database"
 	gmodel "github.com/semanser/ai-coder/graph/model"
 	"github.com/semanser/ai-coder/graph/subscriptions"
-	"github.com/semanser/ai-coder/models"
 	"github.com/semanser/ai-coder/services"
 	"github.com/semanser/ai-coder/websocket"
-	"gorm.io/gorm"
 )
 
-var queue = make(chan models.Task, 1000)
+var queue = make(map[int64]chan database.Task)
+var stopChannels = make(map[int64]chan any)
 
-func AddCommand(task models.Task) {
-	queue <- task
-	log.Printf("Command %d added to the queue", task.ID)
+func AddQueue(flowId int64, db *database.Queries) {
+	if _, ok := queue[flowId]; !ok {
+		queue[flowId] = make(chan database.Task, 1000)
+
+		stop := make(chan any)
+		stopChannels[flowId] = stop
+		ProcessQueue(flowId, db)
+	}
 }
 
-func ProcessQueue(db *gorm.DB) {
-	log.Println("Starting tasks processor")
+func AddCommand(flowId int64, task database.Task) {
+	if queue[flowId] != nil {
+		queue[flowId] <- task
+	}
+	log.Printf("Command %d added to the queue %d", task.ID, flowId)
+}
+
+func CleanQueue(flowId int64) {
+	if _, ok := queue[flowId]; ok {
+		queue[flowId] = nil
+	}
+
+	if _, ok := stopChannels[flowId]; ok {
+		close(stopChannels[flowId])
+		stopChannels[flowId] = nil
+	}
+
+	log.Println(fmt.Sprintf("Queue for flow %d cleaned", flowId))
+}
+
+func ProcessQueue(flowId int64, db *database.Queries) {
+	log.Println("Starting tasks processor for queue %d", flowId)
 
 	go func() {
 		for {
-			log.Println("Waiting for a task")
-			task := <-queue
+			select {
+			case <-stopChannels[flowId]:
+				log.Printf("Stopping task processor for queue %d", flowId)
+				return
+			default:
 
-			log.Printf("Processing command %d of type %s", task.ID, task.Type)
+				log.Println("Waiting for a task")
+				task := <-queue[flowId]
 
-			// Input tasks are added by the user optimistically on the client
-			// so they should not be broadcasted back to the client
-			if task.Type != models.Input {
-				subscriptions.BroadcastTaskAdded(task.FlowID, &gmodel.Task{
-					ID:        task.ID,
-					Message:   task.Message,
-					Type:      gmodel.TaskType(task.Type),
-					CreatedAt: task.CreatedAt,
-					Status:    gmodel.TaskStatus(task.Status),
-					Args:      task.Args.String(),
-					Results:   task.Results,
+				log.Printf("Processing command %d of type %s", task.ID, task.Type.String)
+
+				// Input tasks are added by the user optimistically on the client
+				// so they should not be broadcasted back to the client
+				subscriptions.BroadcastTaskAdded(task.FlowID.Int64, &gmodel.Task{
+					ID:        uint(task.ID),
+					Message:   task.Message.String,
+					Type:      gmodel.TaskType(task.Type.String),
+					CreatedAt: task.CreatedAt.Time,
+					Status:    gmodel.TaskStatus(task.Status.String),
+					Args:      string(task.Args),
+					Results:   task.Results.String,
 				})
-			}
 
-			if task.Type == models.Input {
-				err := processInputTask(db, task)
+				if task.Type.String == "input" {
+					err := processInputTask(db, task)
 
-				if err != nil {
-					log.Printf("failed to process input: %w", err)
-					continue
+					if err != nil {
+						log.Printf("failed to process input: %w", err)
+						continue
+					}
+
+					nextTask, err := getNextTask(db, task.FlowID.Int64)
+
+					if err != nil {
+						log.Printf("failed to get next task: %w", err)
+						continue
+					}
+
+					AddCommand(flowId, *nextTask)
 				}
 
-				nextTask, err := getNextTask(db, task.FlowID)
+				if task.Type.String == "ask" {
+					err := processAskTask(db, task)
 
-				if err != nil {
-					log.Printf("failed to get next task: %w", err)
-					continue
+					if err != nil {
+						log.Printf("failed to process ask: %w", err)
+						continue
+					}
 				}
 
-				AddCommand(*nextTask)
-			}
+				if task.Type.String == "terminal" {
+					err := processTerminalTask(db, task)
 
-			if task.Type == models.Ask {
-				err := processAskTask(db, task)
+					if err != nil {
+						log.Printf("failed to process terminal: %w", err)
+						continue
+					}
+					nextTask, err := getNextTask(db, task.FlowID.Int64)
 
-				if err != nil {
-					log.Printf("failed to process ask: %w", err)
-					continue
-				}
-			}
+					if err != nil {
+						log.Printf("failed to get next task: %w", err)
+						continue
+					}
 
-			if task.Type == models.Terminal {
-				err := processTerminalTask(db, task)
-
-				if err != nil {
-					log.Printf("failed to process terminal: %w", err)
-					continue
-				}
-				nextTask, err := getNextTask(db, task.FlowID)
-
-				if err != nil {
-					log.Printf("failed to get next task: %w", err)
-					continue
+					AddCommand(flowId, *nextTask)
 				}
 
-				AddCommand(*nextTask)
-			}
+				if task.Type.String == "code" {
+					err := processCodeTask(db, task)
 
-			if task.Type == models.Code {
-				err := processCodeTask(db, task)
+					if err != nil {
+						log.Printf("failed to process code: %w", err)
+						continue
+					}
 
-				if err != nil {
-					log.Printf("failed to process code: %w", err)
-					continue
+					nextTask, err := getNextTask(db, task.FlowID.Int64)
+
+					if err != nil {
+						log.Printf("failed to get next task: %w", err)
+						continue
+					}
+
+					AddCommand(flowId, *nextTask)
 				}
 
-				nextTask, err := getNextTask(db, task.FlowID)
+				if task.Type.String == "done" {
+					err := processDoneTask(db, task)
 
-				if err != nil {
-					log.Printf("failed to get next task: %w", err)
-					continue
-				}
-
-				AddCommand(*nextTask)
-			}
-
-			if task.Type == models.Done {
-				err := processDoneTask(db, task)
-
-				if err != nil {
-					log.Printf("failed to process done: %w", err)
-					continue
+					if err != nil {
+						log.Printf("failed to process done: %w", err)
+						continue
+					}
 				}
 			}
 		}
 	}()
 }
 
-func processDoneTask(db *gorm.DB, task models.Task) error {
-	flow := &models.Flow{
-		ID:     task.FlowID,
-		Status: models.FlowFinished,
+func processDoneTask(db *database.Queries, task database.Task) error {
+	flow, err := db.UpdateFlowStatus(context.Background(), database.UpdateFlowStatusParams{
+		ID:     task.FlowID.Int64,
+		Status: database.StringToPgText("finished"),
+	})
+
+	if err != nil {
+		return fmt.Errorf("failed to update task status: %w", err)
 	}
 
-	tx := db.Updates(flow)
-
-	if tx.Error != nil {
-		return fmt.Errorf("failed to update flow: %w", tx.Error)
-	}
-
-	subscriptions.BroadcastFlowUpdated(flow.ID, &gmodel.Flow{
-		ID:     flow.ID,
-		Status: gmodel.FlowStatus(flow.Status),
+	subscriptions.BroadcastFlowUpdated(task.FlowID.Int64, &gmodel.Flow{
+		ID:     uint(flow.ID),
+		Status: gmodel.FlowStatus("finished"),
 	})
 
 	return nil
 }
 
-func processInputTask(db *gorm.DB, task models.Task) error {
-	flow := &models.Flow{
-		ID: task.FlowID,
-	}
-	tx := db.Preload("Tasks").First(flow)
+func processInputTask(db *database.Queries, task database.Task) error {
+	tasks, err := db.ReadTasksByFlowId(context.Background(), pgtype.Int8{
+		Int64: task.FlowID.Int64,
+		Valid: true,
+	})
 
-	if tx.Error != nil {
-		return fmt.Errorf("failed to fetch flow: %w", tx.Error)
+	if err != nil {
+		return fmt.Errorf("failed to get tasks by flow id: %w", err)
 	}
 
 	// This is the first task in the flow.
 	// We need to get the basic flow data as well as spin up the container
-	if len(flow.Tasks) == 1 {
-		summary, err := services.GetMessageSummary(task.Message, 10)
+	if len(tasks) == 1 {
+		summary, err := services.GetMessageSummary(task.Message.String, 10)
 
 		if err != nil {
 			return fmt.Errorf("failed to get message summary: %w", err)
 		}
 
-		dockerImage, err := services.GetDockerImageName(task.Message)
+		dockerImage, err := services.GetDockerImageName(task.Message.String)
 
 		if err != nil {
 			return fmt.Errorf("failed to get docker image name: %w", err)
 		}
 
-		tx := db.Updates(models.Flow{
-			ID:          flow.ID,
-			Name:        summary,
-			DockerImage: dockerImage,
+		flow, err := db.UpdateFlowName(context.Background(), database.UpdateFlowNameParams{
+			ID:   task.FlowID.Int64,
+			Name: database.StringToPgText(summary),
 		})
 
-		if tx.Error != nil {
-			return fmt.Errorf("failed to update flow: %w", tx.Error)
+		if err != nil {
+			return fmt.Errorf("failed to update flow: %w", err)
 		}
 
 		subscriptions.BroadcastFlowUpdated(flow.ID, &gmodel.Flow{
-			ID:            flow.ID,
-			Name:          summary,
-			ContainerName: dockerImage,
+			ID:   uint(flow.ID),
+			Name: summary,
+			Terminal: &gmodel.Terminal{
+				ContainerName: dockerImage,
+				Connected:     false,
+			},
 		})
 
-		flowId := fmt.Sprint(task.FlowID)
-		msg := fmt.Sprintf("Initializing the docker image %s...", dockerImage)
-		err = websocket.SendToChannel(flowId, websocket.FormatTerminalSystemOutput(msg))
+		msg := websocket.FormatTerminalSystemOutput(fmt.Sprintf("Initializing the docker image %s...", dockerImage))
+		l, err := db.CreateLog(context.Background(), database.CreateLogParams{
+			FlowID:  task.FlowID,
+			Message: msg,
+			Type:    "system",
+		})
+
 		if err != nil {
-			log.Printf("failed to send message to channel: %w", err)
+			return fmt.Errorf("Error creating log: %w", err)
 		}
-		_, err = SpawnContainer(context.Background(), GenerateContainerName(flow.ID), dockerImage)
+
+		subscriptions.BroadcastTerminalLogsAdded(flow.ID, &gmodel.Log{
+			ID:   uint(l.ID),
+			Text: msg,
+		})
+
+		containerName := GenerateContainerName(flow.ID)
+
+		containerID, err := SpawnContainer(context.Background(), containerName, dockerImage, db)
 
 		if err != nil {
 			return fmt.Errorf("failed to spawn container: %w", err)
 		}
 
-		err = websocket.SendToChannel(flowId, websocket.FormatTerminalSystemOutput("Container initialized. Ready to execute commands."))
+		subscriptions.BroadcastFlowUpdated(flow.ID, &gmodel.Flow{
+			ID:   uint(flow.ID),
+			Name: summary,
+			Terminal: &gmodel.Terminal{
+				Connected:     true,
+				ContainerName: dockerImage,
+			},
+		})
+
+		_, err = db.UpdateFlowContainer(context.Background(), database.UpdateFlowContainerParams{
+			ID:          flow.ID,
+			ContainerID: pgtype.Int8{Int64: containerID, Valid: true},
+		})
+
 		if err != nil {
-			log.Printf("failed to send message to channel: %w", err)
+			return fmt.Errorf("failed to update flow container: %w", err)
+		}
+
+		msg = websocket.FormatTerminalSystemOutput("Container initialized. Ready to execute commands.")
+		l, err = db.CreateLog(context.Background(), database.CreateLogParams{
+			FlowID:  task.FlowID,
+			Message: msg,
+			Type:    "system",
+		})
+
+		if err != nil {
+			return fmt.Errorf("Error creating log: %w", err)
+		}
+		subscriptions.BroadcastTerminalLogsAdded(flow.ID, &gmodel.Log{
+			ID:   uint(l.ID),
+			Text: msg,
+		})
+
+		if err != nil {
+			log.Printf("failed to send initialized message to the channel: %w", err)
 		}
 	}
 
 	return nil
 }
 
-func processAskTask(db *gorm.DB, task models.Task) error {
-	tx := db.Updates(models.Task{
+func processAskTask(db *database.Queries, task database.Task) error {
+	task, err := db.UpdateTaskStatus(context.Background(), database.UpdateTaskStatusParams{
+		Status: database.StringToPgText("finished"),
 		ID:     task.ID,
-		Status: models.TaskFinished,
 	})
 
-	if tx.Error != nil {
-		return fmt.Errorf("failed to find task with id %d: %w", task.ID, tx.Error)
+	if err != nil {
+		return fmt.Errorf("failed to find task with id %d: %w", task.ID, err)
 	}
 
 	return nil
 }
 
-func processTerminalTask(db *gorm.DB, task models.Task) error {
-	flowId := fmt.Sprint(task.FlowID)
+func processTerminalTask(db *database.Queries, task database.Task) error {
 	var args = agent.TerminalArgs{}
 	err := json.Unmarshal(task.Args, &args)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal args: %v", err)
 	}
 
-	// Send the input to the websocket channel
-	err = websocket.SendToChannel(flowId, websocket.FormatTerminalInput(args.Input))
-
-	if err != nil {
-		log.Printf("failed to send message to channel: %w", err)
-	}
-
-	conn, err := websocket.GetConnection(flowId)
-	if err != nil {
-		return fmt.Errorf("failed to get connection: %w", err)
-	}
-
-	w, err := conn.NextWriter(gorillaWs.BinaryMessage)
-
-	// Write the terminal output to both to the websocket and to the database
-	var result = &bytes.Buffer{}
-	multi := io.MultiWriter(w, result)
-
 	if err != nil {
 		return fmt.Errorf("failed to get writer: %w", err)
 	}
 
-	err = ExecCommand(GenerateContainerName(task.FlowID), args.Input, multi)
+	results, err := ExecCommand(task.FlowID.Int64, args.Input, db)
 
 	if err != nil {
 		return fmt.Errorf("failed to execute command: %w", err)
 	}
 
-	db.Updates(models.Task{
+	_, err = db.UpdateTaskResults(context.Background(), database.UpdateTaskResultsParams{
 		ID:      task.ID,
-		Results: result.String(),
-		Status:  models.TaskFinished,
+		Results: database.StringToPgText(results),
 	})
 
-	err = w.Close()
-
 	if err != nil {
-		return fmt.Errorf("failed to close writer: %w", err)
+		return fmt.Errorf("failed to update task results: %w", err)
 	}
 
 	return nil
 }
 
-func processCodeTask(db *gorm.DB, task models.Task) error {
+func processCodeTask(db *database.Queries, task database.Task) error {
 	var args = agent.CodeArgs{}
 	err := json.Unmarshal(task.Args, &args)
 	if err != nil {
@@ -277,7 +327,6 @@ func processCodeTask(db *gorm.DB, task models.Task) error {
 	}
 
 	var cmd = ""
-	var r = bytes.Buffer{}
 
 	if args.Action == agent.ReadFile {
 		cmd = fmt.Sprintf("cat %s", args.Path)
@@ -287,59 +336,70 @@ func processCodeTask(db *gorm.DB, task models.Task) error {
 		cmd = fmt.Sprintf("echo %s > %s", args.Content, args.Path)
 	}
 
-	err = ExecCommand(GenerateContainerName(task.FlowID), cmd, &r)
+	results, err := ExecCommand(task.FlowID.Int64, cmd, db)
 
 	if err != nil {
 		return fmt.Errorf("failed to execute command: %w", err)
 	}
 
-	db.Updates(models.Task{
+	_, err = db.UpdateTaskResults(context.Background(), database.UpdateTaskResultsParams{
 		ID:      task.ID,
-		Results: r.String(),
+		Results: database.StringToPgText(results),
 	})
+
+	if err != nil {
+		return fmt.Errorf("failed to update task results: %w", err)
+	}
 
 	return nil
 }
 
-func getNextTask(db *gorm.DB, flowId uint) (*models.Task, error) {
-	flow := models.Flow{}
-	tx := db.First(&models.Flow{}, flowId).Preload("Tasks").Find(&flow)
+func getNextTask(db *database.Queries, flowId int64) (*database.Task, error) {
+	flow, err := db.ReadFlow(context.Background(), flowId)
 
-	if tx.Error != nil {
-		return nil, fmt.Errorf("failed to find flow with id %d: %w", flowId, tx.Error)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get flow: %w", err)
+	}
+
+	tasks, err := db.ReadTasksByFlowId(context.Background(), pgtype.Int8{
+		Int64: flowId,
+		Valid: true,
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tasks by flow id: %w", err)
 	}
 
 	const maxResultsLength = 4000
-	for i, task := range flow.Tasks {
+	for i, task := range tasks {
 		// Limit the number of result characters since some output commands can have a lot of output
-		if len(task.Results) > maxResultsLength {
+		if len(task.Results.String) > maxResultsLength {
 			// Get the last N symbols from the output
-			flow.Tasks[i].Results = flow.Tasks[i].Results[len(flow.Tasks[i].Results)-maxResultsLength:]
+			results := task.Results.String[len(task.Results.String)-maxResultsLength:]
+			tasks[i].Results = database.StringToPgText(results)
 		}
 	}
 
 	c, err := agent.NextTask(agent.AgentPrompt{
-		Tasks:       flow.Tasks,
-		DockerImage: flow.DockerImage,
+		Tasks:       tasks,
+		DockerImage: flow.ContainerImage.String,
 	})
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to get next command: %w", err)
 	}
 
-	nextTask := &models.Task{
+	nextTask, err := db.CreateTask(context.Background(), database.CreateTaskParams{
 		Args:    c.Args,
 		Message: c.Message,
 		Type:    c.Type,
-		Status:  models.TaskInProgress,
-		FlowID:  flowId,
+		Status:  database.StringToPgText("in_progress"),
+		FlowID:  pgtype.Int8{Int64: flowId, Valid: true},
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to save command: %w", err)
 	}
 
-	tx = db.Save(nextTask)
-
-	if tx.Error != nil {
-		return nil, fmt.Errorf("failed to save command: %w", tx.Error)
-	}
-
-	return nextTask, nil
+	return &nextTask, nil
 }

@@ -1,0 +1,15 @@
+version: "2"
+cloud:
+sql:
+  - engine: "postgresql"
+    queries:
+      - "models/*.sql"
+    schema: "./migrations"
+    gen:
+      go:
+        package: "database"
+        out: "database"
+        sql_package: "pgx/v5"
+    database:
+      uri: ${DATABASE_URL}
+

@@ -6,7 +6,7 @@ import (
 	gmodel "github.com/semanser/ai-coder/graph/model"
 )
 
-func TaskAdded(ctx context.Context, flowId uint) (<-chan *gmodel.Task, error) {
+func TaskAdded(ctx context.Context, flowId int64) (<-chan *gmodel.Task, error) {
 	ch, unsubscribe := subscribe(flowId, taskAddedSubscriptions)
 
 	go func() {
@@ -25,16 +25,28 @@ func TaskAdded(ctx context.Context, flowId uint) (<-chan *gmodel.Task, error) {
 	return ch, nil
 }
 
-func FlowUpdated(ctx context.Context, flowId uint) (<-chan *gmodel.Flow, error) {
+func FlowUpdated(ctx context.Context, flowId int64) (<-chan *gmodel.Flow, error) {
 	ch, unsubscribe := subscribe(flowId, flowUpdatedSubscriptions)
 	go func() {
-		// Handle deregistration of the channel here. Note the `defer`
 		defer func() {
 			unsubscribe()
 		}()
 		for {
-			<-ctx.Done() // This runs when context gets cancelled. Subscription closes.
-			// Handle deregistration of the channel here. `close(ch)`
+			<-ctx.Done()
+			return
+		}
+	}()
+	return ch, nil
+}
+
+func TerminalLogsAdded(ctx context.Context, flowId int64) (<-chan *gmodel.Log, error) {
+	ch, unsubscribe := subscribe(flowId, terminalLogsAddedSubscriptions)
+	go func() {
+		defer func() {
+			unsubscribe()
+		}()
+		for {
+			<-ctx.Done()
 			return
 		}
 	}()
