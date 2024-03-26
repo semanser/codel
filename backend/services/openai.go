@@ -15,9 +15,9 @@ var OpenAIclient *openai.Client
 
 func Init() {
 
-	OpenAIclient = openai.NewClient(config.Config.OpenAiKey)
+	OpenAIclient = openai.NewClient(config.Config.OpenAIKey)
 
-	if config.Config.OpenAiKey == "" {
+	if config.Config.OpenAIKey == "" {
 		log.Fatal("OPEN_AI_KEY is not set")
 	}
 }

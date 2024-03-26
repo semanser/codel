@@ -28,7 +28,7 @@ func main() {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 
-	db, err := gorm.Open(postgres.Open(config.Config.DatabaseUrl), &gorm.Config{})
+	db, err := gorm.Open(postgres.Open(config.Config.DatabaseURL), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("failed to connect database: %v", err)
 	}
