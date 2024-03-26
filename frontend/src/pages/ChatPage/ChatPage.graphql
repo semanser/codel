@@ -8,11 +8,22 @@ fragment taskFragment on Task {
   createdAt
 }
 
+fragment logFragment on Log {
+  text
+  id
+}
+
 fragment flowFragment on Flow {
   id
   name
-  containerName
   status
+  terminal {
+    containerName
+    connected
+    logs {
+      ...logFragment
+    }
+  }
   tasks {
     ...taskFragment
   }
@@ -37,9 +48,22 @@ mutation createTask($flowId: Uint!, $query: String!) {
   }
 }
 
+mutation finishFlow($flowId: Uint!) {
+  finishFlow(flowId: $flowId) {
+    id
+    status
+  }
+}
+
 subscription taskAdded($flowId: Uint!) {
   taskAdded(flowId: $flowId) {
     ...taskFragment
+  }
+}
+
+subscription terminalLogsAdded($flowId: Uint!) {
+  terminalLogsAdded(flowId: $flowId) {
+    ...logFragment
   }
 }
 
@@ -47,6 +71,9 @@ subscription flowUpdated($flowId: Uint!) {
   flowUpdated(flowId: $flowId) {
     id
     name
-    containerName
+    terminal {
+      containerName
+      connected
+    }
   }
 }

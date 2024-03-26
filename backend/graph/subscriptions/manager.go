@@ -5,15 +5,16 @@ import (
 )
 
 var (
-	taskAddedSubscriptions   = make(map[uint]chan *gmodel.Task)
-	flowUpdatedSubscriptions = make(map[uint]chan *gmodel.Flow)
+	taskAddedSubscriptions         = make(map[int64]chan *gmodel.Task)
+	flowUpdatedSubscriptions       = make(map[int64]chan *gmodel.Flow)
+	terminalLogsAddedSubscriptions = make(map[int64]chan *gmodel.Log)
 )
 
 type Subscription[T any] interface {
 	subscribe() (T, error)
 }
 
-func subscribe[B any](flowID uint, subscriptions map[uint]chan B) (channel chan B, unsubscribe func()) {
+func subscribe[B any](flowID int64, subscriptions map[int64]chan B) (channel chan B, unsubscribe func()) {
 	ch := make(chan B)
 
 	if _, ok := subscriptions[flowID]; !ok {

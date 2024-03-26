@@ -2,13 +2,13 @@ package router
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/handler"
@@ -18,12 +18,12 @@ import (
 	"github.com/99designs/gqlgen/graphql/playground"
 	gorillaWs "github.com/gorilla/websocket"
 
+	"github.com/semanser/ai-coder/database"
 	"github.com/semanser/ai-coder/graph"
-	"github.com/semanser/ai-coder/models"
 	"github.com/semanser/ai-coder/websocket"
 )
 
-func New(db *gorm.DB) *gin.Engine {
+func New(db *database.Queries) *gin.Engine {
 	// Initialize Gin router
 	r := gin.Default()
 
@@ -46,7 +46,7 @@ func New(db *gorm.DB) *gin.Engine {
 	return r
 }
 
-func graphqlHandler(db *gorm.DB) gin.HandlerFunc {
+func graphqlHandler(db *database.Queries) gin.HandlerFunc {
 	// NewExecutableSchema and Config are in the generated.go file
 	// Resolver is in the resolver.go file
 	h := handler.New(graph.NewExecutableSchema(graph.Config{Resolvers: &graph.Resolver{
@@ -107,7 +107,7 @@ func playgroundHandler() gin.HandlerFunc {
 	}
 }
 
-func wsHandler(db *gorm.DB) gin.HandlerFunc {
+func wsHandler(db *database.Queries) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		idParam := c.Param("id")
 
@@ -118,14 +118,21 @@ func wsHandler(db *gorm.DB) gin.HandlerFunc {
 			c.AbortWithError(400, err)
 		}
 
-		flow := models.Flow{
-			ID: uint(id),
+		flow, err := db.ReadFlow(c, int64(id))
+
+		if err != nil {
+			c.AbortWithError(404, err)
+			return
 		}
 
-		tx := db.Where("status != ?", "finished").First(&flow)
+		if flow.Status.String != "in_progress" {
+			c.AbortWithError(404, fmt.Errorf("flow is not in progress"))
+			return
+		}
 
-		if tx.Error != nil {
-			c.AbortWithError(404, tx.Error)
+		if flow.ContainerStatus.String != "running" {
+			c.AbortWithError(404, fmt.Errorf("container is not running"))
+			return
 		}
 
 		websocket.HandleWebsocket(c)

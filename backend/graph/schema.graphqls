@@ -33,11 +33,22 @@ enum FlowStatus {
   finished
 }
 
+type Log {
+  id: Uint!
+  text: String!
+}
+
+type Terminal {
+  containerName: String!
+  connected: Boolean!
+  logs: [Log!]!
+}
+
 type Flow {
   id: Uint!
   name: String!
   tasks: [Task!]!
-  containerName: String!
+  terminal: Terminal!
   status: FlowStatus!
 }
 
@@ -49,6 +60,7 @@ type Query {
 type Mutation {
   createFlow: Flow!
   createTask(flowId: Uint!, query: String!): Task!
+  finishFlow(flowId: Uint!): Flow!
 
   # Use only for development purposes
   _exec(containerId: String!, command: String!): String!
@@ -58,4 +70,6 @@ type Subscription {
   taskAdded(flowId: Uint!): Task!
   taskUpdated: Task!
   flowUpdated(flowId: Uint!): Flow!
+
+  terminalLogsAdded(flowId: Uint!): Log!
 }

@@ -3,7 +3,6 @@
 // https://github.com/reubenmorgan/xterm-react/blob/6c8bb143387a6abc35ff54a3e099c46e5be8819c/src/Xterm.tsx
 import React, { useEffect, useRef } from "react";
 import { ITerminalAddon, ITerminalOptions, Terminal as XTerminal } from "xterm";
-import { AttachAddon } from "xterm-addon-attach";
 import { CanvasAddon } from "xterm-addon-canvas";
 import { FitAddon } from "xterm-addon-fit";
 import { Unicode11Addon } from "xterm-addon-unicode11";
@@ -13,6 +12,7 @@ import { Broadcast } from "xterm-theme";
 import "xterm/css/xterm.css";
 
 import dockerSvg from "@/assets/docker.svg";
+import { Log } from "@/generated/graphql";
 
 import { headerStyles } from "./Terminal.css";
 
@@ -70,6 +70,8 @@ type XTermProps = {
   options?: ITerminalOptions;
   status?: string;
   title?: React.ReactNode;
+  logs?: Log[];
+  isRunning?: boolean;
 };
 
 const addons: ITerminalAddon[] = [
@@ -96,39 +98,30 @@ export const Terminal = ({
   customKeyEventHandler,
   onInit,
   title,
+  logs = [],
+  isRunning = false,
 }: XTermProps) => {
   const divRef = useRef<HTMLDivElement | null>(null);
   const xtermRef = useRef<XTerminal | null>(null);
-  const connectedRefSocket = useRef<WebSocket>();
-  const [isConnected, setIsConnected] = React.useState(false);
+  const renderedLogIds = useRef<string[]>([]);
 
   useEffect(() => {
     if (!xtermRef.current) return;
 
     xtermRef.current.clear();
-
-    if (connectedRefSocket.current) {
-      console.log(`Closing connection to the terminal`);
-      connectedRefSocket.current.close();
-      setIsConnected(false);
-    }
-
-    if (id) {
-      const socket = new WebSocket(
-        "ws://" + import.meta.env.VITE_API_URL + "/terminal/" + id,
-      );
-      xtermRef.current.loadAddon(new AttachAddon(socket));
-      connectedRefSocket.current = socket;
-
-      socket.onopen = () => {
-        setIsConnected(true);
-      };
-
-      socket.onclose = () => {
-        setIsConnected(false);
-      };
-    }
+    renderedLogIds.current = [];
   }, [id]);
+
+  useEffect(() => {
+    if (!xtermRef.current) return;
+
+    for (const log of logs) {
+      if (renderedLogIds.current.includes(log.id)) continue;
+
+      xtermRef.current.writeln(log.text);
+      renderedLogIds.current.push(log.id);
+    }
+  }, [logs]);
 
   useEffect(() => {
     if (!divRef.current || xtermRef.current) return;
@@ -182,10 +175,10 @@ export const Terminal = ({
   return (
     <>
       <div className={headerStyles}>
-        {isConnected ? (
+        {isRunning ? (
           <>
             <img src={dockerSvg} alt="Docker" width="14" height="14" />
-            {title} - "Connected"
+            {title} - Active
           </>
         ) : (
           "Disconnected"

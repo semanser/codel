@@ -13,9 +13,11 @@ import { Terminal } from "@/components/Terminal/Terminal";
 import {
   useCreateFlowMutation,
   useCreateTaskMutation,
+  useFinishFlowMutation,
   useFlowQuery,
   useFlowUpdatedSubscription,
   useTaskAddedSubscription,
+  useTerminalLogsAddedSubscription,
 } from "@/generated/graphql";
 
 import { wrapperStyles } from "./ChatPage.css";
@@ -25,6 +27,7 @@ export const ChatPage = () => {
   const { id } = useParams<{ id: string }>();
   const [, createFlowMutation] = useCreateFlowMutation();
   const [, createTaskMutation] = useCreateTaskMutation();
+  const [, finishFlowMutation] = useFinishFlowMutation();
   const isNewFlow = !id || id === "new";
 
   const [{ operation, data }] = useFlowQuery({
@@ -37,8 +40,13 @@ export const ChatPage = () => {
 
   const tasks = !isStaleData ? data?.flow.tasks ?? [] : [];
   const name = !isStaleData ? data?.flow.name ?? "" : "";
-  const containerName = !isStaleData && data?.flow?.containerName;
   const status = !isStaleData ? data?.flow.status : undefined;
+  const terminal = !isStaleData ? data?.flow.terminal : undefined;
+
+  useTerminalLogsAddedSubscription({
+    variables: { flowId: Number(id) },
+    pause: isNewFlow,
+  });
 
   useTaskAddedSubscription({
     variables: { flowId: Number(id) },
@@ -71,6 +79,10 @@ export const ChatPage = () => {
     }
   };
 
+  const handleFlowStop = () => {
+    finishFlowMutation({ flowId: id });
+  };
+
   return (
     <div className={wrapperStyles}>
       <Panel>
@@ -80,6 +92,7 @@ export const ChatPage = () => {
           onSubmit={handleSubmit}
           flowStatus={status}
           isNew={isNewFlow}
+          onFlowStop={handleFlowStop}
         />
       </Panel>
       <Panel>
@@ -103,7 +116,9 @@ export const ChatPage = () => {
             <Terminal
               id={isNewFlow ? "" : id}
               status={status}
-              title={containerName}
+              title={terminal?.containerName}
+              logs={terminal?.logs ?? []}
+              isRunning={terminal?.connected}
             />
           </Tabs.Content>
           <Tabs.Content className={tabsContentStyles} value="browser">

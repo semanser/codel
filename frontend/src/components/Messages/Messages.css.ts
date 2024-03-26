@@ -20,6 +20,10 @@ export const messagesListWrapper = style({
 export const titleStyles = style([
   font.textSmSemibold,
   {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
     color: vars.color.gray11,
     textAlign: "center",
     marginBottom: 16,

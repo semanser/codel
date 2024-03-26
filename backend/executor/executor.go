@@ -1,6 +1,7 @@
 package executor
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -11,23 +12,27 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/semanser/ai-coder/database"
+	gmodel "github.com/semanser/ai-coder/graph/model"
+	"github.com/semanser/ai-coder/graph/subscriptions"
+	"github.com/semanser/ai-coder/websocket"
 )
 
 var (
 	dockerClient *client.Client
-	containers   []string
 )
 
 func InitDockerClient() error {
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
-		return err
+		return fmt.Errorf("Error initializing docker client: %w", err)
 	}
 	dockerClient = cli
 	info, err := dockerClient.Info(context.Background())
 
 	if err != nil {
-		return err
+		return fmt.Errorf("Error getting docker info: %w", err)
 	}
 
 	log.Printf("Docker client initialized: %s", info.Name)
@@ -35,8 +40,48 @@ func InitDockerClient() error {
 	return nil
 }
 
-func SpawnContainer(ctx context.Context, name string, dockerImage string) (containerID string, err error) {
+func SpawnContainer(ctx context.Context, name string, dockerImage string, db *database.Queries) (dbContainerID int64, err error) {
 	log.Printf("Spawning container %s \"%s\"\n", dockerImage, name)
+
+	dbContainer, err := db.CreateContainer(ctx, database.CreateContainerParams{
+		Name:   database.StringToPgText(name),
+		Image:  database.StringToPgText(dockerImage),
+		Status: database.StringToPgText("starting"),
+	})
+
+	if err != nil {
+		return dbContainer.ID, fmt.Errorf("Error creating container in database: %w", err)
+	}
+
+	localContainerID := ""
+
+	defer func() {
+		status := "failed"
+
+		if err != nil {
+			err := StopContainer(localContainerID, dbContainerID, db)
+
+			if err != nil {
+				log.Printf("Error stopping failed container %s: %s\n", dbContainerID, err)
+			}
+		} else {
+			status = "running"
+		}
+
+		_, err := db.UpdateContainerStatus(ctx, database.UpdateContainerStatusParams{
+			ID:     dbContainer.ID,
+			Status: database.StringToPgText(status),
+		})
+
+		if err != nil {
+			log.Printf("Error updating container status: %s\n", err)
+		}
+
+		_, err = db.UpdateContainerLocalId(ctx, database.UpdateContainerLocalIdParams{
+			ID:      dbContainer.ID,
+			LocalID: database.StringToPgText(localContainerID),
+		})
+	}()
 
 	filters := filters.NewArgs()
 	filters.Add("reference", dockerImage)
@@ -45,7 +90,7 @@ func SpawnContainer(ctx context.Context, name string, dockerImage string) (conta
 	})
 
 	if err != nil {
-		return "", fmt.Errorf("Error listing images: %w", err)
+		return dbContainer.ID, fmt.Errorf("Error listing images: %w", err)
 	}
 
 	imageFound := len(images) > 0
@@ -57,14 +102,14 @@ func SpawnContainer(ctx context.Context, name string, dockerImage string) (conta
 		readCloser, err := dockerClient.ImagePull(ctx, dockerImage, types.ImagePullOptions{})
 
 		if err != nil {
-			return "", fmt.Errorf("Error pulling image: %w", err)
+			return dbContainer.ID, fmt.Errorf("Error pulling image: %w", err)
 		}
 
 		// Wait for the pull to finish
 		_, err = io.Copy(io.Discard, readCloser)
 
 		if err != nil {
-			return "", fmt.Errorf("Error waiting for image pull: %w", err)
+			return dbContainer.ID, fmt.Errorf("Error waiting for image pull: %w", err)
 		}
 	}
 
@@ -75,53 +120,81 @@ func SpawnContainer(ctx context.Context, name string, dockerImage string) (conta
 	}, nil, nil, nil, name)
 
 	if err != nil {
-		return "", fmt.Errorf("Error creating container: %w", err)
+		return dbContainer.ID, fmt.Errorf("Error creating container: %w", err)
 	}
 
 	log.Printf("Container %s created\n", name)
 
-	containerID = resp.ID
-	if err := dockerClient.ContainerStart(ctx, containerID, container.StartOptions{}); err != nil {
-		return "", fmt.Errorf("Error starting container: %w", err)
+	localContainerID = resp.ID
+	err = dockerClient.ContainerStart(ctx, localContainerID, container.StartOptions{})
+
+	if err != nil {
+		return dbContainer.ID, fmt.Errorf("Error starting container: %w", err)
 	}
 	log.Printf("Container %s started\n", name)
 
-	containers = append(containers, containerID)
-	return containerID, nil
+	return dbContainer.ID, nil
 }
 
-func StopContainer(containerID string) error {
+func StopContainer(containerID string, dbID int64, db *database.Queries) error {
 	if err := dockerClient.ContainerStop(context.Background(), containerID, container.StopOptions{}); err != nil {
-		return err
+		if client.IsErrNotFound(err) {
+			log.Printf("Container %s not found. Marking it as stopped.\n", containerID)
+			db.UpdateContainerStatus(context.Background(), database.UpdateContainerStatusParams{
+				Status: database.StringToPgText("stopped"),
+				ID:     dbID,
+			})
+
+			return nil
+		} else {
+			return fmt.Errorf("Error stopping container: %w", err)
+		}
 	}
+
+	_, err := db.UpdateContainerStatus(context.Background(), database.UpdateContainerStatusParams{
+		Status: database.StringToPgText("stopped"),
+		ID:     dbID,
+	})
+
+	if err != nil {
+		return fmt.Errorf("Error updating container status to stopped: %w", err)
+	}
+
 	log.Printf("Container %s stopped\n", containerID)
 	return nil
 }
 
-func DeleteContainer(containerID string) error {
+func DeleteContainer(containerID string, dbID int64, db *database.Queries) error {
 	log.Printf("Deleting container %s...\n", containerID)
 
-	if err := StopContainer(containerID); err != nil {
-		return err
+	if err := StopContainer(containerID, dbID, db); err != nil {
+		return fmt.Errorf("Error stopping container: %w", err)
 	}
 
 	if err := dockerClient.ContainerRemove(context.Background(), containerID, container.RemoveOptions{}); err != nil {
-		return err
+		return fmt.Errorf("Error removing container: %w", err)
 	}
 	log.Printf("Container %s removed\n", containerID)
 	return nil
 }
 
-func Cleanup() error {
-	log.Println("Cleaning up containers")
+func Cleanup(db *database.Queries) error {
+	log.Println("Cleaning up containers and making all flows finished...")
 
 	var wg sync.WaitGroup
 
-	for _, containerID := range containers {
+	containers, err := db.GetAllRunningContainers(context.Background())
+
+	if err != nil {
+		return fmt.Errorf("Error getting running containers: %w", err)
+	}
+
+	for _, container := range containers {
 		wg.Add(1)
 		go func() {
-			if err := DeleteContainer(containerID); err != nil {
-				log.Printf("Error deleting container %s: %s\n", containerID, err)
+			localId := container.LocalID.String
+			if err := DeleteContainer(localId, container.ID, db); err != nil {
+				log.Printf("Error deleting container %s: %s\n", localId, err)
 			}
 			wg.Done()
 		}()
@@ -129,16 +202,74 @@ func Cleanup() error {
 
 	wg.Wait()
 
+	flows, err := db.ReadAllFlows(context.Background())
+
+	if err != nil {
+		return fmt.Errorf("Error getting all flows: %w", err)
+	}
+
+	for _, flow := range flows {
+		if flow.Status.String == "in_progress" {
+			_, err := db.UpdateFlowStatus(context.Background(), database.UpdateFlowStatusParams{
+				Status: database.StringToPgText("finished"),
+				ID:     flow.ID,
+			})
+
+			if err != nil {
+				log.Printf("Error updating flow status: %s\n", err)
+			}
+		}
+	}
+
 	return nil
 }
 
-func ExecCommand(container string, command string, dst io.Writer) (err error) {
+func IsContainerRunning(containerID string) (bool, error) {
+	containerInfo, err := dockerClient.ContainerInspect(context.Background(), containerID)
+
+	if err != nil {
+		return false, fmt.Errorf("Error inspecting container: %w", err)
+	}
+
+	return containerInfo.State.Running, err
+}
+
+func ExecCommand(id int64, command string, db *database.Queries) (result string, err error) {
+	container := GenerateContainerName(id)
+
 	// Create options for starting the exec process
 	cmd := []string{
 		"sh",
 		"-c",
 		command,
 	}
+
+	// Check if container is running
+	isRunning, err := IsContainerRunning(container)
+
+	if err != nil {
+		return "", fmt.Errorf("Error inspecting container: %w", err)
+	}
+
+	if !isRunning {
+		return "", fmt.Errorf("Container is not running")
+	}
+
+	// TODO avoid duplicating here and in the flows table
+	log, err := db.CreateLog(context.Background(), database.CreateLogParams{
+		FlowID:  pgtype.Int8{Int64: id, Valid: true},
+		Message: command,
+		Type:    "input",
+	})
+
+	if err != nil {
+		return "", fmt.Errorf("Error creating log: %w", err)
+	}
+
+	subscriptions.BroadcastTerminalLogsAdded(id, &gmodel.Log{
+		ID:   uint(log.ID),
+		Text: websocket.FormatTerminalInput(command),
+	})
 
 	createResp, err := dockerClient.ContainerExecCreate(context.Background(), container, types.ExecConfig{
 		Cmd:          cmd,
@@ -147,7 +278,7 @@ func ExecCommand(container string, command string, dst io.Writer) (err error) {
 		Tty:          true,
 	})
 	if err != nil {
-		return fmt.Errorf("Error creating exec process: %w", err)
+		return "", fmt.Errorf("Error creating exec process: %w", err)
 	}
 
 	// Attach to the exec process
@@ -155,24 +286,43 @@ func ExecCommand(container string, command string, dst io.Writer) (err error) {
 		Tty: true,
 	})
 	if err != nil {
-		return fmt.Errorf("Error attaching to exec process: %w", err)
+		return "", fmt.Errorf("Error attaching to exec process: %w", err)
 	}
 	defer resp.Close()
 
-	_, err = io.Copy(dst, resp.Reader)
+	dst := bytes.Buffer{}
+	_, err = io.Copy(&dst, resp.Reader)
 	if err != nil && err != io.EOF {
-		return fmt.Errorf("Error copying output: %w", err)
+		return "", fmt.Errorf("Error copying output: %w", err)
 	}
 
 	// Wait for the exec process to finish
 	_, err = dockerClient.ContainerExecInspect(context.Background(), createResp.ID)
 	if err != nil {
-		return fmt.Errorf("Error inspecting exec process: %w", err)
+		return "", fmt.Errorf("Error inspecting exec process: %w", err)
 	}
 
-	return nil
+	results := dst.String()
+
+	// TODO avoid duplicating here and in the flows table
+	log, err = db.CreateLog(context.Background(), database.CreateLogParams{
+		FlowID:  pgtype.Int8{Int64: id, Valid: true},
+		Message: results,
+		Type:    "output",
+	})
+
+	if err != nil {
+		return "", fmt.Errorf("Error creating log: %w", err)
+	}
+
+	subscriptions.BroadcastTerminalLogsAdded(id, &gmodel.Log{
+		ID:   uint(log.ID),
+		Text: results,
+	})
+
+	return dst.String(), nil
 }
 
-func GenerateContainerName(flowID uint) string {
+func GenerateContainerName(flowID int64) string {
 	return fmt.Sprintf("flow-%d", flowID)
 }
