@@ -8,20 +8,19 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/joho/godotenv"
 	"github.com/pressly/goose/v3"
 	"github.com/semanser/ai-coder/assets"
+	"github.com/semanser/ai-coder/config"
 	"github.com/semanser/ai-coder/database"
 	"github.com/semanser/ai-coder/executor"
 	"github.com/semanser/ai-coder/router"
 	"github.com/semanser/ai-coder/services"
 )
-
-const defaultPort = "8080"
 
 //go:embed templates/prompts/*.tmpl
 var promptTemplates embed.FS
@@ -30,18 +29,11 @@ var promptTemplates embed.FS
 var embedMigrations embed.FS
 
 func main() {
+	config.Init()
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 
-	godotenv.Load()
-
-	dsn := os.Getenv("DATABASE_URL")
-
-	if dsn == "" {
-		log.Fatal("failed to read DB env variable")
-	}
-
-	poolConfig, err := pgxpool.ParseConfig(dsn)
+	poolConfig, err := pgxpool.ParseConfig(config.Config.DatabaseURL)
 	if err != nil {
 		log.Fatalf("failed to create a pool: %w", err)
 	}
@@ -62,7 +54,7 @@ func main() {
 	db := database.New(dbPool)
 
 	// Setup migrations
-	dbMigrationsConnection, err := sql.Open("pgx", dsn)
+	dbMigrationsConnection, err := sql.Open("pgx", config.Config.DatabaseURL)
 	if err != nil {
 		log.Fatalf("Unable to connect to database: %v\n", err)
 	}
@@ -79,10 +71,7 @@ func main() {
 
 	log.Println("Migrations ran successfully")
 
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = defaultPort
-	}
+	port := strconv.Itoa(config.Config.Port)
 
 	r := router.New(db)
 

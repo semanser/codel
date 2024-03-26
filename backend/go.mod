@@ -4,13 +4,13 @@ go 1.22.0
 
 require (
 	github.com/99designs/gqlgen v0.17.45
+	github.com/caarlos0/env/v10 v10.0.0
 	github.com/docker/docker v25.0.5+incompatible
 	github.com/gin-contrib/cors v1.7.0
 	github.com/gin-gonic/gin v1.9.1
 	github.com/gorilla/websocket v1.5.0
 	github.com/invopop/jsonschema v0.12.0
 	github.com/jackc/pgx/v5 v5.5.5
-	github.com/joho/godotenv v1.5.1
 	github.com/pressly/goose/v3 v3.19.2
 	github.com/sashabaranov/go-openai v1.20.4
 	github.com/vektah/gqlparser/v2 v2.5.11
