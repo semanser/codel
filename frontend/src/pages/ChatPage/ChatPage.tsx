@@ -41,6 +41,8 @@ export const ChatPage = () => {
   const status = !isStaleData ? data?.flow.status : undefined;
   const terminal = !isStaleData ? data?.flow.terminal : undefined;
 
+  console.log(terminal?.logs)
+
   useTerminalLogsAddedSubscription({
     variables: { flowId: Number(id) },
     pause: isNewFlow,

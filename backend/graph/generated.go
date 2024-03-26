@@ -58,6 +58,11 @@ type ComplexityRoot struct {
 		Terminal func(childComplexity int) int
 	}
 
+	Log struct {
+		ID   func(childComplexity int) int
+		Text func(childComplexity int) int
+	}
+
 	Mutation struct {
 		CreateFlow func(childComplexity int) int
 		CreateTask func(childComplexity int, flowID uint, query string) int
@@ -106,7 +111,7 @@ type SubscriptionResolver interface {
 	TaskAdded(ctx context.Context, flowID uint) (<-chan *gmodel.Task, error)
 	TaskUpdated(ctx context.Context) (<-chan *gmodel.Task, error)
 	FlowUpdated(ctx context.Context, flowID uint) (<-chan *gmodel.Flow, error)
-	TerminalLogsAdded(ctx context.Context, flowID uint) (<-chan string, error)
+	TerminalLogsAdded(ctx context.Context, flowID uint) (<-chan *gmodel.Log, error)
 }
 
 type executableSchema struct {
@@ -162,6 +167,20 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Flow.Terminal(childComplexity), true
+
+	case "Log.id":
+		if e.complexity.Log.ID == nil {
+			break
+		}
+
+		return e.complexity.Log.ID(childComplexity), true
+
+	case "Log.text":
+		if e.complexity.Log.Text == nil {
+			break
+		}
+
+		return e.complexity.Log.Text(childComplexity), true
 
 	case "Mutation.createFlow":
 		if e.complexity.Mutation.CreateFlow == nil {
@@ -871,6 +890,94 @@ func (ec *executionContext) fieldContext_Flow_status(ctx context.Context, field 
 	return fc, nil
 }
 
+func (ec *executionContext) _Log_id(ctx context.Context, field graphql.CollectedField, obj *gmodel.Log) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Log_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(uint)
+	fc.Result = res
+	return ec.marshalNUint2uint(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Log_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Log",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Uint does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Log_text(ctx context.Context, field graphql.CollectedField, obj *gmodel.Log) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Log_text(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Text, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Log_text(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Log",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Mutation_createFlow(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Mutation_createFlow(ctx, field)
 	if err != nil {
@@ -1573,7 +1680,7 @@ func (ec *executionContext) _Subscription_terminalLogsAdded(ctx context.Context,
 	}
 	return func(ctx context.Context) graphql.Marshaler {
 		select {
-		case res, ok := <-resTmp.(<-chan string):
+		case res, ok := <-resTmp.(<-chan *gmodel.Log):
 			if !ok {
 				return nil
 			}
@@ -1581,7 +1688,7 @@ func (ec *executionContext) _Subscription_terminalLogsAdded(ctx context.Context,
 				w.Write([]byte{'{'})
 				graphql.MarshalString(field.Alias).MarshalGQL(w)
 				w.Write([]byte{':'})
-				ec.marshalNString2string(ctx, field.Selections, res).MarshalGQL(w)
+				ec.marshalNLog2ᚖgithubᚗcomᚋsemanserᚋaiᚑcoderᚋgraphᚋmodelᚐLog(ctx, field.Selections, res).MarshalGQL(w)
 				w.Write([]byte{'}'})
 			})
 		case <-ctx.Done():
@@ -1597,7 +1704,13 @@ func (ec *executionContext) fieldContext_Subscription_terminalLogsAdded(ctx cont
 		IsMethod:   true,
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Log_id(ctx, field)
+			case "text":
+				return ec.fieldContext_Log_text(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Log", field.Name)
 		},
 	}
 	defer func() {
@@ -2036,9 +2149,9 @@ func (ec *executionContext) _Terminal_logs(ctx context.Context, field graphql.Co
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]string)
+	res := resTmp.([]*gmodel.Log)
 	fc.Result = res
-	return ec.marshalNString2ᚕstringᚄ(ctx, field.Selections, res)
+	return ec.marshalNLog2ᚕᚖgithubᚗcomᚋsemanserᚋaiᚑcoderᚋgraphᚋmodelᚐLogᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Terminal_logs(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -2048,7 +2161,13 @@ func (ec *executionContext) fieldContext_Terminal_logs(ctx context.Context, fiel
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Log_id(ctx, field)
+			case "text":
+				return ec.fieldContext_Log_text(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Log", field.Name)
 		},
 	}
 	return fc, nil
@@ -3894,6 +4013,50 @@ func (ec *executionContext) _Flow(ctx context.Context, sel ast.SelectionSet, obj
 	return out
 }
 
+var logImplementors = []string{"Log"}
+
+func (ec *executionContext) _Log(ctx context.Context, sel ast.SelectionSet, obj *gmodel.Log) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, logImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Log")
+		case "id":
+			out.Values[i] = ec._Log_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "text":
+			out.Values[i] = ec._Log_text(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var mutationImplementors = []string{"Mutation"}
 
 func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet) graphql.Marshaler {
@@ -4619,6 +4782,64 @@ func (ec *executionContext) marshalNJSON2string(ctx context.Context, sel ast.Sel
 	return res
 }
 
+func (ec *executionContext) marshalNLog2githubᚗcomᚋsemanserᚋaiᚑcoderᚋgraphᚋmodelᚐLog(ctx context.Context, sel ast.SelectionSet, v gmodel.Log) graphql.Marshaler {
+	return ec._Log(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNLog2ᚕᚖgithubᚗcomᚋsemanserᚋaiᚑcoderᚋgraphᚋmodelᚐLogᚄ(ctx context.Context, sel ast.SelectionSet, v []*gmodel.Log) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNLog2ᚖgithubᚗcomᚋsemanserᚋaiᚑcoderᚋgraphᚋmodelᚐLog(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNLog2ᚖgithubᚗcomᚋsemanserᚋaiᚑcoderᚋgraphᚋmodelᚐLog(ctx context.Context, sel ast.SelectionSet, v *gmodel.Log) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._Log(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalNString2string(ctx context.Context, v interface{}) (string, error) {
 	res, err := graphql.UnmarshalString(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -4632,38 +4853,6 @@ func (ec *executionContext) marshalNString2string(ctx context.Context, sel ast.S
 		}
 	}
 	return res
-}
-
-func (ec *executionContext) unmarshalNString2ᚕstringᚄ(ctx context.Context, v interface{}) ([]string, error) {
-	var vSlice []interface{}
-	if v != nil {
-		vSlice = graphql.CoerceList(v)
-	}
-	var err error
-	res := make([]string, len(vSlice))
-	for i := range vSlice {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
-		res[i], err = ec.unmarshalNString2string(ctx, vSlice[i])
-		if err != nil {
-			return nil, err
-		}
-	}
-	return res, nil
-}
-
-func (ec *executionContext) marshalNString2ᚕstringᚄ(ctx context.Context, sel ast.SelectionSet, v []string) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	for i := range v {
-		ret[i] = ec.marshalNString2string(ctx, sel, v[i])
-	}
-
-	for _, e := range ret {
-		if e == graphql.Null {
-			return graphql.Null
-		}
-	}
-
-	return ret
 }
 
 func (ec *executionContext) marshalNTask2githubᚗcomᚋsemanserᚋaiᚑcoderᚋgraphᚋmodelᚐTask(ctx context.Context, sel ast.SelectionSet, v gmodel.Task) graphql.Marshaler {

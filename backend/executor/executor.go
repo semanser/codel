@@ -14,6 +14,9 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/semanser/ai-coder/database"
+	gmodel "github.com/semanser/ai-coder/graph/model"
+	"github.com/semanser/ai-coder/graph/subscriptions"
+	"github.com/semanser/ai-coder/websocket"
 )
 
 var (
@@ -229,10 +232,19 @@ func ExecCommand(id int64, command string, db *database.Queries) (result string,
 	}
 
 	// TODO avoid duplicating here and in the flows table
-	db.CreateLog(context.Background(), database.CreateLogParams{
+	log, err := db.CreateLog(context.Background(), database.CreateLogParams{
 		FlowID:  pgtype.Int8{Int64: id, Valid: true},
 		Message: command,
 		Type:    "input",
+	})
+
+	if err != nil {
+		return "", fmt.Errorf("Error creating log: %w", err)
+	}
+
+	subscriptions.BroadcastTerminalLogsAdded(id, &gmodel.Log{
+		ID:   uint(log.ID),
+		Text: websocket.FormatTerminalInput(command),
 	})
 
 	createResp, err := dockerClient.ContainerExecCreate(context.Background(), container, types.ExecConfig{
@@ -269,10 +281,19 @@ func ExecCommand(id int64, command string, db *database.Queries) (result string,
 	results := dst.String()
 
 	// TODO avoid duplicating here and in the flows table
-	db.CreateLog(context.Background(), database.CreateLogParams{
+	log, err = db.CreateLog(context.Background(), database.CreateLogParams{
 		FlowID:  pgtype.Int8{Int64: id, Valid: true},
 		Message: results,
 		Type:    "output",
+	})
+
+	if err != nil {
+		return "", fmt.Errorf("Error creating log: %w", err)
+	}
+
+	subscriptions.BroadcastTerminalLogsAdded(id, &gmodel.Log{
+		ID:   uint(log.ID),
+		Text: results,
 	})
 
 	return dst.String(), nil

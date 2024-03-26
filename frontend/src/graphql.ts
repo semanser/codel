@@ -34,6 +34,17 @@ export const cache = cacheExchange({
       },
     },
     Subscription: {
+      terminalLogsAdded: (result, _args, cache) => {
+        const flowId = _args.flowId;
+        const flowEntityKey = `Flow:${flowId}.terminal`;
+        const logs = cache.resolve(flowEntityKey, "logs");
+        const log = result.terminalLogsAdded as Data;
+
+        if (Array.isArray(logs)) {
+          logs.push(log);
+          cache.link(flowEntityKey, "logs", logs as Data[]);
+        }
+      },
       taskAdded: (result, _args, cache) => {
         const flowId = _args.flowId;
         const flowEntityKey = `Flow:${flowId}`;

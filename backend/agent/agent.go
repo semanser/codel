@@ -126,7 +126,8 @@ func NextTask(args AgentPrompt) (*database.Task, error) {
 
 	req := openai.ChatCompletionRequest{
 		Temperature: 0.0,
-		Model:       openai.GPT3Dot5Turbo,
+		// TODO make it as an env variable
+		Model: openai.GPT3Dot5Turbo,
 		Messages: []openai.ChatCompletionMessage{
 			{
 				Role:    openai.ChatMessageRoleSystem,

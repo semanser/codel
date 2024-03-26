@@ -8,6 +8,11 @@ fragment taskFragment on Task {
   createdAt
 }
 
+fragment logFragment on Log {
+  text
+  id
+}
+
 fragment flowFragment on Flow {
   id
   name
@@ -15,7 +20,9 @@ fragment flowFragment on Flow {
   terminal {
     containerName
     connected
-    logs
+    logs {
+      ...logFragment
+    }
   }
   tasks {
     ...taskFragment
@@ -48,7 +55,9 @@ subscription taskAdded($flowId: Uint!) {
 }
 
 subscription terminalLogsAdded($flowId: Uint!) {
-  terminalLogsAdded(flowId: $flowId)
+  terminalLogsAdded(flowId: $flowId) {
+    ...logFragment
+  }
 }
 
 subscription flowUpdated($flowId: Uint!) {

@@ -154,6 +154,49 @@
       },
       {
         "kind": "OBJECT",
+        "name": "Log",
+        "description": null,
+        "fields": [
+          {
+            "name": "id",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "Uint",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          },
+          {
+            "name": "text",
+            "description": null,
+            "args": [],
+            "type": {
+              "kind": "NON_NULL",
+              "name": null,
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              }
+            },
+            "isDeprecated": false,
+            "deprecationReason": null
+          }
+        ],
+        "inputFields": null,
+        "interfaces": [],
+        "enumValues": null,
+        "possibleTypes": null
+      },
+      {
+        "kind": "OBJECT",
         "name": "Mutation",
         "description": null,
         "fields": [
@@ -467,8 +510,8 @@
               "kind": "NON_NULL",
               "name": null,
               "ofType": {
-                "kind": "SCALAR",
-                "name": "String",
+                "kind": "OBJECT",
+                "name": "Log",
                 "ofType": null
               }
             },
@@ -737,8 +780,8 @@
                   "kind": "NON_NULL",
                   "name": null,
                   "ofType": {
-                    "kind": "SCALAR",
-                    "name": "String",
+                    "kind": "OBJECT",
+                    "name": "Log",
                     "ofType": null
                   }
                 }

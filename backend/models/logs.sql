@@ -11,4 +11,4 @@ RETURNING *;
 SELECT *
 FROM logs
 WHERE flow_id = $1
-ORDER BY created_at DESC;
+ORDER BY created_at ASC;

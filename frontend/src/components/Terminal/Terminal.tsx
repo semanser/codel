@@ -3,7 +3,6 @@
 // https://github.com/reubenmorgan/xterm-react/blob/6c8bb143387a6abc35ff54a3e099c46e5be8819c/src/Xterm.tsx
 import React, { useEffect, useRef } from "react";
 import { ITerminalAddon, ITerminalOptions, Terminal as XTerminal } from "xterm";
-import { AttachAddon } from "xterm-addon-attach";
 import { CanvasAddon } from "xterm-addon-canvas";
 import { FitAddon } from "xterm-addon-fit";
 import { Unicode11Addon } from "xterm-addon-unicode11";
@@ -15,6 +14,7 @@ import "xterm/css/xterm.css";
 import dockerSvg from "@/assets/docker.svg";
 
 import { headerStyles } from "./Terminal.css";
+import { Log } from "@/generated/graphql";
 
 const isWebGl2Supported = !!document
   .createElement("canvas")
@@ -70,7 +70,8 @@ type XTermProps = {
   options?: ITerminalOptions;
   status?: string;
   title?: React.ReactNode;
-  logs?: string[];
+  logs?: Log[];
+  isConnected?: boolean;
 };
 
 const addons: ITerminalAddon[] = [
@@ -98,22 +99,27 @@ export const Terminal = ({
   onInit,
   title,
   logs = [],
+  isConnected = false,
 }: XTermProps) => {
   const divRef = useRef<HTMLDivElement | null>(null);
   const xtermRef = useRef<XTerminal | null>(null);
-  const [isConnected, setIsConnected] = React.useState(false);
+  const renderedLogIds = useRef<string[]>([]);
 
   useEffect(() => {
     if (!xtermRef.current) return;
 
     xtermRef.current.clear();
+    renderedLogIds.current = [];
   }, [id]);
 
   useEffect(() => {
     if (!xtermRef.current) return;
 
     for (const log of logs) {
-      xtermRef.current.writeln(log);
+      if (renderedLogIds.current.includes(log.id)) continue;
+
+      xtermRef.current.writeln(log.text);
+      renderedLogIds.current.push(log.id);
     }
   }, [logs]);
 

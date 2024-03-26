@@ -180,7 +180,20 @@ func processInputTask(db *database.Queries, task database.Task) error {
 		})
 
 		msg := fmt.Sprintf("Initializing the docker image %s...", dockerImage)
-		subscriptions.BroadcastTerminalLogsAdded(flow.ID, msg)
+		l, err := db.CreateLog(context.Background(), database.CreateLogParams{
+			FlowID:  task.FlowID,
+			Message: msg,
+			Type:    "system",
+		})
+
+		if err != nil {
+			return fmt.Errorf("Error creating log: %w", err)
+		}
+
+		subscriptions.BroadcastTerminalLogsAdded(flow.ID, &gmodel.Log{
+			ID:   uint(l.ID),
+			Text: websocket.FormatTerminalSystemOutput(msg),
+		})
 
 		containerName := GenerateContainerName(flow.ID)
 
@@ -207,7 +220,20 @@ func processInputTask(db *database.Queries, task database.Task) error {
 			return fmt.Errorf("failed to update flow container: %w", err)
 		}
 
-		subscriptions.BroadcastTerminalLogsAdded(flow.ID, "Container initialized. Ready to execute commands.")
+		msg = websocket.FormatTerminalSystemOutput("Container initialized. Ready to execute commands.")
+		l, err = db.CreateLog(context.Background(), database.CreateLogParams{
+			FlowID:  task.FlowID,
+			Message: msg,
+			Type:    "system",
+		})
+
+		if err != nil {
+			return fmt.Errorf("Error creating log: %w", err)
+		}
+		subscriptions.BroadcastTerminalLogsAdded(flow.ID, &gmodel.Log{
+			ID:   uint(l.ID),
+			Text: msg,
+		})
 
 		if err != nil {
 			log.Printf("failed to send initialized message to the channel: %w", err)
@@ -237,8 +263,6 @@ func processTerminalTask(db *database.Queries, task database.Task) error {
 		return fmt.Errorf("failed to unmarshal args: %v", err)
 	}
 
-	subscriptions.BroadcastTerminalLogsAdded(task.FlowID.Int64, websocket.FormatTerminalInput(args.Input))
-
 	if err != nil {
 		return fmt.Errorf("failed to get writer: %w", err)
 	}
@@ -257,8 +281,6 @@ func processTerminalTask(db *database.Queries, task database.Task) error {
 	if err != nil {
 		return fmt.Errorf("failed to update task results: %w", err)
 	}
-
-	subscriptions.BroadcastTerminalLogsAdded(task.FlowID.Int64, websocket.FormatTerminalInput(results))
 
 	return nil
 }

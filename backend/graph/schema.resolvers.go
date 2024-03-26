@@ -15,6 +15,7 @@ import (
 	"github.com/semanser/ai-coder/executor"
 	gmodel "github.com/semanser/ai-coder/graph/model"
 	"github.com/semanser/ai-coder/graph/subscriptions"
+	"github.com/semanser/ai-coder/websocket"
 )
 
 // CreateFlow is the resolver for the createFlow field.
@@ -95,7 +96,7 @@ func (r *queryResolver) Flows(ctx context.Context) ([]*gmodel.Flow, error) {
 
 	for _, flow := range flows {
 		var gTasks []*gmodel.Task
-		var logs []string
+		var logs []*gmodel.Log
 
 		gFlows = append(gFlows, &gmodel.Flow{
 			ID:   uint(flow.ID),
@@ -123,7 +124,7 @@ func (r *queryResolver) Flow(ctx context.Context, id uint) (*gmodel.Flow, error)
 
 	var gFlow *gmodel.Flow
 	var gTasks []*gmodel.Task
-	var gLogs []string
+	var gLogs []*gmodel.Log
 
 	tasks, err := r.Db.ReadTasksByFlowId(ctx, pgtype.Int8{Int64: int64(id), Valid: true})
 
@@ -149,7 +150,16 @@ func (r *queryResolver) Flow(ctx context.Context, id uint) (*gmodel.Flow, error)
 	}
 
 	for _, log := range logs {
-		gLogs = append(gLogs, log.Message)
+		text := log.Message
+
+		if log.Type == "input" {
+			text = websocket.FormatTerminalInput(log.Message)
+		}
+
+		gLogs = append(gLogs, &gmodel.Log{
+			ID:   uint(log.ID),
+			Text: text,
+		})
 	}
 
 	gFlow = &gmodel.Flow{
@@ -183,7 +193,7 @@ func (r *subscriptionResolver) FlowUpdated(ctx context.Context, flowID uint) (<-
 }
 
 // TerminalLogsAdded is the resolver for the terminalLogsAdded field.
-func (r *subscriptionResolver) TerminalLogsAdded(ctx context.Context, flowID uint) (<-chan string, error) {
+func (r *subscriptionResolver) TerminalLogsAdded(ctx context.Context, flowID uint) (<-chan *gmodel.Log, error) {
 	return subscriptions.TerminalLogsAdded(ctx, int64(flowID))
 }
 

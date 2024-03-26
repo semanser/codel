@@ -39,7 +39,7 @@ func FlowUpdated(ctx context.Context, flowId int64) (<-chan *gmodel.Flow, error)
 	return ch, nil
 }
 
-func TerminalLogsAdded(ctx context.Context, flowId int64) (<-chan string, error) {
+func TerminalLogsAdded(ctx context.Context, flowId int64) (<-chan *gmodel.Log, error) {
 	ch, unsubscribe := subscribe(flowId, terminalLogsAddedSubscriptions)
 	go func() {
 		defer func() {

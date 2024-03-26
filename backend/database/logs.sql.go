@@ -44,7 +44,7 @@ const getLogsByFlowId = `-- name: GetLogsByFlowId :many
 SELECT id, message, created_at, flow_id, type
 FROM logs
 WHERE flow_id = $1
-ORDER BY created_at DESC
+ORDER BY created_at ASC
 `
 
 func (q *Queries) GetLogsByFlowId(ctx context.Context, flowID pgtype.Int8) ([]Log, error) {

@@ -33,10 +33,15 @@ enum FlowStatus {
   finished
 }
 
+type Log {
+  id: Uint!
+  text: String!
+}
+
 type Terminal {
   containerName: String!
   connected: Boolean!
-  logs: [String!]!
+  logs: [Log!]!
 }
 
 type Flow {
@@ -65,5 +70,5 @@ type Subscription {
   taskUpdated: Task!
   flowUpdated(flowId: Uint!): Flow!
 
-  terminalLogsAdded(flowId: Uint!): String!
+  terminalLogsAdded(flowId: Uint!): Log!
 }

@@ -34,6 +34,12 @@ export enum FlowStatus {
   InProgress = 'inProgress'
 }
 
+export type Log = {
+  __typename?: 'Log';
+  id: Scalars['Uint']['output'];
+  text: Scalars['String']['output'];
+};
+
 export type Mutation = {
   __typename?: 'Mutation';
   _exec: Scalars['String']['output'];
@@ -69,7 +75,7 @@ export type Subscription = {
   flowUpdated: Flow;
   taskAdded: Task;
   taskUpdated: Task;
-  terminalLogsAdded: Scalars['String']['output'];
+  terminalLogsAdded: Log;
 };
 
 
@@ -118,7 +124,7 @@ export type Terminal = {
   __typename?: 'Terminal';
   connected: Scalars['Boolean']['output'];
   containerName: Scalars['String']['output'];
-  logs: Array<Scalars['String']['output']>;
+  logs: Array<Log>;
 };
 
 export const FlowOverviewFragmentFragmentDoc = gql`
@@ -126,6 +132,12 @@ export const FlowOverviewFragmentFragmentDoc = gql`
   id
   name
   status
+}
+    `;
+export const LogFragmentFragmentDoc = gql`
+    fragment logFragment on Log {
+  text
+  id
 }
     `;
 export const TaskFragmentFragmentDoc = gql`
@@ -147,13 +159,16 @@ export const FlowFragmentFragmentDoc = gql`
   terminal {
     containerName
     connected
-    logs
+    logs {
+      ...logFragment
+    }
   }
   tasks {
     ...taskFragment
   }
 }
-    ${TaskFragmentFragmentDoc}`;
+    ${LogFragmentFragmentDoc}
+${TaskFragmentFragmentDoc}`;
 export const FlowsDocument = gql`
     query flows {
   flows {
@@ -212,9 +227,11 @@ export function useTaskAddedSubscription<TData = TaskAddedSubscription>(options:
 };
 export const TerminalLogsAddedDocument = gql`
     subscription terminalLogsAdded($flowId: Uint!) {
-  terminalLogsAdded(flowId: $flowId)
+  terminalLogsAdded(flowId: $flowId) {
+    ...logFragment
+  }
 }
-    `;
+    ${LogFragmentFragmentDoc}`;
 
 export function useTerminalLogsAddedSubscription<TData = TerminalLogsAddedSubscription>(options: Omit<Urql.UseSubscriptionArgs<TerminalLogsAddedSubscriptionVariables>, 'query'>, handler?: Urql.SubscriptionHandler<TerminalLogsAddedSubscription, TData>) {
   return Urql.useSubscription<TerminalLogsAddedSubscription, TData, TerminalLogsAddedSubscriptionVariables>({ query: TerminalLogsAddedDocument, ...options }, handler);
@@ -244,14 +261,16 @@ export type FlowsQuery = { __typename?: 'Query', flows: Array<{ __typename?: 'Fl
 
 export type TaskFragmentFragment = { __typename?: 'Task', id: any, type: TaskType, message: string, status: TaskStatus, args: any, results: any, createdAt: any };
 
-export type FlowFragmentFragment = { __typename?: 'Flow', id: any, name: string, status: FlowStatus, terminal: { __typename?: 'Terminal', containerName: string, connected: boolean, logs: Array<string> }, tasks: Array<{ __typename?: 'Task', id: any, type: TaskType, message: string, status: TaskStatus, args: any, results: any, createdAt: any }> };
+export type LogFragmentFragment = { __typename?: 'Log', text: string, id: any };
+
+export type FlowFragmentFragment = { __typename?: 'Flow', id: any, name: string, status: FlowStatus, terminal: { __typename?: 'Terminal', containerName: string, connected: boolean, logs: Array<{ __typename?: 'Log', text: string, id: any }> }, tasks: Array<{ __typename?: 'Task', id: any, type: TaskType, message: string, status: TaskStatus, args: any, results: any, createdAt: any }> };
 
 export type FlowQueryVariables = Exact<{
   id: Scalars['Uint']['input'];
 }>;
 
 
-export type FlowQuery = { __typename?: 'Query', flow: { __typename?: 'Flow', id: any, name: string, status: FlowStatus, terminal: { __typename?: 'Terminal', containerName: string, connected: boolean, logs: Array<string> }, tasks: Array<{ __typename?: 'Task', id: any, type: TaskType, message: string, status: TaskStatus, args: any, results: any, createdAt: any }> } };
+export type FlowQuery = { __typename?: 'Query', flow: { __typename?: 'Flow', id: any, name: string, status: FlowStatus, terminal: { __typename?: 'Terminal', containerName: string, connected: boolean, logs: Array<{ __typename?: 'Log', text: string, id: any }> }, tasks: Array<{ __typename?: 'Task', id: any, type: TaskType, message: string, status: TaskStatus, args: any, results: any, createdAt: any }> } };
 
 export type CreateFlowMutationVariables = Exact<{ [key: string]: never; }>;
 
@@ -278,7 +297,7 @@ export type TerminalLogsAddedSubscriptionVariables = Exact<{
 }>;
 
 
-export type TerminalLogsAddedSubscription = { __typename?: 'Subscription', terminalLogsAdded: string };
+export type TerminalLogsAddedSubscription = { __typename?: 'Subscription', terminalLogsAdded: { __typename?: 'Log', text: string, id: any } };
 
 export type FlowUpdatedSubscriptionVariables = Exact<{
   flowId: Scalars['Uint']['input'];
@@ -363,6 +382,35 @@ export default {
                 "kind": "OBJECT",
                 "name": "Terminal",
                 "ofType": null
+              }
+            },
+            "args": []
+          }
+        ],
+        "interfaces": []
+      },
+      {
+        "kind": "OBJECT",
+        "name": "Log",
+        "fields": [
+          {
+            "name": "id",
+            "type": {
+              "kind": "NON_NULL",
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "Any"
+              }
+            },
+            "args": []
+          },
+          {
+            "name": "text",
+            "type": {
+              "kind": "NON_NULL",
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "Any"
               }
             },
             "args": []
@@ -569,8 +617,9 @@ export default {
             "type": {
               "kind": "NON_NULL",
               "ofType": {
-                "kind": "SCALAR",
-                "name": "Any"
+                "kind": "OBJECT",
+                "name": "Log",
+                "ofType": null
               }
             },
             "args": [
@@ -708,8 +757,9 @@ export default {
                 "ofType": {
                   "kind": "NON_NULL",
                   "ofType": {
-                    "kind": "SCALAR",
-                    "name": "Any"
+                    "kind": "OBJECT",
+                    "name": "Log",
+                    "ofType": null
                   }
                 }
               }

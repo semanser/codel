@@ -16,7 +16,7 @@ func BroadcastFlowUpdated(flowID int64, flow *gmodel.Flow) {
 	}
 }
 
-func BroadcastTerminalLogsAdded(flowID int64, flow string) {
+func BroadcastTerminalLogsAdded(flowID int64, flow *gmodel.Log) {
 	if ch, ok := terminalLogsAddedSubscriptions[flowID]; ok {
 		ch <- flow
 	}

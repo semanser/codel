@@ -17,6 +17,11 @@ type Flow struct {
 	Status   FlowStatus `json:"status"`
 }
 
+type Log struct {
+	ID   uint   `json:"id"`
+	Text string `json:"text"`
+}
+
 type Mutation struct {
 }
 
@@ -37,9 +42,9 @@ type Task struct {
 }
 
 type Terminal struct {
-	ContainerName string   `json:"containerName"`
-	Connected     bool     `json:"connected"`
-	Logs          []string `json:"logs"`
+	ContainerName string `json:"containerName"`
+	Connected     bool   `json:"connected"`
+	Logs          []*Log `json:"logs"`
 }
 
 type FlowStatus string
