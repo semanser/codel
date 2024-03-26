@@ -9,6 +9,7 @@ import (
 
 type config struct {
 	OpenAIKey   string `env:"OPEN_AI_KEY"`
+	OpenAIModel string `env:"OPEN_AI_MODEL" envDefault:"gpt-4-0125-preview"`
 	DatabaseURL string `env:"DATABASE_URL"`
 	Port        int    `env:"PORT" envDefault:"8080"`
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	openai "github.com/sashabaranov/go-openai"
 	"github.com/semanser/ai-coder/assets"
+	"github.com/semanser/ai-coder/config"
 	"github.com/semanser/ai-coder/database"
 	"github.com/semanser/ai-coder/services"
 	"github.com/semanser/ai-coder/templates"
@@ -126,8 +127,7 @@ func NextTask(args AgentPrompt) (*database.Task, error) {
 
 	req := openai.ChatCompletionRequest{
 		Temperature: 0.0,
-		// TODO make it as an env variable
-		Model: openai.GPT4Turbo0125,
+		Model:       config.Config.OpenAIModel,
 		Messages: []openai.ChatCompletionMessage{
 			{
 				Role:    openai.ChatMessageRoleSystem,
