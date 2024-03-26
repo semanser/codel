@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"github.com/caarlos0/env/v10"
+	"github.com/joho/godotenv"
 )
 
 type config struct {
@@ -15,7 +16,11 @@ type config struct {
 var Config config
 
 func Init() {
-	if err := env.Parse(&Config); err != nil {
+	godotenv.Load()
+
+	if err := env.ParseWithOptions(&Config, env.Options{
+		RequiredIfNoDef: true,
+	}); err != nil {
 		log.Fatalf("Unable to parse config: %v\n", err)
 	}
 }
