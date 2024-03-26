@@ -179,7 +179,7 @@ func processInputTask(db *database.Queries, task database.Task) error {
 			},
 		})
 
-		msg := fmt.Sprintf("Initializing the docker image %s...", dockerImage)
+		msg := websocket.FormatTerminalSystemOutput(fmt.Sprintf("Initializing the docker image %s...", dockerImage))
 		l, err := db.CreateLog(context.Background(), database.CreateLogParams{
 			FlowID:  task.FlowID,
 			Message: msg,
