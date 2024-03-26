@@ -192,7 +192,7 @@ func processInputTask(db *database.Queries, task database.Task) error {
 
 		subscriptions.BroadcastTerminalLogsAdded(flow.ID, &gmodel.Log{
 			ID:   uint(l.ID),
-			Text: websocket.FormatTerminalSystemOutput(msg),
+			Text: msg,
 		})
 
 		containerName := GenerateContainerName(flow.ID)
@@ -207,7 +207,8 @@ func processInputTask(db *database.Queries, task database.Task) error {
 			ID:   uint(flow.ID),
 			Name: summary,
 			Terminal: &gmodel.Terminal{
-				Connected: true,
+				Connected:     true,
+				ContainerName: dockerImage,
 			},
 		})
 

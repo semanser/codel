@@ -12,9 +12,9 @@ import { Broadcast } from "xterm-theme";
 import "xterm/css/xterm.css";
 
 import dockerSvg from "@/assets/docker.svg";
+import { Log } from "@/generated/graphql";
 
 import { headerStyles } from "./Terminal.css";
-import { Log } from "@/generated/graphql";
 
 const isWebGl2Supported = !!document
   .createElement("canvas")
@@ -71,7 +71,7 @@ type XTermProps = {
   status?: string;
   title?: React.ReactNode;
   logs?: Log[];
-  isConnected?: boolean;
+  isRunning?: boolean;
 };
 
 const addons: ITerminalAddon[] = [
@@ -99,7 +99,7 @@ export const Terminal = ({
   onInit,
   title,
   logs = [],
-  isConnected = false,
+  isRunning = false,
 }: XTermProps) => {
   const divRef = useRef<HTMLDivElement | null>(null);
   const xtermRef = useRef<XTerminal | null>(null);
@@ -175,10 +175,10 @@ export const Terminal = ({
   return (
     <>
       <div className={headerStyles}>
-        {isConnected ? (
+        {isRunning ? (
           <>
             <img src={dockerSvg} alt="Docker" width="14" height="14" />
-            {title} - "Connected"
+            {title} - Active
           </>
         ) : (
           "Disconnected"

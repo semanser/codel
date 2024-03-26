@@ -59,7 +59,7 @@ export const cache = cacheExchange({
     },
   },
   keys: {
-    "Terminal": _ => null,
+    Terminal: (_) => null,
   },
 });
 
