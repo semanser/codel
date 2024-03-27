@@ -220,7 +220,6 @@ func processBrowserTask(db *database.Queries, task database.Task) error {
 		}
 	}
 
-	log.Println("Broadcasting browser updated")
 	subscriptions.BroadcastBrowserUpdated(task.FlowID.Int64, &gmodel.Browser{
 		URL: url,
 		// TODO Use a dynamic URL
