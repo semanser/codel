@@ -1,12 +1,8 @@
-<div align="center">
-  <img src="./.github/logo.png" width="200" />
-</div>
-
-<div align="center">Fully autonomous AI Agent that can perform complicated tasks and projects using terminal, browser, and editor.</div>
-
 <img src="./.github/demo.png" />
+<div align="center">Fully autonomous AI Agent that can perform complicated tasks and projects using terminal, browser, and editor.</div>
+</br>
 
-Discord: https://discord.gg/uMaGSHNjzc
+**Discord: https://discord.gg/uMaGSHNjzc**
 
 # Features
 - 🔓 Secure. Everything is running in a sandboxed Docker environment.
