@@ -25,6 +25,9 @@ import (
 //go:embed templates/prompts/*.tmpl
 var promptTemplates embed.FS
 
+//go:embed templates/scripts/*.js
+var scriptTemplates embed.FS
+
 //go:embed migrations/*.sql
 var embedMigrations embed.FS
 
@@ -75,12 +78,17 @@ func main() {
 
 	r := router.New(db)
 
-	assets.Init(promptTemplates)
+	assets.Init(promptTemplates, scriptTemplates)
 	services.Init()
 
-	err = executor.InitDockerClient()
+	err = executor.InitClient()
 	if err != nil {
 		log.Fatalf("failed to initialize Docker client: %v", err)
+	}
+
+	err = executor.InitBrowser(db)
+	if err != nil {
+		log.Fatalf("failed to initialize browser container: %v", err)
 	}
 
 	// Run the server in a separate goroutine

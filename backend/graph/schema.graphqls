@@ -44,11 +44,17 @@ type Terminal {
   logs: [Log!]!
 }
 
+type Browser {
+  connected: Boolean!
+  imageData: String!
+}
+
 type Flow {
   id: Uint!
   name: String!
   tasks: [Task!]!
   terminal: Terminal!
+  browser: Browser!
   status: FlowStatus!
 }
 

@@ -229,9 +229,8 @@ func processInputTask(db *database.Queries, task database.Task) error {
 			Text: msg,
 		})
 
-		containerName := GenerateContainerName(flow.ID)
-
-		containerID, err := SpawnContainer(context.Background(), containerName, dockerImage, db)
+		terminalContainerName := TerminalName(flow.ID)
+		terminalContainerID, err := SpawnContainer(context.Background(), terminalContainerName, dockerImage, db)
 
 		if err != nil {
 			return fmt.Errorf("failed to spawn container: %w", err)
@@ -248,7 +247,7 @@ func processInputTask(db *database.Queries, task database.Task) error {
 
 		_, err = db.UpdateFlowContainer(context.Background(), database.UpdateFlowContainerParams{
 			ID:          flow.ID,
-			ContainerID: pgtype.Int8{Int64: containerID, Valid: true},
+			ContainerID: pgtype.Int8{Int64: terminalContainerID, Valid: true},
 		})
 
 		if err != nil {
