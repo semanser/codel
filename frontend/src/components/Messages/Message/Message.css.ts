@@ -10,6 +10,7 @@ export const wrapperStyles = style({
 
 export const avatarStyles = style({
   borderRadius: "50%",
+  border: `1px solid ${vars.color.gray4}`,
 });
 
 export const rightColumnStyles = style({
