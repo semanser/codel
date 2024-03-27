@@ -1,29 +1,25 @@
 package executor
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
 	"log"
+	"os"
 	"sync"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/semanser/ai-coder/database"
-	gmodel "github.com/semanser/ai-coder/graph/model"
-	"github.com/semanser/ai-coder/graph/subscriptions"
-	"github.com/semanser/ai-coder/websocket"
 )
 
 var (
 	dockerClient *client.Client
 )
 
-func InitDockerClient() error {
+func InitClient() error {
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		return fmt.Errorf("Error initializing docker client: %w", err)
@@ -40,12 +36,16 @@ func InitDockerClient() error {
 	return nil
 }
 
-func SpawnContainer(ctx context.Context, name string, dockerImage string, db *database.Queries) (dbContainerID int64, err error) {
-	log.Printf("Spawning container %s \"%s\"\n", dockerImage, name)
+func SpawnContainer(ctx context.Context, name string, config *container.Config, hostConfig *container.HostConfig, db *database.Queries) (dbContainerID int64, err error) {
+	if config == nil {
+		return 0, fmt.Errorf("No config found for container %s", name)
+	}
+
+	log.Printf("Spawning container %s \"%s\"\n", config.Image, name)
 
 	dbContainer, err := db.CreateContainer(ctx, database.CreateContainerParams{
 		Name:   database.StringToPgText(name),
-		Image:  database.StringToPgText(dockerImage),
+		Image:  database.StringToPgText(config.Image),
 		Status: database.StringToPgText("starting"),
 	})
 
@@ -84,7 +84,7 @@ func SpawnContainer(ctx context.Context, name string, dockerImage string, db *da
 	}()
 
 	filters := filters.NewArgs()
-	filters.Add("reference", dockerImage)
+	filters.Add("reference", config.Image)
 	images, err := dockerClient.ImageList(ctx, types.ImageListOptions{
 		Filters: filters,
 	})
@@ -95,11 +95,11 @@ func SpawnContainer(ctx context.Context, name string, dockerImage string, db *da
 
 	imageFound := len(images) > 0
 
-	log.Printf("Image %s found: %t\n", dockerImage, imageFound)
+	log.Printf("Image %s found: %t\n", config.Image, imageFound)
 
 	if !imageFound {
-		log.Printf("Pulling image %s...\n", dockerImage)
-		readCloser, err := dockerClient.ImagePull(ctx, dockerImage, types.ImagePullOptions{})
+		log.Printf("Pulling image %s...\n", config.Image)
+		readCloser, err := dockerClient.ImagePull(ctx, config.Image, types.ImagePullOptions{})
 
 		if err != nil {
 			return dbContainer.ID, fmt.Errorf("Error pulling image: %w", err)
@@ -114,10 +114,7 @@ func SpawnContainer(ctx context.Context, name string, dockerImage string, db *da
 	}
 
 	log.Printf("Creating container %s...\n", name)
-	resp, err := dockerClient.ContainerCreate(ctx, &container.Config{
-		Image: dockerImage,
-		Cmd:   []string{"tail", "-f", "/dev/null"},
-	}, nil, nil, nil, name)
+	resp, err := dockerClient.ContainerCreate(ctx, config, hostConfig, nil, nil, name)
 
 	if err != nil {
 		return dbContainer.ID, fmt.Errorf("Error creating container: %w", err)
@@ -179,6 +176,13 @@ func DeleteContainer(containerID string, dbID int64, db *database.Queries) error
 }
 
 func Cleanup(db *database.Queries) error {
+	// Remove tmp files
+	log.Println("Removing tmp files...")
+	err := os.RemoveAll("./tmp/")
+	if err != nil {
+		return fmt.Errorf("Error removing tmp files: %w", err)
+	}
+
 	log.Println("Cleaning up containers and making all flows finished...")
 
 	var wg sync.WaitGroup
@@ -232,97 +236,4 @@ func IsContainerRunning(containerID string) (bool, error) {
 	}
 
 	return containerInfo.State.Running, err
-}
-
-func ExecCommand(flowID int64, command string, db *database.Queries) (result string, err error) {
-	container := GenerateContainerName(flowID)
-
-	// Create options for starting the exec process
-	cmd := []string{
-		"sh",
-		"-c",
-		command,
-	}
-
-	// Check if container is running
-	isRunning, err := IsContainerRunning(container)
-
-	if err != nil {
-		return "", fmt.Errorf("Error inspecting container: %w", err)
-	}
-
-	if !isRunning {
-		return "", fmt.Errorf("Container is not running")
-	}
-
-	// TODO avoid duplicating here and in the flows table
-	log, err := db.CreateLog(context.Background(), database.CreateLogParams{
-		FlowID:  pgtype.Int8{Int64: flowID, Valid: true},
-		Message: command,
-		Type:    "input",
-	})
-
-	if err != nil {
-		return "", fmt.Errorf("Error creating log: %w", err)
-	}
-
-	subscriptions.BroadcastTerminalLogsAdded(flowID, &gmodel.Log{
-		ID:   uint(log.ID),
-		Text: websocket.FormatTerminalInput(command),
-	})
-
-	createResp, err := dockerClient.ContainerExecCreate(context.Background(), container, types.ExecConfig{
-		Cmd:          cmd,
-		AttachStdout: true,
-		AttachStderr: true,
-		Tty:          true,
-	})
-	if err != nil {
-		return "", fmt.Errorf("Error creating exec process: %w", err)
-	}
-
-	// Attach to the exec process
-	resp, err := dockerClient.ContainerExecAttach(context.Background(), createResp.ID, types.ExecStartCheck{
-		Tty: true,
-	})
-	if err != nil {
-		return "", fmt.Errorf("Error attaching to exec process: %w", err)
-	}
-	defer resp.Close()
-
-	dst := bytes.Buffer{}
-	_, err = io.Copy(&dst, resp.Reader)
-	if err != nil && err != io.EOF {
-		return "", fmt.Errorf("Error copying output: %w", err)
-	}
-
-	// Wait for the exec process to finish
-	_, err = dockerClient.ContainerExecInspect(context.Background(), createResp.ID)
-	if err != nil {
-		return "", fmt.Errorf("Error inspecting exec process: %w", err)
-	}
-
-	results := dst.String()
-
-	// TODO avoid duplicating here and in the flows table
-	log, err = db.CreateLog(context.Background(), database.CreateLogParams{
-		FlowID:  pgtype.Int8{Int64: flowID, Valid: true},
-		Message: results,
-		Type:    "output",
-	})
-
-	if err != nil {
-		return "", fmt.Errorf("Error creating log: %w", err)
-	}
-
-	subscriptions.BroadcastTerminalLogsAdded(flowID, &gmodel.Log{
-		ID:   uint(log.ID),
-		Text: results,
-	})
-
-	return dst.String(), nil
-}
-
-func GenerateContainerName(flowID int64) string {
-	return fmt.Sprintf("flow-%d", flowID)
 }

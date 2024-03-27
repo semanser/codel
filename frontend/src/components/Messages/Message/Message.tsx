@@ -1,6 +1,8 @@
-import { formatDistance } from "date-fns";
+import { formatDistanceToNowStrict } from "date-fns";
 import { useState } from "react";
 
+import logoPng from "@/assets/logo.png";
+import mePng from "@/assets/me.png";
 import { Button } from "@/components/Button/Button";
 import { Icon } from "@/components/Icon/Icon";
 import { TaskStatus, TaskType } from "@/generated/graphql";
@@ -40,7 +42,7 @@ export const Message = ({
   return (
     <div className={wrapperStyles}>
       <img
-        src="https://via.placeholder.com/40"
+        src={type === TaskType.Input ? mePng : logoPng}
         alt="avatar"
         className={avatarStyles}
         width="40"
@@ -48,7 +50,7 @@ export const Message = ({
       />
       <div className={rightColumnStyles}>
         <div className={timeStyles}>
-          {formatDistance(new Date(time), new Date(), { addSuffix: true })}
+          {formatDistanceToNowStrict(new Date(time), { addSuffix: true })}
         </div>
         <div
           className={

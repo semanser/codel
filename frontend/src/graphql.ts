@@ -34,6 +34,12 @@ export const cache = cacheExchange({
       },
     },
     Subscription: {
+      browserUpdated: (result, _args, cache) => {
+        const flowId = _args.flowId;
+        const flowEntityKey = `Flow:${flowId}`;
+        const browser = result.browserUpdated as Data;
+        cache.link(flowEntityKey, "browser", browser as Data);
+      },
       terminalLogsAdded: (result, _args, cache) => {
         const flowId = _args.flowId;
         const flowEntityKey = `Flow:${flowId}.terminal`;
@@ -60,6 +66,7 @@ export const cache = cacheExchange({
   },
   keys: {
     Terminal: (_) => null,
+    Browser: (data) => data.url as string,
   },
 });
 

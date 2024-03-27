@@ -213,6 +213,10 @@ func (r *queryResolver) Flow(ctx context.Context, id uint) (*gmodel.Flow, error)
 			Logs:          gLogs,
 		},
 		Status: gmodel.FlowStatus(flow.Status.String),
+		Browser: &gmodel.Browser{
+			URL:           "",
+			ScreenshotURL: "",
+		},
 	}
 
 	return gFlow, nil
@@ -231,6 +235,11 @@ func (r *subscriptionResolver) TaskUpdated(ctx context.Context) (<-chan *gmodel.
 // FlowUpdated is the resolver for the flowUpdated field.
 func (r *subscriptionResolver) FlowUpdated(ctx context.Context, flowID uint) (<-chan *gmodel.Flow, error) {
 	return subscriptions.FlowUpdated(ctx, int64(flowID))
+}
+
+// BrowserUpdated is the resolver for the browserUpdated field.
+func (r *subscriptionResolver) BrowserUpdated(ctx context.Context, flowID uint) (<-chan *gmodel.Browser, error) {
+	return subscriptions.BrowserUpdated(ctx, int64(flowID))
 }
 
 // TerminalLogsAdded is the resolver for the terminalLogsAdded field.

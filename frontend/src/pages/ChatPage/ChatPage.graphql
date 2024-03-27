@@ -13,6 +13,11 @@ fragment logFragment on Log {
   id
 }
 
+fragment browserFragment on Browser {
+  url
+  screenshotUrl
+}
+
 fragment flowFragment on Flow {
   id
   name
@@ -23,6 +28,9 @@ fragment flowFragment on Flow {
     logs {
       ...logFragment
     }
+  }
+  browser {
+    ...browserFragment
   }
   tasks {
     ...taskFragment
@@ -75,5 +83,11 @@ subscription flowUpdated($flowId: Uint!) {
       containerName
       connected
     }
+  }
+}
+
+subscription browserUpdated($flowId: Uint!) {
+  browserUpdated(flowId: $flowId) {
+    ...browserFragment
   }
 }

@@ -37,7 +37,6 @@ const (
 type BrowserArgs struct {
 	Url    string
 	Action BrowserAction
-	Input  string
 	Message
 }
 

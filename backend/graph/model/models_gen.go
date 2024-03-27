@@ -9,11 +9,17 @@ import (
 	"time"
 )
 
+type Browser struct {
+	URL           string `json:"url"`
+	ScreenshotURL string `json:"screenshotUrl"`
+}
+
 type Flow struct {
 	ID       uint       `json:"id"`
 	Name     string     `json:"name"`
 	Tasks    []*Task    `json:"tasks"`
 	Terminal *Terminal  `json:"terminal"`
+	Browser  *Browser   `json:"browser"`
 	Status   FlowStatus `json:"status"`
 }
 

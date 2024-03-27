@@ -1,6 +1,11 @@
 import * as Tabs from "@radix-ui/react-tabs";
+import { useLocalStorage } from "@uidotdev/usehooks";
+import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
+import Browser from "@/components/Browser/Browser";
+import { Button } from "@/components/Button/Button";
+import { Icon } from "@/components/Icon/Icon";
 import { Messages } from "@/components/Messages/Messages";
 import { Panel } from "@/components/Panel/Panel";
 import {
@@ -10,7 +15,9 @@ import {
   tabsTriggerStyles,
 } from "@/components/Tabs/Tabs.css";
 import { Terminal } from "@/components/Terminal/Terminal";
+import { Tooltip } from "@/components/Tooltip/Tooltip";
 import {
+  useBrowserUpdatedSubscription,
   useCreateFlowMutation,
   useCreateTaskMutation,
   useFinishFlowMutation,
@@ -20,7 +27,12 @@ import {
   useTerminalLogsAddedSubscription,
 } from "@/generated/graphql";
 
-import { wrapperStyles } from "./ChatPage.css";
+import {
+  followButtonStyles,
+  leftColumnStyles,
+  tabsStyles,
+  wrapperStyles,
+} from "./ChatPage.css";
 
 export const ChatPage = () => {
   const navigate = useNavigate();
@@ -29,6 +41,11 @@ export const ChatPage = () => {
   const [, createTaskMutation] = useCreateTaskMutation();
   const [, finishFlowMutation] = useFinishFlowMutation();
   const isNewFlow = !id || id === "new";
+  const [isFollowingTabs, setIsFollowingTabs] = useLocalStorage(
+    "isFollowingTabs",
+    true,
+  );
+  const [activeTab, setActiveTab] = useState("terminal");
 
   const [{ operation, data }] = useFlowQuery({
     pause: isNewFlow,
@@ -42,11 +59,31 @@ export const ChatPage = () => {
   const name = !isStaleData ? data?.flow.name ?? "" : "";
   const status = !isStaleData ? data?.flow.status : undefined;
   const terminal = !isStaleData ? data?.flow.terminal : undefined;
+  const browser = !isStaleData ? data?.flow.browser : undefined;
 
-  useTerminalLogsAddedSubscription({
-    variables: { flowId: Number(id) },
-    pause: isNewFlow,
-  });
+  useBrowserUpdatedSubscription(
+    {
+      variables: { flowId: Number(id) },
+      pause: isNewFlow,
+    },
+    () => {
+      if (isFollowingTabs) {
+        setActiveTab("browser");
+      }
+    },
+  );
+
+  useTerminalLogsAddedSubscription(
+    {
+      variables: { flowId: Number(id) },
+      pause: isNewFlow,
+    },
+    () => {
+      if (isFollowingTabs) {
+        setActiveTab("terminal");
+      }
+    },
+  );
 
   useTaskAddedSubscription({
     variables: { flowId: Number(id) },
@@ -83,6 +120,10 @@ export const ChatPage = () => {
     finishFlowMutation({ flowId: id });
   };
 
+  const handleChangeIsFollowingTabs = () => {
+    setIsFollowingTabs(!isFollowingTabs);
+  };
+
   return (
     <div className={wrapperStyles}>
       <Panel>
@@ -96,21 +137,47 @@ export const ChatPage = () => {
         />
       </Panel>
       <Panel>
-        <Tabs.Root className={tabsRootStyles} defaultValue="terminal">
+        <Tabs.Root
+          className={tabsRootStyles}
+          value={activeTab}
+          onValueChange={setActiveTab}
+        >
           <Tabs.List className={tabsListStyles}>
-            <Tabs.Trigger className={tabsTriggerStyles} value="terminal">
-              Terminal
-            </Tabs.Trigger>
-            <Tabs.Trigger
-              className={tabsTriggerStyles}
-              value="browser"
-              disabled
-            >
-              Browser (Soon)
-            </Tabs.Trigger>
-            <Tabs.Trigger className={tabsTriggerStyles} value="code" disabled>
-              Code (Soon)
-            </Tabs.Trigger>
+            <div className={tabsStyles}>
+              <div className={leftColumnStyles}>
+                <Tabs.Trigger className={tabsTriggerStyles} value="terminal">
+                  Terminal
+                </Tabs.Trigger>
+                <Tabs.Trigger className={tabsTriggerStyles} value="browser">
+                  Browser
+                </Tabs.Trigger>
+                <Tabs.Trigger
+                  className={tabsTriggerStyles}
+                  value="code"
+                  disabled
+                >
+                  Code (Soon)
+                </Tabs.Trigger>
+              </div>
+
+              <Tooltip
+                content={
+                  <>
+                    Following the active tab is{" "}
+                    <b>{isFollowingTabs ? "enabled" : "disabled"}</b>
+                  </>
+                }
+              >
+                <Button
+                  size="small"
+                  hierarchy={isFollowingTabs ? "primary" : "secondary"}
+                  className={followButtonStyles}
+                  onClick={handleChangeIsFollowingTabs}
+                >
+                  {isFollowingTabs ? <Icon.Eye /> : <Icon.EyeOff />}
+                </Button>
+              </Tooltip>
+            </div>
           </Tabs.List>
           <Tabs.Content className={tabsContentStyles} value="terminal">
             <Terminal
@@ -122,7 +189,10 @@ export const ChatPage = () => {
             />
           </Tabs.Content>
           <Tabs.Content className={tabsContentStyles} value="browser">
-            browser
+            <Browser
+              url={browser?.url || undefined}
+              screenshotUrl={browser?.screenshotUrl ?? ""}
+            />
           </Tabs.Content>
           <Tabs.Content className={tabsContentStyles} value="code">
             code

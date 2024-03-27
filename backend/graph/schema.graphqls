@@ -44,11 +44,17 @@ type Terminal {
   logs: [Log!]!
 }
 
+type Browser {
+  url: String!
+  screenshotUrl: String!
+}
+
 type Flow {
   id: Uint!
   name: String!
   tasks: [Task!]!
   terminal: Terminal!
+  browser: Browser!
   status: FlowStatus!
 }
 
@@ -71,5 +77,6 @@ type Subscription {
   taskUpdated: Task!
   flowUpdated(flowId: Uint!): Flow!
 
+  browserUpdated(flowId: Uint!): Browser!
   terminalLogsAdded(flowId: Uint!): Log!
 }

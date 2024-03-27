@@ -7,6 +7,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/docker/docker/api/types/container"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/semanser/ai-coder/agent"
 	"github.com/semanser/ai-coder/database"
@@ -147,9 +148,85 @@ func ProcessQueue(flowId int64, db *database.Queries) {
 						continue
 					}
 				}
+
+				if task.Type.String == "browser" {
+					err := processBrowserTask(db, task)
+
+					if err != nil {
+						log.Printf("failed to process browser: %w", err)
+						continue
+					}
+
+					nextTask, err := getNextTask(db, task.FlowID.Int64)
+
+					if err != nil {
+						log.Printf("failed to get next task: %w", err)
+						continue
+					}
+
+					AddCommand(flowId, *nextTask)
+				}
 			}
 		}
 	}()
+}
+
+func processBrowserTask(db *database.Queries, task database.Task) error {
+	var args = agent.BrowserArgs{}
+	err := json.Unmarshal(task.Args, &args)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal args: %v", err)
+	}
+
+	var url = args.Url
+	var screenshotName string
+
+	if args.Action == agent.Read {
+		content, screenshot, err := Content(url)
+
+		if err != nil {
+			return fmt.Errorf("failed to get content: %w", err)
+		}
+
+		log.Println("Screenshot taken")
+		screenshotName = screenshot
+
+		_, err = db.UpdateTaskResults(context.Background(), database.UpdateTaskResultsParams{
+			ID:      task.ID,
+			Results: database.StringToPgText(content),
+		})
+
+		if err != nil {
+			return fmt.Errorf("failed to update task results: %w", err)
+		}
+	}
+
+	if args.Action == agent.Url {
+		content, screenshot, err := URLs(url)
+
+		if err != nil {
+			return fmt.Errorf("failed to get content: %w", err)
+		}
+
+		screenshotName = screenshot
+
+		_, err = db.UpdateTaskResults(context.Background(), database.UpdateTaskResultsParams{
+			ID:      task.ID,
+			Results: database.StringToPgText(content),
+		})
+
+		if err != nil {
+			return fmt.Errorf("failed to update task results: %w", err)
+		}
+	}
+
+	subscriptions.BroadcastBrowserUpdated(task.FlowID.Int64, &gmodel.Browser{
+		URL: url,
+		// TODO Use a dynamic URL
+		ScreenshotURL: "http://localhost:8080/browser/" + screenshotName,
+	})
+
+	return nil
 }
 
 func processDoneTask(db *database.Queries, task database.Task) error {
@@ -229,9 +306,16 @@ func processInputTask(db *database.Queries, task database.Task) error {
 			Text: msg,
 		})
 
-		containerName := GenerateContainerName(flow.ID)
-
-		containerID, err := SpawnContainer(context.Background(), containerName, dockerImage, db)
+		terminalContainerName := TerminalName(flow.ID)
+		terminalContainerID, err := SpawnContainer(context.Background(),
+			terminalContainerName,
+			&container.Config{
+				Image: dockerImage,
+				Cmd:   []string{"tail", "-f", "/dev/null"},
+			},
+			&container.HostConfig{},
+			db,
+		)
 
 		if err != nil {
 			return fmt.Errorf("failed to spawn container: %w", err)
@@ -248,7 +332,7 @@ func processInputTask(db *database.Queries, task database.Task) error {
 
 		_, err = db.UpdateFlowContainer(context.Background(), database.UpdateFlowContainerParams{
 			ID:          flow.ID,
-			ContainerID: pgtype.Int8{Int64: containerID, Valid: true},
+			ContainerID: pgtype.Int8{Int64: terminalContainerID, Valid: true},
 		})
 
 		if err != nil {
@@ -296,10 +380,6 @@ func processTerminalTask(db *database.Queries, task database.Task) error {
 	err := json.Unmarshal(task.Args, &args)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal args: %v", err)
-	}
-
-	if err != nil {
-		return fmt.Errorf("failed to get writer: %w", err)
 	}
 
 	results, err := ExecCommand(task.FlowID.Int64, args.Input, db)
