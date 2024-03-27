@@ -3,7 +3,6 @@ package executor
 import (
 	"context"
 	"fmt"
-	"io/fs"
 	"log"
 	"time"
 
@@ -14,6 +13,7 @@ import (
 	"github.com/go-rod/rod/lib/proto"
 	"github.com/semanser/ai-coder/assets"
 	"github.com/semanser/ai-coder/database"
+	"github.com/semanser/ai-coder/templates"
 )
 
 var (
@@ -89,7 +89,7 @@ func Content(url string, query string) (result string, err error) {
 		return "", fmt.Errorf("Error waiting for page to stabilize: %w", err)
 	}
 
-	script, err := fs.ReadFile(assets.ScriptTemplates, "scripts/content.js")
+	script, err := templates.Render(assets.ScriptTemplates, "scripts/content.js", nil)
 
 	if err != nil {
 		return "", fmt.Errorf("Error reading script: %w", err)
