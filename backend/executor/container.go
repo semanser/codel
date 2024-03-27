@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
 	"sync"
 
 	"github.com/docker/docker/api/types"
@@ -175,6 +176,13 @@ func DeleteContainer(containerID string, dbID int64, db *database.Queries) error
 }
 
 func Cleanup(db *database.Queries) error {
+	// Remove tmp files
+	log.Println("Removing tmp files...")
+	err := os.RemoveAll("./tmp/")
+	if err != nil {
+		return fmt.Errorf("Error removing tmp files: %w", err)
+	}
+
 	log.Println("Cleaning up containers and making all flows finished...")
 
 	var wg sync.WaitGroup
