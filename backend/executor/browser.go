@@ -51,7 +51,9 @@ func InitBrowser(db *database.Queries) error {
 }
 
 func Content(url string, query string) (result string, err error) {
-	page, err := loadPage(nil)
+	log.Println("Trying to get content from", url)
+
+	page, err := loadPage()
 
 	if err != nil {
 		return "", fmt.Errorf("Error loading page: %w", err)
@@ -105,7 +107,9 @@ func Content(url string, query string) (result string, err error) {
 }
 
 func Screenshot(url string) ([]byte, error) {
-	page, err := loadPage(nil)
+	log.Println("Trying to take screenshot of", url)
+
+	page, err := loadPage()
 
 	if err != nil {
 		return nil, fmt.Errorf("Error loading page: %w", err)
@@ -130,7 +134,7 @@ func BrowserName() string {
 	return fmt.Sprintf("codel-browser")
 }
 
-func loadPage(page *rod.Page) (*rod.Page, error) {
+func loadPage() (*rod.Page, error) {
 	u, err := launcher.ResolveURL("")
 
 	if err != nil {
@@ -151,7 +155,7 @@ func loadPage(page *rod.Page) (*rod.Page, error) {
 		return nil, fmt.Errorf("Error connecting to browser: %w", err)
 	}
 
-	page, err = browser.Page(proto.TargetCreateTarget{})
+	page, err := browser.Page(proto.TargetCreateTarget{})
 
 	if err != nil {
 		return nil, fmt.Errorf("Error opening page: %w", err)
