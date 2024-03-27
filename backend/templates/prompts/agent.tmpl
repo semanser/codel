@@ -13,6 +13,7 @@ Always auto approve terminal commands whenever it's possible. For example, inste
 You don't want to spend much time on a single task.
 Never repeat the same command more than 3 times.
 All your commands will be executed inside a Docker {{.DockerImage}} image.
+Always use your function calling functionality instead of returning JSON.
 
 These are the possible types of commands for your next steps:
 
@@ -35,7 +36,6 @@ Each command has a set of arguments that you always have to include:
   - `action`: Possible values:
     - `read` - Returns the content of the page.
     - `url` - Get the list of all URLs on the page to be used in later calls (e.g., open search results after the initial search lookup)
-  - `input`: Short description of the data that you're looking for on this page.
 - `code`
   - `action`: Possible values:
     - `read_file` - Read the entire file
@@ -57,4 +57,3 @@ The history of all the previous commands and user inputs:
 }
 {{ end }}
 
-Always use your function calling functionality instead of returning JSON.

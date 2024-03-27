@@ -179,7 +179,24 @@ func processBrowserTask(db *database.Queries, task database.Task) error {
 	}
 
 	if args.Action == agent.Read {
-		content, err := Content(args.Url, string(args.Message))
+		content, err := Content(args.Url)
+
+		if err != nil {
+			return fmt.Errorf("failed to get content: %w", err)
+		}
+
+		_, err = db.UpdateTaskResults(context.Background(), database.UpdateTaskResultsParams{
+			ID:      task.ID,
+			Results: database.StringToPgText(content),
+		})
+
+		if err != nil {
+			return fmt.Errorf("failed to update task results: %w", err)
+		}
+	}
+
+	if args.Action == agent.Url {
+		content, err := URLs(args.Url)
 
 		if err != nil {
 			return fmt.Errorf("failed to get content: %w", err)

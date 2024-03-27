@@ -50,7 +50,7 @@ func InitBrowser(db *database.Queries) error {
 	return nil
 }
 
-func Content(url string, query string) (result string, err error) {
+func Content(url string) (result string, err error) {
 	log.Println("Trying to get content from", url)
 
 	page, err := loadPage()
@@ -59,36 +59,10 @@ func Content(url string, query string) (result string, err error) {
 		return "", fmt.Errorf("Error loading page: %w", err)
 	}
 
-	pageRouter := page.HijackRequests()
-
-	// Do not load any images or css files
-	pageRouter.MustAdd("*", func(ctx *rod.Hijack) {
-		// There're a lot of types you can use in this enum, like NetworkResourceTypeScript for javascript files
-		// In this case we're using NetworkResourceTypeImage to block images
-		if ctx.Request.Type() == proto.NetworkResourceTypeImage ||
-			ctx.Request.Type() == proto.NetworkResourceTypeStylesheet ||
-			ctx.Request.Type() == proto.NetworkResourceTypeFont ||
-			ctx.Request.Type() == proto.NetworkResourceTypeMedia ||
-			ctx.Request.Type() == proto.NetworkResourceTypeManifest ||
-			ctx.Request.Type() == proto.NetworkResourceTypeOther {
-			ctx.Response.Fail(proto.NetworkErrorReasonBlockedByClient)
-			return
-		}
-		ctx.ContinueRequest(&proto.FetchContinueRequest{})
-	})
-	// since we are only hijacking a specific page, even using the "*" won't affect much of the performance
-	go pageRouter.Run()
-
-	err = page.Navigate(url)
+	err = loadUrl(page, url)
 
 	if err != nil {
-		return "", fmt.Errorf("Error navigating to page: %w", err)
-	}
-
-	err = page.WaitDOMStable(time.Second*1, 5)
-
-	if err != nil {
-		return "", fmt.Errorf("Error waiting for page to stabilize: %w", err)
+		return "", fmt.Errorf("Error loading url: %w", err)
 	}
 
 	script, err := templates.Render(assets.ScriptTemplates, "scripts/content.js", nil)
@@ -104,6 +78,36 @@ func Content(url string, query string) (result string, err error) {
 	}
 
 	return pageText.Value.Str(), nil
+}
+
+func URLs(url string) (result string, err error) {
+	log.Println("Trying to get urls from", url)
+
+	page, err := loadPage()
+
+	if err != nil {
+		return "", fmt.Errorf("Error loading page: %w", err)
+	}
+
+	err = loadUrl(page, url)
+
+	if err != nil {
+		return "", fmt.Errorf("Error loading url: %w", err)
+	}
+
+	script, err := templates.Render(assets.ScriptTemplates, "scripts/urls.js", nil)
+
+	if err != nil {
+		return "", fmt.Errorf("Error reading script: %w", err)
+	}
+
+	urls, err := page.Eval(string(script))
+
+	if err != nil {
+		return "", fmt.Errorf("Error evaluating script: %w", err)
+	}
+
+	return urls.Value.Str(), nil
 }
 
 func Screenshot(url string) ([]byte, error) {
@@ -162,4 +166,41 @@ func loadPage() (*rod.Page, error) {
 	}
 
 	return page, nil
+}
+
+func loadUrl(page *rod.Page, url string) error {
+	pageRouter := page.HijackRequests()
+
+	// Do not load any images or css files
+	pageRouter.MustAdd("*", func(ctx *rod.Hijack) {
+		// There're a lot of types you can use in this enum, like NetworkResourceTypeScript for javascript files
+		// In this case we're using NetworkResourceTypeImage to block images
+		if ctx.Request.Type() == proto.NetworkResourceTypeImage ||
+			ctx.Request.Type() == proto.NetworkResourceTypeStylesheet ||
+			ctx.Request.Type() == proto.NetworkResourceTypeFont ||
+			ctx.Request.Type() == proto.NetworkResourceTypeMedia ||
+			ctx.Request.Type() == proto.NetworkResourceTypeManifest ||
+			ctx.Request.Type() == proto.NetworkResourceTypeOther {
+			ctx.Response.Fail(proto.NetworkErrorReasonBlockedByClient)
+			return
+		}
+		ctx.ContinueRequest(&proto.FetchContinueRequest{})
+	})
+
+	// since we are only hijacking a specific page, even using the "*" won't affect much of the performance
+	go pageRouter.Run()
+
+	err := page.Navigate(url)
+
+	if err != nil {
+		return fmt.Errorf("Error navigating to page: %w", err)
+	}
+
+	err = page.WaitDOMStable(time.Second*1, 5)
+
+	if err != nil {
+		return fmt.Errorf("Error waiting for page to stabilize: %w", err)
+	}
+
+	return nil
 }
