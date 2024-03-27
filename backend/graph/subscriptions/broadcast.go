@@ -21,3 +21,9 @@ func BroadcastTerminalLogsAdded(flowID int64, flow *gmodel.Log) {
 		ch <- flow
 	}
 }
+
+func BroadcastBrowserUpdated(flowID int64, browser *gmodel.Browser) {
+	if ch, ok := browserSubscriptions[flowID]; ok {
+		ch <- browser
+	}
+}

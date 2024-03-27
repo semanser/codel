@@ -52,3 +52,17 @@ func TerminalLogsAdded(ctx context.Context, flowId int64) (<-chan *gmodel.Log, e
 	}()
 	return ch, nil
 }
+
+func BrowserUpdated(ctx context.Context, flowId int64) (<-chan *gmodel.Browser, error) {
+	ch, unsubscribe := subscribe(flowId, browserSubscriptions)
+	go func() {
+		defer func() {
+			unsubscribe()
+		}()
+		for {
+			<-ctx.Done()
+			return
+		}
+	}()
+	return ch, nil
+}

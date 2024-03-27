@@ -50,7 +50,13 @@ type DirectiveRoot struct {
 }
 
 type ComplexityRoot struct {
+	Browser struct {
+		ScreenshotURL func(childComplexity int) int
+		URL           func(childComplexity int) int
+	}
+
 	Flow struct {
+		Browser  func(childComplexity int) int
 		ID       func(childComplexity int) int
 		Name     func(childComplexity int) int
 		Status   func(childComplexity int) int
@@ -76,6 +82,7 @@ type ComplexityRoot struct {
 	}
 
 	Subscription struct {
+		BrowserUpdated    func(childComplexity int, flowID uint) int
 		FlowUpdated       func(childComplexity int, flowID uint) int
 		TaskAdded         func(childComplexity int, flowID uint) int
 		TaskUpdated       func(childComplexity int) int
@@ -113,6 +120,7 @@ type SubscriptionResolver interface {
 	TaskAdded(ctx context.Context, flowID uint) (<-chan *gmodel.Task, error)
 	TaskUpdated(ctx context.Context) (<-chan *gmodel.Task, error)
 	FlowUpdated(ctx context.Context, flowID uint) (<-chan *gmodel.Flow, error)
+	BrowserUpdated(ctx context.Context, flowID uint) (<-chan *gmodel.Browser, error)
 	TerminalLogsAdded(ctx context.Context, flowID uint) (<-chan *gmodel.Log, error)
 }
 
@@ -134,6 +142,27 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 	ec := executionContext{nil, e, 0, 0, nil}
 	_ = ec
 	switch typeName + "." + field {
+
+	case "Browser.screenshotUrl":
+		if e.complexity.Browser.ScreenshotURL == nil {
+			break
+		}
+
+		return e.complexity.Browser.ScreenshotURL(childComplexity), true
+
+	case "Browser.url":
+		if e.complexity.Browser.URL == nil {
+			break
+		}
+
+		return e.complexity.Browser.URL(childComplexity), true
+
+	case "Flow.browser":
+		if e.complexity.Flow.Browser == nil {
+			break
+		}
+
+		return e.complexity.Flow.Browser(childComplexity), true
 
 	case "Flow.id":
 		if e.complexity.Flow.ID == nil {
@@ -245,6 +274,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Query.Flows(childComplexity), true
+
+	case "Subscription.browserUpdated":
+		if e.complexity.Subscription.BrowserUpdated == nil {
+			break
+		}
+
+		args, err := ec.field_Subscription_browserUpdated_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Subscription.BrowserUpdated(childComplexity, args["flowId"].(uint)), true
 
 	case "Subscription.flowUpdated":
 		if e.complexity.Subscription.FlowUpdated == nil {
@@ -592,6 +633,21 @@ func (ec *executionContext) field_Query_flow_args(ctx context.Context, rawArgs m
 	return args, nil
 }
 
+func (ec *executionContext) field_Subscription_browserUpdated_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 uint
+	if tmp, ok := rawArgs["flowId"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("flowId"))
+		arg0, err = ec.unmarshalNUint2uint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["flowId"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Subscription_flowUpdated_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
@@ -674,6 +730,94 @@ func (ec *executionContext) field___Type_fields_args(ctx context.Context, rawArg
 // endregion ************************** directives.gotpl **************************
 
 // region    **************************** field.gotpl *****************************
+
+func (ec *executionContext) _Browser_url(ctx context.Context, field graphql.CollectedField, obj *gmodel.Browser) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Browser_url(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.URL, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Browser_url(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Browser",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Browser_screenshotUrl(ctx context.Context, field graphql.CollectedField, obj *gmodel.Browser) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Browser_screenshotUrl(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ScreenshotURL, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Browser_screenshotUrl(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Browser",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
 
 func (ec *executionContext) _Flow_id(ctx context.Context, field graphql.CollectedField, obj *gmodel.Flow) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Flow_id(ctx, field)
@@ -875,6 +1019,56 @@ func (ec *executionContext) fieldContext_Flow_terminal(ctx context.Context, fiel
 	return fc, nil
 }
 
+func (ec *executionContext) _Flow_browser(ctx context.Context, field graphql.CollectedField, obj *gmodel.Flow) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Flow_browser(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Browser, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*gmodel.Browser)
+	fc.Result = res
+	return ec.marshalNBrowser2ᚖgithubᚗcomᚋsemanserᚋaiᚑcoderᚋgraphᚋmodelᚐBrowser(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Flow_browser(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Flow",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "url":
+				return ec.fieldContext_Browser_url(ctx, field)
+			case "screenshotUrl":
+				return ec.fieldContext_Browser_screenshotUrl(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Browser", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Flow_status(ctx context.Context, field graphql.CollectedField, obj *gmodel.Flow) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Flow_status(ctx, field)
 	if err != nil {
@@ -1054,6 +1248,8 @@ func (ec *executionContext) fieldContext_Mutation_createFlow(ctx context.Context
 				return ec.fieldContext_Flow_tasks(ctx, field)
 			case "terminal":
 				return ec.fieldContext_Flow_terminal(ctx, field)
+			case "browser":
+				return ec.fieldContext_Flow_browser(ctx, field)
 			case "status":
 				return ec.fieldContext_Flow_status(ctx, field)
 			}
@@ -1181,6 +1377,8 @@ func (ec *executionContext) fieldContext_Mutation_finishFlow(ctx context.Context
 				return ec.fieldContext_Flow_tasks(ctx, field)
 			case "terminal":
 				return ec.fieldContext_Flow_terminal(ctx, field)
+			case "browser":
+				return ec.fieldContext_Flow_browser(ctx, field)
 			case "status":
 				return ec.fieldContext_Flow_status(ctx, field)
 			}
@@ -1303,6 +1501,8 @@ func (ec *executionContext) fieldContext_Query_flows(ctx context.Context, field 
 				return ec.fieldContext_Flow_tasks(ctx, field)
 			case "terminal":
 				return ec.fieldContext_Flow_terminal(ctx, field)
+			case "browser":
+				return ec.fieldContext_Flow_browser(ctx, field)
 			case "status":
 				return ec.fieldContext_Flow_status(ctx, field)
 			}
@@ -1359,6 +1559,8 @@ func (ec *executionContext) fieldContext_Query_flow(ctx context.Context, field g
 				return ec.fieldContext_Flow_tasks(ctx, field)
 			case "terminal":
 				return ec.fieldContext_Flow_terminal(ctx, field)
+			case "browser":
+				return ec.fieldContext_Flow_browser(ctx, field)
 			case "status":
 				return ec.fieldContext_Flow_status(ctx, field)
 			}
@@ -1728,6 +1930,8 @@ func (ec *executionContext) fieldContext_Subscription_flowUpdated(ctx context.Co
 				return ec.fieldContext_Flow_tasks(ctx, field)
 			case "terminal":
 				return ec.fieldContext_Flow_terminal(ctx, field)
+			case "browser":
+				return ec.fieldContext_Flow_browser(ctx, field)
 			case "status":
 				return ec.fieldContext_Flow_status(ctx, field)
 			}
@@ -1742,6 +1946,81 @@ func (ec *executionContext) fieldContext_Subscription_flowUpdated(ctx context.Co
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Subscription_flowUpdated_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Subscription_browserUpdated(ctx context.Context, field graphql.CollectedField) (ret func(ctx context.Context) graphql.Marshaler) {
+	fc, err := ec.fieldContext_Subscription_browserUpdated(ctx, field)
+	if err != nil {
+		return nil
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = nil
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Subscription().BrowserUpdated(rctx, fc.Args["flowId"].(uint))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return nil
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return nil
+	}
+	return func(ctx context.Context) graphql.Marshaler {
+		select {
+		case res, ok := <-resTmp.(<-chan *gmodel.Browser):
+			if !ok {
+				return nil
+			}
+			return graphql.WriterFunc(func(w io.Writer) {
+				w.Write([]byte{'{'})
+				graphql.MarshalString(field.Alias).MarshalGQL(w)
+				w.Write([]byte{':'})
+				ec.marshalNBrowser2ᚖgithubᚗcomᚋsemanserᚋaiᚑcoderᚋgraphᚋmodelᚐBrowser(ctx, field.Selections, res).MarshalGQL(w)
+				w.Write([]byte{'}'})
+			})
+		case <-ctx.Done():
+			return nil
+		}
+	}
+}
+
+func (ec *executionContext) fieldContext_Subscription_browserUpdated(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Subscription",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "url":
+				return ec.fieldContext_Browser_url(ctx, field)
+			case "screenshotUrl":
+				return ec.fieldContext_Browser_screenshotUrl(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Browser", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Subscription_browserUpdated_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -4050,6 +4329,50 @@ func (ec *executionContext) fieldContext___Type_specifiedByURL(ctx context.Conte
 
 // region    **************************** object.gotpl ****************************
 
+var browserImplementors = []string{"Browser"}
+
+func (ec *executionContext) _Browser(ctx context.Context, sel ast.SelectionSet, obj *gmodel.Browser) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, browserImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Browser")
+		case "url":
+			out.Values[i] = ec._Browser_url(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "screenshotUrl":
+			out.Values[i] = ec._Browser_screenshotUrl(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var flowImplementors = []string{"Flow"}
 
 func (ec *executionContext) _Flow(ctx context.Context, sel ast.SelectionSet, obj *gmodel.Flow) graphql.Marshaler {
@@ -4078,6 +4401,11 @@ func (ec *executionContext) _Flow(ctx context.Context, sel ast.SelectionSet, obj
 			}
 		case "terminal":
 			out.Values[i] = ec._Flow_terminal(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "browser":
+			out.Values[i] = ec._Flow_browser(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -4336,6 +4664,8 @@ func (ec *executionContext) _Subscription(ctx context.Context, sel ast.Selection
 		return ec._Subscription_taskUpdated(ctx, fields[0])
 	case "flowUpdated":
 		return ec._Subscription_flowUpdated(ctx, fields[0])
+	case "browserUpdated":
+		return ec._Subscription_browserUpdated(ctx, fields[0])
 	case "terminalLogsAdded":
 		return ec._Subscription_terminalLogsAdded(ctx, fields[0])
 	default:
@@ -4800,6 +5130,20 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) marshalNBrowser2githubᚗcomᚋsemanserᚋaiᚑcoderᚋgraphᚋmodelᚐBrowser(ctx context.Context, sel ast.SelectionSet, v gmodel.Browser) graphql.Marshaler {
+	return ec._Browser(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNBrowser2ᚖgithubᚗcomᚋsemanserᚋaiᚑcoderᚋgraphᚋmodelᚐBrowser(ctx context.Context, sel ast.SelectionSet, v *gmodel.Browser) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._Browser(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNFlow2githubᚗcomᚋsemanserᚋaiᚑcoderᚋgraphᚋmodelᚐFlow(ctx context.Context, sel ast.SelectionSet, v gmodel.Flow) graphql.Marshaler {

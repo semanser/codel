@@ -1,6 +1,7 @@
 import * as Tabs from "@radix-ui/react-tabs";
 import { useNavigate, useParams } from "react-router-dom";
 
+import Browser from "@/components/Browser/Browser";
 import { Messages } from "@/components/Messages/Messages";
 import { Panel } from "@/components/Panel/Panel";
 import {
@@ -11,6 +12,7 @@ import {
 } from "@/components/Tabs/Tabs.css";
 import { Terminal } from "@/components/Terminal/Terminal";
 import {
+  useBrowserUpdatedSubscription,
   useCreateFlowMutation,
   useCreateTaskMutation,
   useFinishFlowMutation,
@@ -42,6 +44,12 @@ export const ChatPage = () => {
   const name = !isStaleData ? data?.flow.name ?? "" : "";
   const status = !isStaleData ? data?.flow.status : undefined;
   const terminal = !isStaleData ? data?.flow.terminal : undefined;
+  const browser = !isStaleData ? data?.flow.browser : undefined;
+
+  useBrowserUpdatedSubscription({
+    variables: { flowId: Number(id) },
+    pause: isNewFlow,
+  });
 
   useTerminalLogsAddedSubscription({
     variables: { flowId: Number(id) },
@@ -101,12 +109,8 @@ export const ChatPage = () => {
             <Tabs.Trigger className={tabsTriggerStyles} value="terminal">
               Terminal
             </Tabs.Trigger>
-            <Tabs.Trigger
-              className={tabsTriggerStyles}
-              value="browser"
-              disabled
-            >
-              Browser (Soon)
+            <Tabs.Trigger className={tabsTriggerStyles} value="browser">
+              Browser
             </Tabs.Trigger>
             <Tabs.Trigger className={tabsTriggerStyles} value="code" disabled>
               Code (Soon)
@@ -122,7 +126,10 @@ export const ChatPage = () => {
             />
           </Tabs.Content>
           <Tabs.Content className={tabsContentStyles} value="browser">
-            browser
+            <Browser
+              url={browser?.url || undefined}
+              screenshotUrl={browser?.screenshotUrl ?? ""}
+            />
           </Tabs.Content>
           <Tabs.Content className={tabsContentStyles} value="code">
             code

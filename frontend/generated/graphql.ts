@@ -22,8 +22,8 @@ export type Scalars = {
 
 export type Browser = {
   __typename?: 'Browser';
-  connected: Scalars['Boolean']['output'];
-  imageData: Scalars['String']['output'];
+  screenshotUrl: Scalars['String']['output'];
+  url: Scalars['String']['output'];
 };
 
 export type Flow = {
@@ -85,10 +85,16 @@ export type QueryFlowArgs = {
 
 export type Subscription = {
   __typename?: 'Subscription';
+  browserUpdated: Browser;
   flowUpdated: Flow;
   taskAdded: Task;
   taskUpdated: Task;
   terminalLogsAdded: Log;
+};
+
+
+export type SubscriptionBrowserUpdatedArgs = {
+  flowId: Scalars['Uint']['input'];
 };
 
 
@@ -153,6 +159,12 @@ export const LogFragmentFragmentDoc = gql`
   id
 }
     `;
+export const BrowserFragmentFragmentDoc = gql`
+    fragment browserFragment on Browser {
+  url
+  screenshotUrl
+}
+    `;
 export const TaskFragmentFragmentDoc = gql`
     fragment taskFragment on Task {
   id
@@ -176,11 +188,15 @@ export const FlowFragmentFragmentDoc = gql`
       ...logFragment
     }
   }
+  browser {
+    ...browserFragment
+  }
   tasks {
     ...taskFragment
   }
 }
     ${LogFragmentFragmentDoc}
+${BrowserFragmentFragmentDoc}
 ${TaskFragmentFragmentDoc}`;
 export const FlowsDocument = gql`
     query flows {
@@ -277,6 +293,17 @@ export const FlowUpdatedDocument = gql`
 export function useFlowUpdatedSubscription<TData = FlowUpdatedSubscription>(options: Omit<Urql.UseSubscriptionArgs<FlowUpdatedSubscriptionVariables>, 'query'>, handler?: Urql.SubscriptionHandler<FlowUpdatedSubscription, TData>) {
   return Urql.useSubscription<FlowUpdatedSubscription, TData, FlowUpdatedSubscriptionVariables>({ query: FlowUpdatedDocument, ...options }, handler);
 };
+export const BrowserUpdatedDocument = gql`
+    subscription browserUpdated($flowId: Uint!) {
+  browserUpdated(flowId: $flowId) {
+    ...browserFragment
+  }
+}
+    ${BrowserFragmentFragmentDoc}`;
+
+export function useBrowserUpdatedSubscription<TData = BrowserUpdatedSubscription>(options: Omit<Urql.UseSubscriptionArgs<BrowserUpdatedSubscriptionVariables>, 'query'>, handler?: Urql.SubscriptionHandler<BrowserUpdatedSubscription, TData>) {
+  return Urql.useSubscription<BrowserUpdatedSubscription, TData, BrowserUpdatedSubscriptionVariables>({ query: BrowserUpdatedDocument, ...options }, handler);
+};
 export type FlowOverviewFragmentFragment = { __typename?: 'Flow', id: any, name: string, status: FlowStatus };
 
 export type FlowsQueryVariables = Exact<{ [key: string]: never; }>;
@@ -288,14 +315,16 @@ export type TaskFragmentFragment = { __typename?: 'Task', id: any, type: TaskTyp
 
 export type LogFragmentFragment = { __typename?: 'Log', text: string, id: any };
 
-export type FlowFragmentFragment = { __typename?: 'Flow', id: any, name: string, status: FlowStatus, terminal: { __typename?: 'Terminal', containerName: string, connected: boolean, logs: Array<{ __typename?: 'Log', text: string, id: any }> }, tasks: Array<{ __typename?: 'Task', id: any, type: TaskType, message: string, status: TaskStatus, args: any, results: any, createdAt: any }> };
+export type BrowserFragmentFragment = { __typename?: 'Browser', url: string, screenshotUrl: string };
+
+export type FlowFragmentFragment = { __typename?: 'Flow', id: any, name: string, status: FlowStatus, terminal: { __typename?: 'Terminal', containerName: string, connected: boolean, logs: Array<{ __typename?: 'Log', text: string, id: any }> }, browser: { __typename?: 'Browser', url: string, screenshotUrl: string }, tasks: Array<{ __typename?: 'Task', id: any, type: TaskType, message: string, status: TaskStatus, args: any, results: any, createdAt: any }> };
 
 export type FlowQueryVariables = Exact<{
   id: Scalars['Uint']['input'];
 }>;
 
 
-export type FlowQuery = { __typename?: 'Query', flow: { __typename?: 'Flow', id: any, name: string, status: FlowStatus, terminal: { __typename?: 'Terminal', containerName: string, connected: boolean, logs: Array<{ __typename?: 'Log', text: string, id: any }> }, tasks: Array<{ __typename?: 'Task', id: any, type: TaskType, message: string, status: TaskStatus, args: any, results: any, createdAt: any }> } };
+export type FlowQuery = { __typename?: 'Query', flow: { __typename?: 'Flow', id: any, name: string, status: FlowStatus, terminal: { __typename?: 'Terminal', containerName: string, connected: boolean, logs: Array<{ __typename?: 'Log', text: string, id: any }> }, browser: { __typename?: 'Browser', url: string, screenshotUrl: string }, tasks: Array<{ __typename?: 'Task', id: any, type: TaskType, message: string, status: TaskStatus, args: any, results: any, createdAt: any }> } };
 
 export type CreateFlowMutationVariables = Exact<{ [key: string]: never; }>;
 
@@ -338,6 +367,13 @@ export type FlowUpdatedSubscriptionVariables = Exact<{
 
 export type FlowUpdatedSubscription = { __typename?: 'Subscription', flowUpdated: { __typename?: 'Flow', id: any, name: string, terminal: { __typename?: 'Terminal', containerName: string, connected: boolean } } };
 
+export type BrowserUpdatedSubscriptionVariables = Exact<{
+  flowId: Scalars['Uint']['input'];
+}>;
+
+
+export type BrowserUpdatedSubscription = { __typename?: 'Subscription', browserUpdated: { __typename?: 'Browser', url: string, screenshotUrl: string } };
+
 import { IntrospectionQuery } from 'graphql';
 export default {
   "__schema": {
@@ -356,7 +392,7 @@ export default {
         "name": "Browser",
         "fields": [
           {
-            "name": "connected",
+            "name": "screenshotUrl",
             "type": {
               "kind": "NON_NULL",
               "ofType": {
@@ -367,7 +403,7 @@ export default {
             "args": []
           },
           {
-            "name": "imageData",
+            "name": "url",
             "type": {
               "kind": "NON_NULL",
               "ofType": {
@@ -650,6 +686,29 @@ export default {
         "kind": "OBJECT",
         "name": "Subscription",
         "fields": [
+          {
+            "name": "browserUpdated",
+            "type": {
+              "kind": "NON_NULL",
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "Browser",
+                "ofType": null
+              }
+            },
+            "args": [
+              {
+                "name": "flowId",
+                "type": {
+                  "kind": "NON_NULL",
+                  "ofType": {
+                    "kind": "SCALAR",
+                    "name": "Any"
+                  }
+                }
+              }
+            ]
+          },
           {
             "name": "flowUpdated",
             "type": {

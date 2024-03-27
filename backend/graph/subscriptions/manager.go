@@ -8,6 +8,7 @@ var (
 	taskAddedSubscriptions         = make(map[int64]chan *gmodel.Task)
 	flowUpdatedSubscriptions       = make(map[int64]chan *gmodel.Flow)
 	terminalLogsAddedSubscriptions = make(map[int64]chan *gmodel.Log)
+	browserSubscriptions           = make(map[int64]chan *gmodel.Browser)
 )
 
 type Subscription[T any] interface {

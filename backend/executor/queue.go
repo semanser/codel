@@ -178,12 +178,18 @@ func processBrowserTask(db *database.Queries, task database.Task) error {
 		return fmt.Errorf("failed to unmarshal args: %v", err)
 	}
 
+	var url = args.Url
+	var screenshotName string
+
 	if args.Action == agent.Read {
-		content, err := Content(args.Url)
+		content, screenshot, err := Content(url)
 
 		if err != nil {
 			return fmt.Errorf("failed to get content: %w", err)
 		}
+
+		log.Println("Screenshot taken")
+		screenshotName = screenshot
 
 		_, err = db.UpdateTaskResults(context.Background(), database.UpdateTaskResultsParams{
 			ID:      task.ID,
@@ -196,11 +202,13 @@ func processBrowserTask(db *database.Queries, task database.Task) error {
 	}
 
 	if args.Action == agent.Url {
-		content, err := URLs(args.Url)
+		content, screenshot, err := URLs(url)
 
 		if err != nil {
 			return fmt.Errorf("failed to get content: %w", err)
 		}
+
+		screenshotName = screenshot
 
 		_, err = db.UpdateTaskResults(context.Background(), database.UpdateTaskResultsParams{
 			ID:      task.ID,
@@ -211,6 +219,13 @@ func processBrowserTask(db *database.Queries, task database.Task) error {
 			return fmt.Errorf("failed to update task results: %w", err)
 		}
 	}
+
+	log.Println("Broadcasting browser updated")
+	subscriptions.BroadcastBrowserUpdated(task.FlowID.Int64, &gmodel.Browser{
+		URL: url,
+		// TODO Use a dynamic URL
+		ScreenshotURL: "http://localhost:8080/browser/" + screenshotName,
+	})
 
 	return nil
 }

@@ -43,6 +43,9 @@ func New(db *database.Queries) *gin.Engine {
 	// WebSocket endpoint for Docker daemon
 	r.GET("/terminal/:id", wsHandler(db))
 
+	// Static file server
+	r.Static("/browser", "./tmp/browser")
+
 	return r
 }
 
