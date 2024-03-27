@@ -4,8 +4,11 @@ import (
 	"context"
 	"fmt"
 	"io/fs"
+	"log"
 	"time"
 
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/go-connections/nat"
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"
 	"github.com/go-rod/rod/lib/proto"
@@ -13,9 +16,32 @@ import (
 	"github.com/semanser/ai-coder/database"
 )
 
+var (
+	browser *rod.Browser
+)
+
+const port = "9222"
+
 func InitBrowser(db *database.Queries) error {
 	browserContainerName := BrowserName()
-	_, err := SpawnContainer(context.Background(), browserContainerName, "ghcr.io/go-rod/rod", db)
+	portBinding := nat.Port(fmt.Sprintf("%s/tcp", port))
+
+	_, err := SpawnContainer(context.Background(), browserContainerName, &container.Config{
+		Image: "ghcr.io/go-rod/rod",
+		ExposedPorts: nat.PortSet{
+			portBinding: struct{}{},
+		},
+		Cmd: []string{"chrome", "--headless", "--no-sandbox", fmt.Sprintf("--remote-debugging-port=%s", port), "--remote-debugging-address=0.0.0.0"},
+	}, &container.HostConfig{
+		PortBindings: nat.PortMap{
+			portBinding: []nat.PortBinding{
+				{
+					HostIP:   "0.0.0.0",
+					HostPort: port,
+				},
+			},
+		},
+	}, db)
 
 	if err != nil {
 		return fmt.Errorf("failed to spawn container: %w", err)
@@ -101,14 +127,25 @@ func Screenshot(url string) ([]byte, error) {
 }
 
 func BrowserName() string {
-	return fmt.Sprintf("browser")
+	return fmt.Sprintf("codel-browser")
 }
 
 func loadPage(page *rod.Page) (*rod.Page, error) {
-	u := launcher.MustResolveURL("")
+	u, err := launcher.ResolveURL("")
+
+	if err != nil {
+		return nil, fmt.Errorf("Error resolving url: %w", err)
+	}
 
 	browser := rod.New().ControlURL(u)
-	err := browser.Connect()
+	err = browser.Connect()
+
+	version, err := browser.Version()
+
+	if err != nil {
+		return nil, fmt.Errorf("Error getting browser version: %w", err)
+	}
+	log.Println("Connected to browser %s", version.Product)
 
 	if err != nil {
 		return nil, fmt.Errorf("Error connecting to browser: %w", err)

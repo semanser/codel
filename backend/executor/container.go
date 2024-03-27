@@ -35,12 +35,16 @@ func InitClient() error {
 	return nil
 }
 
-func SpawnContainer(ctx context.Context, name string, dockerImage string, db *database.Queries) (dbContainerID int64, err error) {
-	log.Printf("Spawning container %s \"%s\"\n", dockerImage, name)
+func SpawnContainer(ctx context.Context, name string, config *container.Config, hostConfig *container.HostConfig, db *database.Queries) (dbContainerID int64, err error) {
+	if config == nil {
+		return 0, fmt.Errorf("No config found for container %s", name)
+	}
+
+	log.Printf("Spawning container %s \"%s\"\n", config.Image, name)
 
 	dbContainer, err := db.CreateContainer(ctx, database.CreateContainerParams{
 		Name:   database.StringToPgText(name),
-		Image:  database.StringToPgText(dockerImage),
+		Image:  database.StringToPgText(config.Image),
 		Status: database.StringToPgText("starting"),
 	})
 
@@ -79,7 +83,7 @@ func SpawnContainer(ctx context.Context, name string, dockerImage string, db *da
 	}()
 
 	filters := filters.NewArgs()
-	filters.Add("reference", dockerImage)
+	filters.Add("reference", config.Image)
 	images, err := dockerClient.ImageList(ctx, types.ImageListOptions{
 		Filters: filters,
 	})
@@ -90,11 +94,11 @@ func SpawnContainer(ctx context.Context, name string, dockerImage string, db *da
 
 	imageFound := len(images) > 0
 
-	log.Printf("Image %s found: %t\n", dockerImage, imageFound)
+	log.Printf("Image %s found: %t\n", config.Image, imageFound)
 
 	if !imageFound {
-		log.Printf("Pulling image %s...\n", dockerImage)
-		readCloser, err := dockerClient.ImagePull(ctx, dockerImage, types.ImagePullOptions{})
+		log.Printf("Pulling image %s...\n", config.Image)
+		readCloser, err := dockerClient.ImagePull(ctx, config.Image, types.ImagePullOptions{})
 
 		if err != nil {
 			return dbContainer.ID, fmt.Errorf("Error pulling image: %w", err)
@@ -109,10 +113,7 @@ func SpawnContainer(ctx context.Context, name string, dockerImage string, db *da
 	}
 
 	log.Printf("Creating container %s...\n", name)
-	resp, err := dockerClient.ContainerCreate(ctx, &container.Config{
-		Image: dockerImage,
-		Cmd:   []string{"tail", "-f", "/dev/null"},
-	}, nil, nil, nil, name)
+	resp, err := dockerClient.ContainerCreate(ctx, config, hostConfig, nil, nil, name)
 
 	if err != nil {
 		return dbContainer.ID, fmt.Errorf("Error creating container: %w", err)

@@ -7,6 +7,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/docker/docker/api/types/container"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/semanser/ai-coder/agent"
 	"github.com/semanser/ai-coder/database"
@@ -147,9 +148,54 @@ func ProcessQueue(flowId int64, db *database.Queries) {
 						continue
 					}
 				}
+
+				if task.Type.String == "browser" {
+					err := processBrowserTask(db, task)
+
+					if err != nil {
+						log.Printf("failed to process browser: %w", err)
+						continue
+					}
+
+					nextTask, err := getNextTask(db, task.FlowID.Int64)
+
+					if err != nil {
+						log.Printf("failed to get next task: %w", err)
+						continue
+					}
+
+					AddCommand(flowId, *nextTask)
+				}
 			}
 		}
 	}()
+}
+
+func processBrowserTask(db *database.Queries, task database.Task) error {
+	var args = agent.BrowserArgs{}
+	err := json.Unmarshal(task.Args, &args)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal args: %v", err)
+	}
+
+	if args.Action == agent.Read {
+		content, err := Content(args.Url, string(args.Message))
+
+		if err != nil {
+			return fmt.Errorf("failed to get content: %w", err)
+		}
+
+		_, err = db.UpdateTaskResults(context.Background(), database.UpdateTaskResultsParams{
+			ID:      task.ID,
+			Results: database.StringToPgText(content),
+		})
+
+		if err != nil {
+			return fmt.Errorf("failed to update task results: %w", err)
+		}
+	}
+
+	return nil
 }
 
 func processDoneTask(db *database.Queries, task database.Task) error {
@@ -230,7 +276,15 @@ func processInputTask(db *database.Queries, task database.Task) error {
 		})
 
 		terminalContainerName := TerminalName(flow.ID)
-		terminalContainerID, err := SpawnContainer(context.Background(), terminalContainerName, dockerImage, db)
+		terminalContainerID, err := SpawnContainer(context.Background(),
+			terminalContainerName,
+			&container.Config{
+				Image: dockerImage,
+				Cmd:   []string{"tail", "-f", "/dev/null"},
+			},
+			&container.HostConfig{},
+			db,
+		)
 
 		if err != nil {
 			return fmt.Errorf("failed to spawn container: %w", err)
@@ -295,10 +349,6 @@ func processTerminalTask(db *database.Queries, task database.Task) error {
 	err := json.Unmarshal(task.Args, &args)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal args: %v", err)
-	}
-
-	if err != nil {
-		return fmt.Errorf("failed to get writer: %w", err)
 	}
 
 	results, err := ExecCommand(task.FlowID.Int64, args.Input, db)

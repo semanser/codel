@@ -20,8 +20,15 @@ export type Scalars = {
   Uint: { input: any; output: any; }
 };
 
+export type Browser = {
+  __typename?: 'Browser';
+  connected: Scalars['Boolean']['output'];
+  imageData: Scalars['String']['output'];
+};
+
 export type Flow = {
   __typename?: 'Flow';
+  browser: Browser;
   id: Scalars['Uint']['output'];
   name: Scalars['String']['output'];
   status: FlowStatus;
@@ -346,8 +353,49 @@ export default {
     "types": [
       {
         "kind": "OBJECT",
+        "name": "Browser",
+        "fields": [
+          {
+            "name": "connected",
+            "type": {
+              "kind": "NON_NULL",
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "Any"
+              }
+            },
+            "args": []
+          },
+          {
+            "name": "imageData",
+            "type": {
+              "kind": "NON_NULL",
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "Any"
+              }
+            },
+            "args": []
+          }
+        ],
+        "interfaces": []
+      },
+      {
+        "kind": "OBJECT",
         "name": "Flow",
         "fields": [
+          {
+            "name": "browser",
+            "type": {
+              "kind": "NON_NULL",
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "Browser",
+                "ofType": null
+              }
+            },
+            "args": []
+          },
           {
             "name": "id",
             "type": {

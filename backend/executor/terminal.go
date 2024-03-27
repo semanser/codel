@@ -104,5 +104,5 @@ func ExecCommand(flowID int64, command string, db *database.Queries) (result str
 }
 
 func TerminalName(flowID int64) string {
-	return fmt.Sprintf("flow-%d", flowID)
+	return fmt.Sprintf("codel-terminal-%d", flowID)
 }
