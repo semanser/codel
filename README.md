@@ -23,6 +23,7 @@ Discord: https://discord.gg/uMaGSHNjzc
 - golang
 - nodejs
 - docker
+- postgresql
 
 ## Environment variables
 Add to `.env` file in the `backend` folder.
