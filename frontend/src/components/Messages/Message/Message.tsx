@@ -1,4 +1,4 @@
-import { formatDistance } from "date-fns";
+import { formatDistanceToNowStrict } from "date-fns";
 import { useState } from "react";
 
 import { Button } from "@/components/Button/Button";
@@ -48,7 +48,7 @@ export const Message = ({
       />
       <div className={rightColumnStyles}>
         <div className={timeStyles}>
-          {formatDistance(new Date(time), new Date(), { addSuffix: true })}
+          {formatDistanceToNowStrict(new Date(time), { addSuffix: true })}
         </div>
         <div
           className={
