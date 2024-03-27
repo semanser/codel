@@ -62,4 +62,5 @@ This project wouldn't be possible without:
 - https://arxiv.org/abs/2308.00352
 - https://arxiv.org/abs/2403.08299
 - https://www.cognition-labs.com/introducing-devin
+- https://github.com/go-rod/rod
 - https://github.com/semanser/JsonGenius
