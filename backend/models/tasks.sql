@@ -14,7 +14,8 @@ RETURNING *;
 
 -- name: ReadTasksByFlowId :many
 SELECT * FROM tasks
-WHERE flow_id = $1;
+WHERE flow_id = $1
+ORDER BY created_at ASC;
 
 -- name: UpdateTaskStatus :one
 UPDATE tasks

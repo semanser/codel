@@ -65,6 +65,7 @@ func (q *Queries) CreateTask(ctx context.Context, arg CreateTaskParams) (Task, e
 const readTasksByFlowId = `-- name: ReadTasksByFlowId :many
 SELECT id, created_at, updated_at, type, status, args, results, flow_id, message, tool_call_id FROM tasks
 WHERE flow_id = $1
+ORDER BY created_at ASC
 `
 
 func (q *Queries) ReadTasksByFlowId(ctx context.Context, flowID pgtype.Int8) ([]Task, error) {
