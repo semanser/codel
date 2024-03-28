@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"strings"
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -408,19 +407,25 @@ func processCodeTask(db *database.Queries, task database.Task) error {
 	}
 
 	var cmd = ""
+	var results = ""
 
 	if args.Action == agent.ReadFile {
+		// TODO consider using dockerClient.CopyFromContainer command instead
 		cmd = fmt.Sprintf("cat %s", args.Path)
+		results, err = ExecCommand(task.FlowID.Int64, cmd, db)
+
+		if err != nil {
+			return fmt.Errorf("error executing cat command: %w", err)
+		}
 	}
 
 	if args.Action == agent.UpdateFile {
-		// Replace all " with \"
-		content := strings.ReplaceAll(args.Content, "\"", "\\\"")
+		err = WriteFile(task.FlowID.Int64, args.Content, args.Path, db)
 
-		cmd = fmt.Sprintf("echo %s > %s", content, args.Path)
+		if err != nil {
+			return fmt.Errorf("error writing a file: %w", err)
+		}
 	}
-
-	results, err := ExecCommand(task.FlowID.Int64, cmd, db)
 
 	if err != nil {
 		return fmt.Errorf("failed to execute command: %w", err)
@@ -469,12 +474,24 @@ func getNextTask(db *database.Queries, flowId int64) (*database.Task, error) {
 		DockerImage: flow.ContainerImage.String,
 	})
 
+	lastTask := tasks[len(tasks)-1]
+
+	_, err = db.UpdateTaskToolCallId(context.Background(), database.UpdateTaskToolCallIdParams{
+		ToolCallID: c.ToolCallID,
+		ID:         lastTask.ID,
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to update task tool call id: %w", err)
+	}
+
 	nextTask, err := db.CreateTask(context.Background(), database.CreateTaskParams{
-		Args:    c.Args,
-		Message: c.Message,
-		Type:    c.Type,
-		Status:  database.StringToPgText("in_progress"),
-		FlowID:  pgtype.Int8{Int64: flowId, Valid: true},
+		Args:       c.Args,
+		Message:    c.Message,
+		Type:       c.Type,
+		Status:     database.StringToPgText("in_progress"),
+		FlowID:     pgtype.Int8{Int64: flowId, Valid: true},
+		ToolCallID: c.ToolCallID,
 	})
 
 	if err != nil {

@@ -5,9 +5,10 @@ INSERT INTO tasks (
   args,
   results,
   flow_id,
-  message
+  message,
+  tool_call_id
 ) VALUES (
-  $1, $2, $3, $4, $5, $6
+  $1, $2, $3, $4, $5, $6, $7
 )
 RETURNING *;
 
@@ -24,5 +25,11 @@ RETURNING *;
 -- name: UpdateTaskResults :one
 UPDATE tasks
 SET results = $1
+WHERE id = $2
+RETURNING *;
+
+-- name: UpdateTaskToolCallId :one
+UPDATE tasks
+SET tool_call_id = $1
 WHERE id = $2
 RETURNING *;

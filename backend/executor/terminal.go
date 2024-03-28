@@ -1,10 +1,12 @@
 package executor
 
 import (
+	"archive/tar"
 	"bytes"
 	"context"
 	"fmt"
 	"io"
+	"path/filepath"
 
 	"github.com/docker/docker/api/types"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -101,6 +103,83 @@ func ExecCommand(flowID int64, command string, db *database.Queries) (result str
 	})
 
 	return dst.String(), nil
+}
+
+func WriteFile(flowID int64, content string, path string, db *database.Queries) (err error) {
+	container := TerminalName(flowID)
+
+	// Check if container is running
+	isRunning, err := IsContainerRunning(container)
+
+	if err != nil {
+		return fmt.Errorf("Error inspecting container: %w", err)
+	}
+
+	if !isRunning {
+		return fmt.Errorf("Container is not running")
+	}
+
+	// TODO avoid duplicating here and in the flows table
+	log, err := db.CreateLog(context.Background(), database.CreateLogParams{
+		FlowID:  pgtype.Int8{Int64: flowID, Valid: true},
+		Message: content,
+		Type:    "input",
+	})
+
+	if err != nil {
+		return fmt.Errorf("Error creating log: %w", err)
+	}
+
+	subscriptions.BroadcastTerminalLogsAdded(flowID, &gmodel.Log{
+		ID:   uint(log.ID),
+		Text: websocket.FormatTerminalInput(content),
+	})
+
+	// Put content into a tar archive
+	archive := &bytes.Buffer{}
+	tarWriter := tar.NewWriter(archive)
+	filename := filepath.Base(path)
+	tarHeader := &tar.Header{
+		Name: filename,
+		Mode: 0600,
+		Size: int64(len(content)),
+	}
+	err = tarWriter.WriteHeader(tarHeader)
+	if err != nil {
+		return fmt.Errorf("Error writing tar header: %w", err)
+	}
+
+	_, err = tarWriter.Write([]byte(content))
+	if err != nil {
+		return fmt.Errorf("Error writing tar content: %w", err)
+	}
+
+	dir := filepath.Dir(path)
+	err = dockerClient.CopyToContainer(context.Background(), container, dir, archive, types.CopyToContainerOptions{})
+
+	if err != nil {
+		return fmt.Errorf("Error writing file: %w", err)
+	}
+
+	message := fmt.Sprintf("Wrote to %s", path)
+
+	// TODO avoid duplicating here and in the flows table
+	log, err = db.CreateLog(context.Background(), database.CreateLogParams{
+		FlowID:  pgtype.Int8{Int64: flowID, Valid: true},
+		Message: message,
+		Type:    "output",
+	})
+
+	if err != nil {
+		return fmt.Errorf("Error creating log: %w", err)
+	}
+
+	subscriptions.BroadcastTerminalLogsAdded(flowID, &gmodel.Log{
+		ID:   uint(log.ID),
+		Text: message,
+	})
+
+	return nil
 }
 
 func TerminalName(flowID int64) string {

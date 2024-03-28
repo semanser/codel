@@ -52,8 +52,8 @@ ORDER BY f.created_at DESC
 
 type ReadAllFlowsRow struct {
 	ID            int64
-	CreatedAt     pgtype.Timestamp
-	UpdatedAt     pgtype.Timestamp
+	CreatedAt     pgtype.Timestamptz
+	UpdatedAt     pgtype.Timestamptz
 	Name          pgtype.Text
 	Status        pgtype.Text
 	ContainerID   pgtype.Int8
@@ -102,8 +102,8 @@ WHERE f.id = $1
 
 type ReadFlowRow struct {
 	ID               int64
-	CreatedAt        pgtype.Timestamp
-	UpdatedAt        pgtype.Timestamp
+	CreatedAt        pgtype.Timestamptz
+	UpdatedAt        pgtype.Timestamptz
 	Name             pgtype.Text
 	Status           pgtype.Text
 	ContainerID      pgtype.Int8
