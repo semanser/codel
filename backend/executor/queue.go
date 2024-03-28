@@ -464,14 +464,10 @@ func getNextTask(db *database.Queries, flowId int64) (*database.Task, error) {
 		}
 	}
 
-	c, err := agent.NextTask(agent.AgentPrompt{
+	c := agent.NextTask(agent.AgentPrompt{
 		Tasks:       tasks,
 		DockerImage: flow.ContainerImage.String,
 	})
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to get next command: %w", err)
-	}
 
 	nextTask, err := db.CreateTask(context.Background(), database.CreateTaskParams{
 		Args:    c.Args,
