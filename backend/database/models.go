@@ -18,8 +18,8 @@ type Container struct {
 
 type Flow struct {
 	ID          int64
-	CreatedAt   pgtype.Timestamp
-	UpdatedAt   pgtype.Timestamp
+	CreatedAt   pgtype.Timestamptz
+	UpdatedAt   pgtype.Timestamptz
 	Name        pgtype.Text
 	Status      pgtype.Text
 	ContainerID pgtype.Int8
@@ -28,19 +28,20 @@ type Flow struct {
 type Log struct {
 	ID        int32
 	Message   string
-	CreatedAt pgtype.Timestamp
+	CreatedAt pgtype.Timestamptz
 	FlowID    pgtype.Int8
 	Type      string
 }
 
 type Task struct {
-	ID        int64
-	CreatedAt pgtype.Timestamp
-	UpdatedAt pgtype.Timestamp
-	Type      pgtype.Text
-	Status    pgtype.Text
-	Args      []byte
-	Results   pgtype.Text
-	FlowID    pgtype.Int8
-	Message   pgtype.Text
+	ID         int64
+	CreatedAt  pgtype.Timestamptz
+	UpdatedAt  pgtype.Timestamptz
+	Type       pgtype.Text
+	Status     pgtype.Text
+	Args       []byte
+	Results    pgtype.Text
+	FlowID     pgtype.Int8
+	Message    pgtype.Text
+	ToolCallID pgtype.Text
 }
