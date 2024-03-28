@@ -141,7 +141,7 @@ func NextTask(args AgentPrompt) *database.Task {
 			})
 		}
 
-		if task.Type.String == "terminal" || task.Type.String == "code" || task.Type.String == "browser" || task.Type.String == "done" || (task.Type.String == "ask" && task.ToolCallID.String != "") {
+		if task.ToolCallID.String != "" {
 			messages = append(messages, openai.ChatCompletionMessage{
 				Role: openai.ChatMessageRoleAssistant,
 				ToolCalls: []openai.ToolCall{

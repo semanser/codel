@@ -102,7 +102,13 @@ func ExecCommand(flowID int64, command string, db *database.Queries) (result str
 		Text: results,
 	})
 
-	return dst.String(), nil
+	result = dst.String()
+
+	if result == "" {
+		result = "Command executed successfully"
+	}
+
+	return result, nil
 }
 
 func WriteFile(flowID int64, content string, path string, db *database.Queries) (err error) {

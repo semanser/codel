@@ -426,6 +426,8 @@ func processCodeTask(db *database.Queries, task database.Task) error {
 		if err != nil {
 			return fmt.Errorf("error writing a file: %w", err)
 		}
+
+		results = "File updated"
 	}
 
 	if err != nil {
