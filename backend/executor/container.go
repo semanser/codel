@@ -19,6 +19,8 @@ var (
 	dockerClient *client.Client
 )
 
+const defaultImage = "debian:latest"
+
 func InitClient() error {
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
@@ -93,23 +95,26 @@ func SpawnContainer(ctx context.Context, name string, config *container.Config, 
 		return dbContainer.ID, fmt.Errorf("Error listing images: %w", err)
 	}
 
-	imageFound := len(images) > 0
+	imageExistsLocally := len(images) > 0
 
-	log.Printf("Image %s found: %t\n", config.Image, imageFound)
+	log.Printf("Image %s found locally: %t\n", config.Image, imageExistsLocally)
 
-	if !imageFound {
+	if !imageExistsLocally {
 		log.Printf("Pulling image %s...\n", config.Image)
 		readCloser, err := dockerClient.ImagePull(ctx, config.Image, types.ImagePullOptions{})
 
 		if err != nil {
-			return dbContainer.ID, fmt.Errorf("Error pulling image: %w", err)
+			config.Image = defaultImage
+			log.Printf("Error pulling image: %s. Using default image %s\n", err, defaultImage)
 		}
 
-		// Wait for the pull to finish
-		_, err = io.Copy(io.Discard, readCloser)
+		if err == nil {
+			// Wait for the pull to finish
+			_, err = io.Copy(io.Discard, readCloser)
 
-		if err != nil {
-			return dbContainer.ID, fmt.Errorf("Error waiting for image pull: %w", err)
+			if err != nil {
+				log.Printf("Error waiting for image pull: %s\n", err)
+			}
 		}
 	}
 
