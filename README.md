@@ -50,7 +50,7 @@ Frontend environment variables can be set by creating a `.env.local` file in the
 - [ ] SWE-bench
 - [ ] Better way to run it (eg a single docker command)
 
-See more detailed roarmap [here](https://github.com/semanser/codel/milestones).
+See more detailed roadmap [here](https://github.com/semanser/codel/milestones).
 
 
 
