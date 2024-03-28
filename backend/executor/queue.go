@@ -239,8 +239,9 @@ func processDoneTask(db *database.Queries, task database.Task) error {
 	}
 
 	subscriptions.BroadcastFlowUpdated(task.FlowID.Int64, &gmodel.Flow{
-		ID:     uint(flow.ID),
-		Status: gmodel.FlowStatus("finished"),
+		ID:       uint(flow.ID),
+		Status:   gmodel.FlowStatus("finished"),
+		Terminal: &gmodel.Terminal{},
 	})
 
 	return nil
