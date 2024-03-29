@@ -3,6 +3,8 @@ frontend/node_modules
 frontend/dist
 frontend/.env.local
 
+backend/.env
+
 **/*.log
 **/*.env
 **/.DS_Store

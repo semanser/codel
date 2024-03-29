@@ -1,4 +1,5 @@
-FROM node:21-slim
+# STEP 1: Build the frontend
+FROM node:21-slim as fe-build
 
 ENV NODE_ENV=production
 
@@ -13,3 +14,22 @@ COPY frontend/ .
 RUN yarn install --frozen-lockfile --production=false
 RUN ls -la /frontend
 RUN yarn build
+
+# STEP 2: Build the backend
+FROM golang:1.22-alpine as be-build
+
+WORKDIR /backend
+
+COPY backend/ .
+
+RUN go mod download
+
+RUN go build -o /app
+
+# STEP 3: Build the final image
+FROM alpine:3.14
+
+COPY --from=be-build /app /app
+COPY --from=fe-build /frontend/dist /frontend/dist
+
+CMD /app
