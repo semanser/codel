@@ -8,15 +8,14 @@ import { FitAddon } from "xterm-addon-fit";
 import { Unicode11Addon } from "xterm-addon-unicode11";
 import { WebLinksAddon } from "xterm-addon-web-links";
 import { WebglAddon } from "xterm-addon-webgl";
+// @ts-ignore - This package is not typed
+import { Broadcast } from "xterm-theme";
 import "xterm/css/xterm.css";
 
 import dockerSvg from "@/assets/docker.svg";
 import { Log } from "@/generated/graphql";
 
 import { headerStyles } from "./Terminal.css";
-
-// We don't have types for xterm-theme, so this is a hack to get it to compile
-const { Broadcast } = require("xterm-theme");
 
 const isWebGl2Supported = !!document
   .createElement("canvas")

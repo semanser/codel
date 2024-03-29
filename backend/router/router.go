@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/gin-contrib/cors"
+	"github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
 
 	"github.com/99designs/gqlgen/graphql"
@@ -33,6 +34,8 @@ func New(db *database.Queries) *gin.Engine {
 	config.AllowAllOrigins = true
 	config.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
 	r.Use(cors.New(config))
+
+	r.Use(static.Serve("/", static.LocalFile("./fe", true)))
 
 	// GraphQL endpoint
 	r.Any("/graphql", graphqlHandler(db))
