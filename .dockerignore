@@ -1,0 +1,9 @@
+frontend/dist
+frontend/node_modules
+frontend/dist
+frontend/.env.local
+
+**/*.log
+**/*.env
+**/.DS_Store
+**/Thumbs.db
