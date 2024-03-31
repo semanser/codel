@@ -8,29 +8,29 @@ INSERT INTO tasks (
   message,
   tool_call_id
 ) VALUES (
-  $1, $2, $3, $4, $5, $6, $7
+  ?, ?, ?, ?, ?, ?, ?
 )
 RETURNING *;
 
 -- name: ReadTasksByFlowId :many
 SELECT * FROM tasks
-WHERE flow_id = $1
+WHERE flow_id = ?
 ORDER BY created_at ASC;
 
 -- name: UpdateTaskStatus :one
 UPDATE tasks
-SET status = $1
-WHERE id = $2
+SET status = ?
+WHERE id = ?
 RETURNING *;
 
 -- name: UpdateTaskResults :one
 UPDATE tasks
-SET results = $1
-WHERE id = $2
+SET results = ?
+WHERE id = ?
 RETURNING *;
 
 -- name: UpdateTaskToolCallId :one
 UPDATE tasks
-SET tool_call_id = $1
-WHERE id = $2
+SET tool_call_id = ?
+WHERE id = ?
 RETURNING *;

@@ -7,11 +7,11 @@ package graph
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
 
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/semanser/ai-coder/database"
 	"github.com/semanser/ai-coder/executor"
 	gmodel "github.com/semanser/ai-coder/graph/model"
@@ -22,8 +22,8 @@ import (
 // CreateFlow is the resolver for the createFlow field.
 func (r *mutationResolver) CreateFlow(ctx context.Context) (*gmodel.Flow, error) {
 	flow, err := r.Db.CreateFlow(ctx, database.CreateFlowParams{
-		Name:   database.StringToPgText("New Task"),
-		Status: database.StringToPgText("in_progress"),
+		Name:   database.StringToNullString("New Task"),
+		Status: database.StringToNullString("in_progress"),
 	})
 
 	if err != nil {
@@ -52,11 +52,11 @@ func (r *mutationResolver) CreateTask(ctx context.Context, flowID uint, query st
 	}
 
 	task, err := r.Db.CreateTask(ctx, database.CreateTaskParams{
-		Type:    database.StringToPgText("input"),
-		Message: database.StringToPgText(query),
-		Status:  database.StringToPgText("finished"),
-		Args:    arg,
-		FlowID:  pgtype.Int8{Int64: int64(flowID), Valid: true},
+		Type:    database.StringToNullString("input"),
+		Message: database.StringToNullString(query),
+		Status:  database.StringToNullString("finished"),
+		Args:    database.StringToNullString(string(arg)),
+		FlowID:  sql.NullInt64{Int64: int64(flowID), Valid: true},
 	})
 
 	if err != nil {
@@ -74,7 +74,7 @@ func (r *mutationResolver) CreateTask(ctx context.Context, flowID uint, query st
 		Message:   task.Message.String,
 		Type:      gmodel.TaskType(task.Type.String),
 		Status:    gmodel.TaskStatus(task.Status.String),
-		Args:      string(task.Args),
+		Args:      database.StringToNullString(string(arg)).String,
 		CreatedAt: task.CreatedAt.Time,
 	}, nil
 }
@@ -101,7 +101,7 @@ func (r *mutationResolver) FinishFlow(ctx context.Context, flowID uint) (*gmodel
 
 	// Update flow status
 	r.Db.UpdateFlowStatus(ctx, database.UpdateFlowStatusParams{
-		Status: database.StringToPgText("finished"),
+		Status: database.StringToNullString("finished"),
 		ID:     int64(flowID),
 	})
 
@@ -167,7 +167,7 @@ func (r *queryResolver) Flow(ctx context.Context, id uint) (*gmodel.Flow, error)
 	var gTasks []*gmodel.Task
 	var gLogs []*gmodel.Log
 
-	tasks, err := r.Db.ReadTasksByFlowId(ctx, pgtype.Int8{Int64: int64(id), Valid: true})
+	tasks, err := r.Db.ReadTasksByFlowId(ctx, sql.NullInt64{Int64: int64(id), Valid: true})
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch tasks: %w", err)
@@ -179,12 +179,12 @@ func (r *queryResolver) Flow(ctx context.Context, id uint) (*gmodel.Flow, error)
 			Message:   task.Message.String,
 			Type:      gmodel.TaskType(task.Type.String),
 			Status:    gmodel.TaskStatus(task.Status.String),
-			Args:      string(task.Args),
+			Args:      task.Args.String,
 			Results:   task.Results.String,
 			CreatedAt: task.CreatedAt.Time,
 		})
 	}
-	logs, err := r.Db.GetLogsByFlowId(ctx, pgtype.Int8{Int64: flow.ID, Valid: true})
+	logs, err := r.Db.GetLogsByFlowId(ctx, sql.NullInt64{Int64: flow.ID, Valid: true})
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch logs: %w", err)

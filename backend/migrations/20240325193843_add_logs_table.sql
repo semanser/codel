@@ -1,10 +1,10 @@
 -- +goose Up
 -- +goose StatementBegin
 CREATE TABLE logs (
-  id SERIAL PRIMARY KEY,
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
   message TEXT NOT NULL,
-  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-  flow_id bigint REFERENCES flows(id) ON DELETE CASCADE,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  flow_id INTEGER REFERENCES flows(id) ON DELETE CASCADE,
   type TEXT NOT NULL -- "input" or "output"
 );
 -- +goose StatementEnd

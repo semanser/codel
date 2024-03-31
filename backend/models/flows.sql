@@ -3,7 +3,7 @@ INSERT INTO flows (
   name, status, container_id
 )
 VALUES (
-  $1, $2, $3
+  ?, ?, ?
 )
 RETURNING *;
 
@@ -24,22 +24,22 @@ SELECT
   c.local_id AS container_local_id
 FROM flows f
 LEFT JOIN containers c ON f.container_id = c.id
-WHERE f.id = $1;
+WHERE f.id = ?;
 
 -- name: UpdateFlowStatus :one
 UPDATE flows
-SET status = $1
-WHERE id = $2
+SET status = ?
+WHERE id = ?
 RETURNING *;
 
 -- name: UpdateFlowName :one
 UPDATE flows
-SET name = $1
-WHERE id = $2
+SET name = ?
+WHERE id = ?
 RETURNING *;
 
 -- name: UpdateFlowContainer :one
 UPDATE flows
-SET container_id = $1
-WHERE id = $2
+SET container_id = ?
+WHERE id = ?
 RETURNING *;

@@ -7,8 +7,7 @@ package database
 
 import (
 	"context"
-
-	"github.com/jackc/pgx/v5/pgtype"
+	"database/sql"
 )
 
 const createLog = `-- name: CreateLog :one
@@ -16,19 +15,19 @@ INSERT INTO logs (
   message, flow_id, type
 )
 VALUES (
-  $1, $2, $3
+  ?, ?, ?
 )
 RETURNING id, message, created_at, flow_id, type
 `
 
 type CreateLogParams struct {
 	Message string
-	FlowID  pgtype.Int8
+	FlowID  sql.NullInt64
 	Type    string
 }
 
 func (q *Queries) CreateLog(ctx context.Context, arg CreateLogParams) (Log, error) {
-	row := q.db.QueryRow(ctx, createLog, arg.Message, arg.FlowID, arg.Type)
+	row := q.db.QueryRowContext(ctx, createLog, arg.Message, arg.FlowID, arg.Type)
 	var i Log
 	err := row.Scan(
 		&i.ID,
@@ -43,12 +42,12 @@ func (q *Queries) CreateLog(ctx context.Context, arg CreateLogParams) (Log, erro
 const getLogsByFlowId = `-- name: GetLogsByFlowId :many
 SELECT id, message, created_at, flow_id, type
 FROM logs
-WHERE flow_id = $1
+WHERE flow_id = ?
 ORDER BY created_at ASC
 `
 
-func (q *Queries) GetLogsByFlowId(ctx context.Context, flowID pgtype.Int8) ([]Log, error) {
-	rows, err := q.db.Query(ctx, getLogsByFlowId, flowID)
+func (q *Queries) GetLogsByFlowId(ctx context.Context, flowID sql.NullInt64) ([]Log, error) {
+	rows, err := q.db.QueryContext(ctx, getLogsByFlowId, flowID)
 	if err != nil {
 		return nil, err
 	}
@@ -66,6 +65,9 @@ func (q *Queries) GetLogsByFlowId(ctx context.Context, flowID pgtype.Int8) ([]Lo
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err

@@ -7,8 +7,7 @@ package database
 
 import (
 	"context"
-
-	"github.com/jackc/pgx/v5/pgtype"
+	"database/sql"
 )
 
 const createTask = `-- name: CreateTask :one
@@ -21,23 +20,23 @@ INSERT INTO tasks (
   message,
   tool_call_id
 ) VALUES (
-  $1, $2, $3, $4, $5, $6, $7
+  ?, ?, ?, ?, ?, ?, ?
 )
-RETURNING id, created_at, updated_at, type, status, args, results, flow_id, message, tool_call_id
+RETURNING id, created_at, updated_at, type, status, args, results, message, flow_id, tool_call_id
 `
 
 type CreateTaskParams struct {
-	Type       pgtype.Text
-	Status     pgtype.Text
-	Args       []byte
-	Results    pgtype.Text
-	FlowID     pgtype.Int8
-	Message    pgtype.Text
-	ToolCallID pgtype.Text
+	Type       sql.NullString
+	Status     sql.NullString
+	Args       sql.NullString
+	Results    sql.NullString
+	FlowID     sql.NullInt64
+	Message    sql.NullString
+	ToolCallID sql.NullString
 }
 
 func (q *Queries) CreateTask(ctx context.Context, arg CreateTaskParams) (Task, error) {
-	row := q.db.QueryRow(ctx, createTask,
+	row := q.db.QueryRowContext(ctx, createTask,
 		arg.Type,
 		arg.Status,
 		arg.Args,
@@ -55,21 +54,21 @@ func (q *Queries) CreateTask(ctx context.Context, arg CreateTaskParams) (Task, e
 		&i.Status,
 		&i.Args,
 		&i.Results,
-		&i.FlowID,
 		&i.Message,
+		&i.FlowID,
 		&i.ToolCallID,
 	)
 	return i, err
 }
 
 const readTasksByFlowId = `-- name: ReadTasksByFlowId :many
-SELECT id, created_at, updated_at, type, status, args, results, flow_id, message, tool_call_id FROM tasks
-WHERE flow_id = $1
+SELECT id, created_at, updated_at, type, status, args, results, message, flow_id, tool_call_id FROM tasks
+WHERE flow_id = ?
 ORDER BY created_at ASC
 `
 
-func (q *Queries) ReadTasksByFlowId(ctx context.Context, flowID pgtype.Int8) ([]Task, error) {
-	rows, err := q.db.Query(ctx, readTasksByFlowId, flowID)
+func (q *Queries) ReadTasksByFlowId(ctx context.Context, flowID sql.NullInt64) ([]Task, error) {
+	rows, err := q.db.QueryContext(ctx, readTasksByFlowId, flowID)
 	if err != nil {
 		return nil, err
 	}
@@ -85,13 +84,16 @@ func (q *Queries) ReadTasksByFlowId(ctx context.Context, flowID pgtype.Int8) ([]
 			&i.Status,
 			&i.Args,
 			&i.Results,
-			&i.FlowID,
 			&i.Message,
+			&i.FlowID,
 			&i.ToolCallID,
 		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -101,18 +103,18 @@ func (q *Queries) ReadTasksByFlowId(ctx context.Context, flowID pgtype.Int8) ([]
 
 const updateTaskResults = `-- name: UpdateTaskResults :one
 UPDATE tasks
-SET results = $1
-WHERE id = $2
-RETURNING id, created_at, updated_at, type, status, args, results, flow_id, message, tool_call_id
+SET results = ?
+WHERE id = ?
+RETURNING id, created_at, updated_at, type, status, args, results, message, flow_id, tool_call_id
 `
 
 type UpdateTaskResultsParams struct {
-	Results pgtype.Text
+	Results sql.NullString
 	ID      int64
 }
 
 func (q *Queries) UpdateTaskResults(ctx context.Context, arg UpdateTaskResultsParams) (Task, error) {
-	row := q.db.QueryRow(ctx, updateTaskResults, arg.Results, arg.ID)
+	row := q.db.QueryRowContext(ctx, updateTaskResults, arg.Results, arg.ID)
 	var i Task
 	err := row.Scan(
 		&i.ID,
@@ -122,8 +124,8 @@ func (q *Queries) UpdateTaskResults(ctx context.Context, arg UpdateTaskResultsPa
 		&i.Status,
 		&i.Args,
 		&i.Results,
-		&i.FlowID,
 		&i.Message,
+		&i.FlowID,
 		&i.ToolCallID,
 	)
 	return i, err
@@ -131,18 +133,18 @@ func (q *Queries) UpdateTaskResults(ctx context.Context, arg UpdateTaskResultsPa
 
 const updateTaskStatus = `-- name: UpdateTaskStatus :one
 UPDATE tasks
-SET status = $1
-WHERE id = $2
-RETURNING id, created_at, updated_at, type, status, args, results, flow_id, message, tool_call_id
+SET status = ?
+WHERE id = ?
+RETURNING id, created_at, updated_at, type, status, args, results, message, flow_id, tool_call_id
 `
 
 type UpdateTaskStatusParams struct {
-	Status pgtype.Text
+	Status sql.NullString
 	ID     int64
 }
 
 func (q *Queries) UpdateTaskStatus(ctx context.Context, arg UpdateTaskStatusParams) (Task, error) {
-	row := q.db.QueryRow(ctx, updateTaskStatus, arg.Status, arg.ID)
+	row := q.db.QueryRowContext(ctx, updateTaskStatus, arg.Status, arg.ID)
 	var i Task
 	err := row.Scan(
 		&i.ID,
@@ -152,8 +154,8 @@ func (q *Queries) UpdateTaskStatus(ctx context.Context, arg UpdateTaskStatusPara
 		&i.Status,
 		&i.Args,
 		&i.Results,
-		&i.FlowID,
 		&i.Message,
+		&i.FlowID,
 		&i.ToolCallID,
 	)
 	return i, err
@@ -161,18 +163,18 @@ func (q *Queries) UpdateTaskStatus(ctx context.Context, arg UpdateTaskStatusPara
 
 const updateTaskToolCallId = `-- name: UpdateTaskToolCallId :one
 UPDATE tasks
-SET tool_call_id = $1
-WHERE id = $2
-RETURNING id, created_at, updated_at, type, status, args, results, flow_id, message, tool_call_id
+SET tool_call_id = ?
+WHERE id = ?
+RETURNING id, created_at, updated_at, type, status, args, results, message, flow_id, tool_call_id
 `
 
 type UpdateTaskToolCallIdParams struct {
-	ToolCallID pgtype.Text
+	ToolCallID sql.NullString
 	ID         int64
 }
 
 func (q *Queries) UpdateTaskToolCallId(ctx context.Context, arg UpdateTaskToolCallIdParams) (Task, error) {
-	row := q.db.QueryRow(ctx, updateTaskToolCallId, arg.ToolCallID, arg.ID)
+	row := q.db.QueryRowContext(ctx, updateTaskToolCallId, arg.ToolCallID, arg.ID)
 	var i Task
 	err := row.Scan(
 		&i.ID,
@@ -182,8 +184,8 @@ func (q *Queries) UpdateTaskToolCallId(ctx context.Context, arg UpdateTaskToolCa
 		&i.Status,
 		&i.Args,
 		&i.Results,
-		&i.FlowID,
 		&i.Message,
+		&i.FlowID,
 		&i.ToolCallID,
 	)
 	return i, err

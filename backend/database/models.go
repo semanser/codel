@@ -5,43 +5,44 @@
 package database
 
 import (
-	"github.com/jackc/pgx/v5/pgtype"
+	"database/sql"
+	"time"
 )
 
 type Container struct {
 	ID      int64
-	Name    pgtype.Text
-	LocalID pgtype.Text
-	Image   pgtype.Text
-	Status  pgtype.Text
+	Name    sql.NullString
+	LocalID sql.NullString
+	Image   sql.NullString
+	Status  sql.NullString
 }
 
 type Flow struct {
 	ID          int64
-	CreatedAt   pgtype.Timestamptz
-	UpdatedAt   pgtype.Timestamptz
-	Name        pgtype.Text
-	Status      pgtype.Text
-	ContainerID pgtype.Int8
+	CreatedAt   sql.NullTime
+	UpdatedAt   sql.NullTime
+	Name        sql.NullString
+	Status      sql.NullString
+	ContainerID sql.NullInt64
 }
 
 type Log struct {
-	ID        int32
+	ID        int64
 	Message   string
-	CreatedAt pgtype.Timestamptz
-	FlowID    pgtype.Int8
+	CreatedAt time.Time
+	FlowID    sql.NullInt64
 	Type      string
 }
 
 type Task struct {
 	ID         int64
-	CreatedAt  pgtype.Timestamptz
-	UpdatedAt  pgtype.Timestamptz
-	Type       pgtype.Text
-	Status     pgtype.Text
-	Args       []byte
-	Results    pgtype.Text
-	FlowID     pgtype.Int8
-	Message    pgtype.Text
-	ToolCallID pgtype.Text
+	CreatedAt  sql.NullTime
+	UpdatedAt  sql.NullTime
+	Type       sql.NullString
+	Status     sql.NullString
+	Args       sql.NullString
+	Results    sql.NullString
+	Message    sql.NullString
+	FlowID     sql.NullInt64
+	ToolCallID sql.NullString
 }

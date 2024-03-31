@@ -2,12 +2,12 @@ package executor
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
 
 	"github.com/docker/docker/api/types/container"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/semanser/ai-coder/agent"
 	"github.com/semanser/ai-coder/database"
 	gmodel "github.com/semanser/ai-coder/graph/model"
@@ -73,7 +73,7 @@ func ProcessQueue(flowId int64, db *database.Queries) {
 					Type:      gmodel.TaskType(task.Type.String),
 					CreatedAt: task.CreatedAt.Time,
 					Status:    gmodel.TaskStatus(task.Status.String),
-					Args:      string(task.Args),
+					Args:      task.Args.String,
 					Results:   task.Results.String,
 				})
 
@@ -172,7 +172,7 @@ func ProcessQueue(flowId int64, db *database.Queries) {
 
 func processBrowserTask(db *database.Queries, task database.Task) error {
 	var args = agent.BrowserArgs{}
-	err := json.Unmarshal(task.Args, &args)
+	err := json.Unmarshal([]byte(task.Args.String), &args)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal args: %v", err)
 	}
@@ -192,7 +192,7 @@ func processBrowserTask(db *database.Queries, task database.Task) error {
 
 		_, err = db.UpdateTaskResults(context.Background(), database.UpdateTaskResultsParams{
 			ID:      task.ID,
-			Results: database.StringToPgText(content),
+			Results: database.StringToNullString(content),
 		})
 
 		if err != nil {
@@ -211,7 +211,7 @@ func processBrowserTask(db *database.Queries, task database.Task) error {
 
 		_, err = db.UpdateTaskResults(context.Background(), database.UpdateTaskResultsParams{
 			ID:      task.ID,
-			Results: database.StringToPgText(content),
+			Results: database.StringToNullString(content),
 		})
 
 		if err != nil {
@@ -231,7 +231,7 @@ func processBrowserTask(db *database.Queries, task database.Task) error {
 func processDoneTask(db *database.Queries, task database.Task) error {
 	flow, err := db.UpdateFlowStatus(context.Background(), database.UpdateFlowStatusParams{
 		ID:     task.FlowID.Int64,
-		Status: database.StringToPgText("finished"),
+		Status: database.StringToNullString("finished"),
 	})
 
 	if err != nil {
@@ -248,7 +248,7 @@ func processDoneTask(db *database.Queries, task database.Task) error {
 }
 
 func processInputTask(db *database.Queries, task database.Task) error {
-	tasks, err := db.ReadTasksByFlowId(context.Background(), pgtype.Int8{
+	tasks, err := db.ReadTasksByFlowId(context.Background(), sql.NullInt64{
 		Int64: task.FlowID.Int64,
 		Valid: true,
 	})
@@ -274,7 +274,7 @@ func processInputTask(db *database.Queries, task database.Task) error {
 
 		flow, err := db.UpdateFlowName(context.Background(), database.UpdateFlowNameParams{
 			ID:   task.FlowID.Int64,
-			Name: database.StringToPgText(summary),
+			Name: database.StringToNullString(summary),
 		})
 
 		if err != nil {
@@ -332,7 +332,7 @@ func processInputTask(db *database.Queries, task database.Task) error {
 
 		_, err = db.UpdateFlowContainer(context.Background(), database.UpdateFlowContainerParams{
 			ID:          flow.ID,
-			ContainerID: pgtype.Int8{Int64: terminalContainerID, Valid: true},
+			ContainerID: sql.NullInt64{Int64: terminalContainerID, Valid: true},
 		})
 
 		if err != nil {
@@ -364,7 +364,7 @@ func processInputTask(db *database.Queries, task database.Task) error {
 
 func processAskTask(db *database.Queries, task database.Task) error {
 	task, err := db.UpdateTaskStatus(context.Background(), database.UpdateTaskStatusParams{
-		Status: database.StringToPgText("finished"),
+		Status: database.StringToNullString("finished"),
 		ID:     task.ID,
 	})
 
@@ -377,7 +377,7 @@ func processAskTask(db *database.Queries, task database.Task) error {
 
 func processTerminalTask(db *database.Queries, task database.Task) error {
 	var args = agent.TerminalArgs{}
-	err := json.Unmarshal(task.Args, &args)
+	err := json.Unmarshal([]byte(task.Args.String), &args)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal args: %v", err)
 	}
@@ -390,7 +390,7 @@ func processTerminalTask(db *database.Queries, task database.Task) error {
 
 	_, err = db.UpdateTaskResults(context.Background(), database.UpdateTaskResultsParams{
 		ID:      task.ID,
-		Results: database.StringToPgText(results),
+		Results: database.StringToNullString(results),
 	})
 
 	if err != nil {
@@ -402,7 +402,7 @@ func processTerminalTask(db *database.Queries, task database.Task) error {
 
 func processCodeTask(db *database.Queries, task database.Task) error {
 	var args = agent.CodeArgs{}
-	err := json.Unmarshal(task.Args, &args)
+	err := json.Unmarshal([]byte(task.Args.String), &args)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal args: %v", err)
 	}
@@ -436,7 +436,7 @@ func processCodeTask(db *database.Queries, task database.Task) error {
 
 	_, err = db.UpdateTaskResults(context.Background(), database.UpdateTaskResultsParams{
 		ID:      task.ID,
-		Results: database.StringToPgText(results),
+		Results: database.StringToNullString(results),
 	})
 
 	if err != nil {
@@ -453,7 +453,7 @@ func getNextTask(db *database.Queries, flowId int64) (*database.Task, error) {
 		return nil, fmt.Errorf("failed to get flow: %w", err)
 	}
 
-	tasks, err := db.ReadTasksByFlowId(context.Background(), pgtype.Int8{
+	tasks, err := db.ReadTasksByFlowId(context.Background(), sql.NullInt64{
 		Int64: flowId,
 		Valid: true,
 	})
@@ -468,7 +468,7 @@ func getNextTask(db *database.Queries, flowId int64) (*database.Task, error) {
 		if len(task.Results.String) > maxResultsLength {
 			// Get the last N symbols from the output
 			results := task.Results.String[len(task.Results.String)-maxResultsLength:]
-			tasks[i].Results = database.StringToPgText(results)
+			tasks[i].Results = database.StringToNullString(results)
 		}
 	}
 
@@ -492,8 +492,8 @@ func getNextTask(db *database.Queries, flowId int64) (*database.Task, error) {
 		Args:       c.Args,
 		Message:    c.Message,
 		Type:       c.Type,
-		Status:     database.StringToPgText("in_progress"),
-		FlowID:     pgtype.Int8{Int64: flowId, Valid: true},
+		Status:     database.StringToNullString("in_progress"),
+		FlowID:     sql.NullInt64{Int64: flowId, Valid: true},
 		ToolCallID: c.ToolCallID,
 	})
 

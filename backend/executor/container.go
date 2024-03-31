@@ -46,9 +46,9 @@ func SpawnContainer(ctx context.Context, name string, config *container.Config, 
 	log.Printf("Spawning container %s \"%s\"\n", config.Image, name)
 
 	dbContainer, err := db.CreateContainer(ctx, database.CreateContainerParams{
-		Name:   database.StringToPgText(name),
-		Image:  database.StringToPgText(config.Image),
-		Status: database.StringToPgText("starting"),
+		Name:   database.StringToNullString(name),
+		Image:  database.StringToNullString(config.Image),
+		Status: database.StringToNullString("starting"),
 	})
 
 	if err != nil {
@@ -72,7 +72,7 @@ func SpawnContainer(ctx context.Context, name string, config *container.Config, 
 
 		_, err := db.UpdateContainerStatus(ctx, database.UpdateContainerStatusParams{
 			ID:     dbContainer.ID,
-			Status: database.StringToPgText(status),
+			Status: database.StringToNullString(status),
 		})
 
 		if err != nil {
@@ -81,7 +81,7 @@ func SpawnContainer(ctx context.Context, name string, config *container.Config, 
 
 		_, err = db.UpdateContainerLocalId(ctx, database.UpdateContainerLocalIdParams{
 			ID:      dbContainer.ID,
-			LocalID: database.StringToPgText(localContainerID),
+			LocalID: database.StringToNullString(localContainerID),
 		})
 	}()
 
@@ -143,7 +143,7 @@ func StopContainer(containerID string, dbID int64, db *database.Queries) error {
 		if client.IsErrNotFound(err) {
 			log.Printf("Container %s not found. Marking it as stopped.\n", containerID)
 			db.UpdateContainerStatus(context.Background(), database.UpdateContainerStatusParams{
-				Status: database.StringToPgText("stopped"),
+				Status: database.StringToNullString("stopped"),
 				ID:     dbID,
 			})
 
@@ -154,7 +154,7 @@ func StopContainer(containerID string, dbID int64, db *database.Queries) error {
 	}
 
 	_, err := db.UpdateContainerStatus(context.Background(), database.UpdateContainerStatusParams{
-		Status: database.StringToPgText("stopped"),
+		Status: database.StringToNullString("stopped"),
 		ID:     dbID,
 	})
 
@@ -220,7 +220,7 @@ func Cleanup(db *database.Queries) error {
 	for _, flow := range flows {
 		if flow.Status.String == "in_progress" {
 			_, err := db.UpdateFlowStatus(context.Background(), database.UpdateFlowStatusParams{
-				Status: database.StringToPgText("finished"),
+				Status: database.StringToNullString("finished"),
 				ID:     flow.ID,
 			})
 

@@ -7,8 +7,7 @@ package database
 
 import (
 	"context"
-
-	"github.com/jackc/pgx/v5/pgtype"
+	"database/sql"
 )
 
 const createContainer = `-- name: CreateContainer :one
@@ -16,19 +15,19 @@ INSERT INTO containers (
   name, image, status
 )
 VALUES (
-  $1, $2, $3
+  ?, ?, ?
 )
 RETURNING id, name, local_id, image, status
 `
 
 type CreateContainerParams struct {
-	Name   pgtype.Text
-	Image  pgtype.Text
-	Status pgtype.Text
+	Name   sql.NullString
+	Image  sql.NullString
+	Status sql.NullString
 }
 
 func (q *Queries) CreateContainer(ctx context.Context, arg CreateContainerParams) (Container, error) {
-	row := q.db.QueryRow(ctx, createContainer, arg.Name, arg.Image, arg.Status)
+	row := q.db.QueryRowContext(ctx, createContainer, arg.Name, arg.Image, arg.Status)
 	var i Container
 	err := row.Scan(
 		&i.ID,
@@ -45,7 +44,7 @@ SELECT id, name, local_id, image, status FROM containers WHERE status = 'running
 `
 
 func (q *Queries) GetAllRunningContainers(ctx context.Context) ([]Container, error) {
-	rows, err := q.db.Query(ctx, getAllRunningContainers)
+	rows, err := q.db.QueryContext(ctx, getAllRunningContainers)
 	if err != nil {
 		return nil, err
 	}
@@ -64,6 +63,9 @@ func (q *Queries) GetAllRunningContainers(ctx context.Context) ([]Container, err
 		}
 		items = append(items, i)
 	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -72,18 +74,18 @@ func (q *Queries) GetAllRunningContainers(ctx context.Context) ([]Container, err
 
 const updateContainerLocalId = `-- name: UpdateContainerLocalId :one
 UPDATE containers
-SET local_id = $1
-WHERE id = $2
+SET local_id = ?
+WHERE id = ?
 RETURNING id, name, local_id, image, status
 `
 
 type UpdateContainerLocalIdParams struct {
-	LocalID pgtype.Text
+	LocalID sql.NullString
 	ID      int64
 }
 
 func (q *Queries) UpdateContainerLocalId(ctx context.Context, arg UpdateContainerLocalIdParams) (Container, error) {
-	row := q.db.QueryRow(ctx, updateContainerLocalId, arg.LocalID, arg.ID)
+	row := q.db.QueryRowContext(ctx, updateContainerLocalId, arg.LocalID, arg.ID)
 	var i Container
 	err := row.Scan(
 		&i.ID,
@@ -97,18 +99,18 @@ func (q *Queries) UpdateContainerLocalId(ctx context.Context, arg UpdateContaine
 
 const updateContainerStatus = `-- name: UpdateContainerStatus :one
 UPDATE containers
-SET status = $1
-WHERE id = $2
+SET status = ?
+WHERE id = ?
 RETURNING id, name, local_id, image, status
 `
 
 type UpdateContainerStatusParams struct {
-	Status pgtype.Text
+	Status sql.NullString
 	ID     int64
 }
 
 func (q *Queries) UpdateContainerStatus(ctx context.Context, arg UpdateContainerStatusParams) (Container, error) {
-	row := q.db.QueryRow(ctx, updateContainerStatus, arg.Status, arg.ID)
+	row := q.db.QueryRowContext(ctx, updateContainerStatus, arg.Status, arg.ID)
 	var i Container
 	err := row.Scan(
 		&i.ID,

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"database/sql"
 	"embed"
 	"log"
@@ -11,8 +10,7 @@ import (
 	"strconv"
 	"syscall"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-	_ "github.com/jackc/pgx/v5/stdlib"
+  _ "github.com/mattn/go-sqlite3"
 	"github.com/pressly/goose/v3"
 	"github.com/semanser/ai-coder/assets"
 	"github.com/semanser/ai-coder/config"
@@ -36,39 +34,17 @@ func main() {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 
-	poolConfig, err := pgxpool.ParseConfig(config.Config.DatabaseURL)
-	if err != nil {
-		log.Fatalf("failed to create a pool: %w", err)
-	}
+  db, err := sql.Open("sqlite3", config.Config.DatabaseURL)
 
-	dbPool, err := pgxpool.NewWithConfig(context.Background(), poolConfig)
-
-	if err != nil {
-		log.Fatalf("Unable to connect to database: %v\n", err)
-	}
-
-	err = dbPool.Ping(context.Background())
-	if err != nil {
-		log.Fatalf("Unable to ping database: %v\n", err)
-	}
-
-	defer dbPool.Close()
-
-	db := database.New(dbPool)
-
-	// Setup migrations
-	dbMigrationsConnection, err := sql.Open("pgx", config.Config.DatabaseURL)
-	if err != nil {
-		log.Fatalf("Unable to connect to database: %v\n", err)
-	}
+	queries := database.New(db)
 
 	goose.SetBaseFS(embedMigrations)
 
-	if err := goose.SetDialect("postgres"); err != nil {
+	if err := goose.SetDialect("sqlite3"); err != nil {
 		log.Fatalf("Unable to set dialect: %v\n", err)
 	}
 
-	if err := goose.Up(dbMigrationsConnection, "migrations"); err != nil {
+	if err := goose.Up(db, "migrations"); err != nil {
 		log.Fatalf("Unable to run migrations: %v\n", err)
 	}
 
@@ -76,7 +52,7 @@ func main() {
 
 	port := strconv.Itoa(config.Config.Port)
 
-	r := router.New(db)
+	r := router.New(queries)
 
 	assets.Init(promptTemplates, scriptTemplates)
 	services.Init()
@@ -86,7 +62,7 @@ func main() {
 		log.Fatalf("failed to initialize Docker client: %v", err)
 	}
 
-	err = executor.InitBrowser(db)
+	err = executor.InitBrowser(queries)
 	if err != nil {
 		log.Fatalf("failed to initialize browser container: %v", err)
 	}
@@ -104,7 +80,7 @@ func main() {
 	log.Println("Shutting down...")
 
 	// Cleanup resources
-	if err := executor.Cleanup(db); err != nil {
+	if err := executor.Cleanup(queries); err != nil {
 		log.Printf("Error during cleanup: %v", err)
 	}
 
