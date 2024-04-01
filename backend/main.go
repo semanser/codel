@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"syscall"
 
-  _ "github.com/mattn/go-sqlite3"
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/pressly/goose/v3"
 	"github.com/semanser/ai-coder/assets"
 	"github.com/semanser/ai-coder/config"
@@ -34,7 +34,7 @@ func main() {
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 
-  db, err := sql.Open("sqlite3", config.Config.DatabaseURL)
+	db, err := sql.Open("sqlite3", config.Config.DatabaseURL)
 
 	queries := database.New(db)
 

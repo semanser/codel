@@ -49,6 +49,10 @@ func New(db *database.Queries) *gin.Engine {
 	// Static file server
 	r.Static("/browser", "./tmp/browser")
 
+	r.NoRoute(func(c *gin.Context) {
+		c.Redirect(301, "/")
+	})
+
 	return r
 }
 

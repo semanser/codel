@@ -1,3 +1,4 @@
 ai-coder
 tmp
 database.db
+.env.*
