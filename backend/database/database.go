@@ -1,7 +1,9 @@
 package database
 
-import "github.com/jackc/pgx/v5/pgtype"
+import (
+	"database/sql"
+)
 
-func StringToPgText(s string) pgtype.Text {
-	return pgtype.Text{String: s, Valid: true}
+func StringToNullString(s string) sql.NullString {
+	return sql.NullString{String: s, Valid: true}
 }

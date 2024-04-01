@@ -1,7 +1,7 @@
 version: "2"
 cloud:
 sql:
-  - engine: "postgresql"
+  - engine: "sqlite"
     queries:
       - "models/*.sql"
     schema: "./migrations"
@@ -9,7 +9,6 @@ sql:
       go:
         package: "database"
         out: "database"
-        sql_package: "pgx/v5"
     database:
       uri: ${DATABASE_URL}
 

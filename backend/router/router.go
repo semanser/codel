@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/gin-contrib/cors"
+	"github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
 
 	"github.com/99designs/gqlgen/graphql"
@@ -34,6 +35,8 @@ func New(db *database.Queries) *gin.Engine {
 	config.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
 	r.Use(cors.New(config))
 
+	r.Use(static.Serve("/", static.LocalFile("./fe", true)))
+
 	// GraphQL endpoint
 	r.Any("/graphql", graphqlHandler(db))
 
@@ -45,6 +48,10 @@ func New(db *database.Queries) *gin.Engine {
 
 	// Static file server
 	r.Static("/browser", "./tmp/browser")
+
+	r.NoRoute(func(c *gin.Context) {
+		c.Redirect(301, "/")
+	})
 
 	return r
 }

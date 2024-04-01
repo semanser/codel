@@ -1,32 +1,34 @@
 -- +goose Up
 -- +goose StatementBegin
 CREATE TABLE containers (
-  id BIGSERIAL PRIMARY KEY,
-  name text,
-  local_id text,
-  image text,
-  status text DEFAULT 'starting'::text
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT,
+  local_id TEXT,
+  image TEXT,
+  status TEXT DEFAULT 'starting'
 );
 
 CREATE TABLE flows (
-  id BIGSERIAL PRIMARY KEY,
-  created_at timestamp DEFAULT now(),
-  updated_at timestamp DEFAULT now(),
-  name text,
-  status text,
-  container_id bigint REFERENCES containers(id)
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  name TEXT,
+  status TEXT,
+  container_id INTEGER,
+  FOREIGN KEY (container_id) REFERENCES containers (id)
 );
 
 CREATE TABLE tasks (
-  id BIGSERIAL PRIMARY KEY,
-  created_at timestamp DEFAULT now(),
-  updated_at timestamp DEFAULT now(),
-  type text,
-  status text,
-  args jsonb DEFAULT '{}'::jsonb,
-  results text DEFAULT '{}'::jsonb,
-  flow_id bigint,
-  message text
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  type TEXT,
+  status TEXT,
+  args TEXT DEFAULT '{}',
+  results TEXT DEFAULT '{}',
+  message TEXT,
+  flow_id INTEGER,
+  FOREIGN KEY (flow_id) REFERENCES flows (id)
 );
 -- +goose StatementEnd
 
@@ -36,3 +38,4 @@ DROP TABLE tasks;
 DROP TABLE flows;
 DROP TABLE containers;
 -- +goose StatementEnd
+```

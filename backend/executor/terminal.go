@@ -4,12 +4,12 @@ import (
 	"archive/tar"
 	"bytes"
 	"context"
+	"database/sql"
 	"fmt"
 	"io"
 	"path/filepath"
 
 	"github.com/docker/docker/api/types"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/semanser/ai-coder/database"
 	gmodel "github.com/semanser/ai-coder/graph/model"
 	"github.com/semanser/ai-coder/graph/subscriptions"
@@ -39,7 +39,7 @@ func ExecCommand(flowID int64, command string, db *database.Queries) (result str
 
 	// TODO avoid duplicating here and in the flows table
 	log, err := db.CreateLog(context.Background(), database.CreateLogParams{
-		FlowID:  pgtype.Int8{Int64: flowID, Valid: true},
+		FlowID:  sql.NullInt64{Int64: flowID, Valid: true},
 		Message: command,
 		Type:    "input",
 	})
@@ -88,7 +88,7 @@ func ExecCommand(flowID int64, command string, db *database.Queries) (result str
 
 	// TODO avoid duplicating here and in the flows table
 	log, err = db.CreateLog(context.Background(), database.CreateLogParams{
-		FlowID:  pgtype.Int8{Int64: flowID, Valid: true},
+		FlowID:  sql.NullInt64{Int64: flowID, Valid: true},
 		Message: results,
 		Type:    "output",
 	})
@@ -127,7 +127,7 @@ func WriteFile(flowID int64, content string, path string, db *database.Queries) 
 
 	// TODO avoid duplicating here and in the flows table
 	log, err := db.CreateLog(context.Background(), database.CreateLogParams{
-		FlowID:  pgtype.Int8{Int64: flowID, Valid: true},
+		FlowID:  sql.NullInt64{Int64: flowID, Valid: true},
 		Message: content,
 		Type:    "input",
 	})
@@ -171,7 +171,7 @@ func WriteFile(flowID int64, content string, path string, db *database.Queries) 
 
 	// TODO avoid duplicating here and in the flows table
 	log, err = db.CreateLog(context.Background(), database.CreateLogParams{
-		FlowID:  pgtype.Int8{Int64: flowID, Valid: true},
+		FlowID:  sql.NullInt64{Int64: flowID, Valid: true},
 		Message: message,
 		Type:    "output",
 	})

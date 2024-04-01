@@ -2,12 +2,12 @@ package agent
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
 
 	"github.com/invopop/jsonschema"
-	"github.com/jackc/pgx/v5/pgtype"
 	openai "github.com/sashabaranov/go-openai"
 	"github.com/semanser/ai-coder/assets"
 	"github.com/semanser/ai-coder/config"
@@ -137,7 +137,7 @@ func NextTask(args AgentPrompt) *database.Task {
 		if task.Type.String == "input" {
 			messages = append(messages, openai.ChatCompletionMessage{
 				Role:    openai.ChatMessageRoleUser,
-				Content: string(task.Args),
+				Content: task.Args.String,
 			})
 		}
 
@@ -149,7 +149,7 @@ func NextTask(args AgentPrompt) *database.Task {
 						ID: task.ToolCallID.String,
 						Function: openai.FunctionCall{
 							Name:      task.Type.String,
-							Arguments: string(task.Args),
+							Arguments: task.Args.String,
 						},
 						Type: openai.ToolTypeFunction,
 					},
@@ -212,7 +212,7 @@ func NextTask(args AgentPrompt) *database.Task {
 	}
 
 	task := database.Task{
-		Type: database.StringToPgText(tool.Function.Name),
+		Type: database.StringToNullString(tool.Function.Name),
 	}
 
 	switch tool.Function.Name {
@@ -227,7 +227,7 @@ func NextTask(args AgentPrompt) *database.Task {
 			log.Printf("Failed to marshal terminal args, asking user: %v", err)
 			return defaultAskTask("There was an error running the terminal command")
 		}
-		task.Args = args
+		task.Args = database.StringToNullString(string(args))
 
 		// Sometimes the model returns an empty string for the message
 		msg := string(params.Message)
@@ -235,8 +235,8 @@ func NextTask(args AgentPrompt) *database.Task {
 			msg = params.Input
 		}
 
-		task.Message = database.StringToPgText(msg)
-		task.Status = database.StringToPgText("in_progress")
+		task.Message = database.StringToNullString(msg)
+		task.Status = database.StringToNullString("in_progress")
 
 	case "browser":
 		params, err := extractArgs(tool.Function.Arguments, &BrowserArgs{})
@@ -249,11 +249,8 @@ func NextTask(args AgentPrompt) *database.Task {
 			log.Printf("Failed to marshal browser args, asking user: %v", err)
 			return defaultAskTask("There was an error opening the browser")
 		}
-		task.Args = args
-		task.Message = pgtype.Text{
-			String: string(params.Message),
-			Valid:  true,
-		}
+		task.Args = database.StringToNullString(string(args))
+		task.Message = database.StringToNullString(string(params.Message))
 	case "code":
 		params, err := extractArgs(tool.Function.Arguments, &CodeArgs{})
 		if err != nil {
@@ -265,11 +262,8 @@ func NextTask(args AgentPrompt) *database.Task {
 			log.Printf("Failed to marshal code args, asking user: %v", err)
 			return defaultAskTask("There was an error reading or updating the file")
 		}
-		task.Args = args
-		task.Message = pgtype.Text{
-			String: string(params.Message),
-			Valid:  true,
-		}
+		task.Args = database.StringToNullString(string(args))
+		task.Message = database.StringToNullString(string(params.Message))
 	case "ask":
 		params, err := extractArgs(tool.Function.Arguments, &AskArgs{})
 		if err != nil {
@@ -281,11 +275,8 @@ func NextTask(args AgentPrompt) *database.Task {
 			log.Printf("Failed to marshal ask args, asking user: %v", err)
 			return defaultAskTask("There was an error asking the user for additional information")
 		}
-		task.Args = args
-		task.Message = pgtype.Text{
-			String: string(params.Message),
-			Valid:  true,
-		}
+		task.Args = database.StringToNullString(string(args))
+		task.Message = database.StringToNullString(string(params.Message))
 	case "done":
 		params, err := extractArgs(tool.Function.Arguments, &DoneArgs{})
 		if err != nil {
@@ -296,28 +287,22 @@ func NextTask(args AgentPrompt) *database.Task {
 		if err != nil {
 			return defaultAskTask("There was an error marking the task as done")
 		}
-		task.Args = args
-		task.Message = pgtype.Text{
-			String: string(params.Message),
-			Valid:  true,
-		}
+		task.Args = database.StringToNullString(string(args))
+		task.Message = database.StringToNullString(string(params.Message))
 	}
 
-	task.ToolCallID = pgtype.Text{
-		String: tool.ID,
-		Valid:  true,
-	}
+	task.ToolCallID = database.StringToNullString(tool.ID)
 
 	return &task
 }
 
 func defaultAskTask(message string) *database.Task {
 	task := database.Task{
-		Type: database.StringToPgText("ask"),
+		Type: database.StringToNullString("ask"),
 	}
 
-	task.Args = []byte("{}")
-	task.Message = pgtype.Text{
+	task.Args = database.StringToNullString("{}")
+	task.Message = sql.NullString{
 		String: fmt.Sprintf("%s. What should I do next?", message),
 		Valid:  true,
 	}
