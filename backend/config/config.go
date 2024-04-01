@@ -8,10 +8,11 @@ import (
 )
 
 type config struct {
-	OpenAIKey   string `env:"OPEN_AI_KEY"`
-	OpenAIModel string `env:"OPEN_AI_MODEL" envDefault:"gpt-4-0125-preview"`
-	DatabaseURL string `env:"DATABASE_URL" envDefault:"database.db"`
-	Port        int    `env:"PORT" envDefault:"8080"`
+	OpenAIKey       string `env:"OPEN_AI_KEY"`
+	OpenAIModel     string `env:"OPEN_AI_MODEL" envDefault:"gpt-4-0125-preview"`
+	OpenAIServerURL string `env:"OPEN_AI_SERVER_URL" envDefault:"https://api.openai.com/v1"`
+	DatabaseURL     string `env:"DATABASE_URL" envDefault:"database.db"`
+	Port            int    `env:"PORT" envDefault:"8080"`
 }
 
 var Config config
