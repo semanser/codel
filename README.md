@@ -38,6 +38,8 @@ docker run -d \
   ghcr.io/semanser/codel:latest
 ```
 
+Now you can visit [localhost:3000](localhost:3000) in your browser and start using Codel.
+
 <details>
   <summary>Required environment variables</summary>
 
