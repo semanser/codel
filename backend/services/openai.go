@@ -16,10 +16,16 @@ var OPEN_AI_KEY string
 
 func Init() {
 	OPEN_AI_KEY := os.Getenv("OPEN_AI_KEY")
-	OpenAIclient = openai.NewClient(OPEN_AI_KEY)
+	OPEN_AI_SERVER_URL := os.Getenv("OPEN_AI_SERVER_URL")
+	cfg := openai.DefaultConfig(OPEN_AI_KEY)
+	cfg.BaseURL = OPEN_AI_SERVER_URL
+	OpenAIclient = openai.NewClientWithConfig(cfg)
 
 	if OPEN_AI_KEY == "" {
 		log.Fatal("OPEN_AI_KEY is not set")
+	}
+	if OPEN_AI_SERVER_URL == "" {
+		log.Fatal("OPEN_AI_SERVER_URL is not set")
 	}
 }
 
