@@ -3,25 +3,33 @@ package providers
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 
 	"github.com/invopop/jsonschema"
-	openai "github.com/sashabaranov/go-openai"
 	"github.com/semanser/ai-coder/assets"
 	"github.com/semanser/ai-coder/config"
 	"github.com/semanser/ai-coder/database"
 	"github.com/semanser/ai-coder/templates"
+
+	"github.com/tmc/langchaingo/llms"
+	"github.com/tmc/langchaingo/llms/openai"
+	"github.com/tmc/langchaingo/schema"
 )
 
 type OpenAIProvider struct {
-	client *openai.Client
+	client *openai.LLM
 }
 
 func (p OpenAIProvider) New() Provider {
-	cfg := openai.DefaultConfig(config.Config.OpenAIKey)
-	cfg.BaseURL = config.Config.OpenAIServerURL
-	client := openai.NewClientWithConfig(cfg)
+	client, err := openai.New(
+		openai.WithToken(config.Config.OpenAIKey),
+		openai.WithModel(config.Config.OpenAIModel),
+		openai.WithBaseURL(config.Config.OpenAIServerURL),
+	)
+
+	if err != nil {
+		log.Fatalf("Failed to create OpenAI client: %v", err)
+	}
 
 	return OpenAIProvider{client}
 }
@@ -35,31 +43,18 @@ func (p OpenAIProvider) Summary(query string, n int) (string, error) {
 		return "", err
 	}
 
-	req := openai.ChatCompletionRequest{
-		Temperature: 0.0,
-		Model:       openai.GPT3Dot5Turbo,
-		Messages: []openai.ChatCompletionMessage{
-			{
-				Role:    openai.ChatMessageRoleSystem,
-				Content: prompt,
-			},
-		},
-		TopP: 0.2,
-		N:    1,
-	}
+	response, err := llms.GenerateFromSinglePrompt(
+		context.Background(),
+		p.client,
+		prompt,
+		llms.WithTemperature(0.0),
+		// Use a simpler model for this task
+		llms.WithModel(config.Config.OpenAIModel),
+		llms.WithTopP(0.2),
+		llms.WithN(1),
+	)
 
-	resp, err := p.client.CreateChatCompletion(context.Background(), req)
-	if err != nil {
-		return "", fmt.Errorf("completion error: %v", err)
-	}
-
-	choices := resp.Choices
-
-	if len(choices) == 0 {
-		return "", fmt.Errorf("no choices found")
-	}
-
-	return choices[0].Message.Content, nil
+	return response, err
 }
 
 func (p OpenAIProvider) DockerImageName(task string) (string, error) {
@@ -70,31 +65,18 @@ func (p OpenAIProvider) DockerImageName(task string) (string, error) {
 		return "", err
 	}
 
-	req := openai.ChatCompletionRequest{
-		Temperature: 0.0,
-		Model:       openai.GPT3Dot5Turbo,
-		Messages: []openai.ChatCompletionMessage{
-			{
-				Role:    openai.ChatMessageRoleSystem,
-				Content: prompt,
-			},
-		},
-		TopP: 0.2,
-		N:    1,
-	}
+	response, err := llms.GenerateFromSinglePrompt(
+		context.Background(),
+		p.client,
+		prompt,
+		llms.WithTemperature(0.0),
+		// Use a simpler model for this task
+		llms.WithModel(config.Config.OpenAIModel),
+		llms.WithTopP(0.2),
+		llms.WithN(1),
+	)
 
-	resp, err := p.client.CreateChatCompletion(context.Background(), req)
-	if err != nil {
-		return "", fmt.Errorf("completion error: %v", err)
-	}
-
-	choices := resp.Choices
-
-	if len(choices) == 0 {
-		return "", fmt.Errorf("no choices found")
-	}
-
-	return choices[0].Message.Content, nil
+	return response, err
 }
 
 func (p OpenAIProvider) NextTask(args NextTaskOptions) *database.Task {
@@ -113,42 +95,42 @@ func (p OpenAIProvider) NextTask(args NextTaskOptions) *database.Task {
 		return defaultAskTask("There was an error getting the next task")
 	}
 
-	tools := []openai.Tool{
+	tools := []llms.Tool{
 		{
-			Type: openai.ToolTypeFunction,
-			Function: &openai.FunctionDefinition{
+			Type: "function",
+			Function: &llms.FunctionDefinition{
 				Name:        "terminal",
 				Description: "Calls a terminal command",
 				Parameters:  jsonschema.Reflect(&TerminalArgs{}).Definitions["TerminalArgs"],
 			},
 		},
 		{
-			Type: openai.ToolTypeFunction,
-			Function: &openai.FunctionDefinition{
+			Type: "function",
+			Function: &llms.FunctionDefinition{
 				Name:        "browser",
 				Description: "Opens a browser to look for additional information",
 				Parameters:  jsonschema.Reflect(&BrowserArgs{}).Definitions["BrowserArgs"],
 			},
 		},
 		{
-			Type: openai.ToolTypeFunction,
-			Function: &openai.FunctionDefinition{
+			Type: "function",
+			Function: &llms.FunctionDefinition{
 				Name:        "code",
 				Description: "Modifies or reads code files",
 				Parameters:  jsonschema.Reflect(&CodeArgs{}).Definitions["CodeArgs"],
 			},
 		},
 		{
-			Type: openai.ToolTypeFunction,
-			Function: &openai.FunctionDefinition{
+			Type: "function",
+			Function: &llms.FunctionDefinition{
 				Name:        "ask",
 				Description: "Sends a question to the user for additional information",
 				Parameters:  jsonschema.Reflect(&AskArgs{}).Definitions["AskArgs"],
 			},
 		},
 		{
-			Type: openai.ToolTypeFunction,
-			Function: &openai.FunctionDefinition{
+			Type: "function",
+			Function: &llms.FunctionDefinition{
 				Name:        "done",
 				Description: "Mark the whole task as done. Should be called at the very end when everything is completed",
 				Parameters:  jsonschema.Reflect(&DoneArgs{}).Definitions["DoneArgs"],
@@ -156,65 +138,73 @@ func (p OpenAIProvider) NextTask(args NextTaskOptions) *database.Task {
 		},
 	}
 
-	var messages []openai.ChatCompletionMessage
+	var messages []llms.MessageContent
 
-	messages = append(messages, openai.ChatCompletionMessage{
-		Role:    openai.ChatMessageRoleSystem,
-		Content: prompt,
+	messages = append(messages, llms.MessageContent{
+		Role: schema.ChatMessageTypeSystem,
+		Parts: []llms.ContentPart{
+			llms.TextPart(prompt),
+		},
 	})
 
 	for _, task := range args.Tasks {
 		if task.Type.String == "input" {
-			messages = append(messages, openai.ChatCompletionMessage{
-				Role:    openai.ChatMessageRoleUser,
-				Content: task.Args.String,
+			messages = append(messages, llms.MessageContent{
+				Role: schema.ChatMessageTypeHuman,
+				Parts: []llms.ContentPart{
+					llms.TextPart(prompt),
+				},
 			})
 		}
 
 		if task.ToolCallID.String != "" {
-			messages = append(messages, openai.ChatCompletionMessage{
-				Role: openai.ChatMessageRoleAssistant,
-				ToolCalls: []openai.ToolCall{
-					{
+			messages = append(messages, llms.MessageContent{
+				Role: schema.ChatMessageTypeAI,
+				Parts: []llms.ContentPart{
+					llms.ToolCall{
 						ID: task.ToolCallID.String,
-						Function: openai.FunctionCall{
+						FunctionCall: &schema.FunctionCall{
 							Name:      task.Type.String,
 							Arguments: task.Args.String,
 						},
-						Type: openai.ToolTypeFunction,
+						Type: "function",
 					},
 				},
 			})
 
-			messages = append(messages, openai.ChatCompletionMessage{
-				Role:       openai.ChatMessageRoleTool,
-				ToolCallID: task.ToolCallID.String,
-				Content:    task.Results.String,
+			messages = append(messages, llms.MessageContent{
+				Role: schema.ChatMessageTypeTool,
+				Parts: []llms.ContentPart{
+					llms.ToolCallResponse{
+						ToolCallID: task.ToolCallID.String,
+						Name:       task.Type.String,
+						Content:    task.Results.String,
+					},
+				},
 			})
 		}
 
 		// This Ask was generated by the agent itself in case of some error (not the OpenAI)
 		if task.Type.String == "ask" && task.ToolCallID.String == "" {
-			messages = append(messages, openai.ChatCompletionMessage{
-				Role:    openai.ChatMessageRoleAssistant,
-				Content: task.Message.String,
+			messages = append(messages, llms.MessageContent{
+				Role: schema.ChatMessageTypeAI,
+				Parts: []llms.ContentPart{
+					llms.TextPart(task.Message.String),
+				},
 			})
 		}
 	}
 
-	req := openai.ChatCompletionRequest{
-		Temperature: 0.0,
-		Model:       config.Config.OpenAIModel,
-		Messages:    messages,
-		ResponseFormat: &openai.ChatCompletionResponseFormat{
-			Type: openai.ChatCompletionResponseFormatTypeJSONObject,
-		},
-		TopP:  0.2,
-		Tools: tools,
-		N:     1,
-	}
+	resp, err := p.client.GenerateContent(
+		context.Background(),
+		messages,
+		llms.WithTemperature(0.0),
+		llms.WithModel(config.Config.OpenAIModel),
+		llms.WithTopP(0.2),
+		llms.WithN(1),
+		llms.WithTools(tools),
+	)
 
-	resp, err := p.client.CreateChatCompletion(context.Background(), req)
 	if err != nil {
 		log.Printf("Failed to get response from OpenAI %v", err)
 		return defaultAskTask("There was an error getting the next task")
@@ -227,7 +217,7 @@ func (p OpenAIProvider) NextTask(args NextTaskOptions) *database.Task {
 		return defaultAskTask("Looks like I couldn't find a task to run")
 	}
 
-	toolCalls := choices[0].Message.ToolCalls
+	toolCalls := choices[0].ToolCalls
 
 	if len(toolCalls) == 0 {
 		log.Println("No tool calls found, asking user")
@@ -236,18 +226,18 @@ func (p OpenAIProvider) NextTask(args NextTaskOptions) *database.Task {
 
 	tool := toolCalls[0]
 
-	if tool.Function.Name == "" {
+	if tool.FunctionCall.Name == "" {
 		log.Println("No tool found, asking user")
 		return defaultAskTask("The next task is empty, I don't know what to do next")
 	}
 
 	task := database.Task{
-		Type: database.StringToNullString(tool.Function.Name),
+		Type: database.StringToNullString(tool.FunctionCall.Name),
 	}
 
-	switch tool.Function.Name {
+	switch tool.FunctionCall.Name {
 	case "terminal":
-		params, err := extractArgs(tool.Function.Arguments, &TerminalArgs{})
+		params, err := extractArgs(tool.FunctionCall.Arguments, &TerminalArgs{})
 		if err != nil {
 			log.Printf("Failed to extract terminal args, asking user: %v", err)
 			return defaultAskTask("There was an error running the terminal command")
@@ -269,7 +259,7 @@ func (p OpenAIProvider) NextTask(args NextTaskOptions) *database.Task {
 		task.Status = database.StringToNullString("in_progress")
 
 	case "browser":
-		params, err := extractArgs(tool.Function.Arguments, &BrowserArgs{})
+		params, err := extractArgs(tool.FunctionCall.Arguments, &BrowserArgs{})
 		if err != nil {
 			log.Printf("Failed to extract browser args, asking user: %v", err)
 			return defaultAskTask("There was an error opening the browser")
@@ -282,7 +272,7 @@ func (p OpenAIProvider) NextTask(args NextTaskOptions) *database.Task {
 		task.Args = database.StringToNullString(string(args))
 		task.Message = database.StringToNullString(string(params.Message))
 	case "code":
-		params, err := extractArgs(tool.Function.Arguments, &CodeArgs{})
+		params, err := extractArgs(tool.FunctionCall.Arguments, &CodeArgs{})
 		if err != nil {
 			log.Printf("Failed to extract code args, asking user: %v", err)
 			return defaultAskTask("There was an error reading or updating the file")
@@ -295,7 +285,7 @@ func (p OpenAIProvider) NextTask(args NextTaskOptions) *database.Task {
 		task.Args = database.StringToNullString(string(args))
 		task.Message = database.StringToNullString(string(params.Message))
 	case "ask":
-		params, err := extractArgs(tool.Function.Arguments, &AskArgs{})
+		params, err := extractArgs(tool.FunctionCall.Arguments, &AskArgs{})
 		if err != nil {
 			log.Printf("Failed to extract ask args, asking user: %v", err)
 			return defaultAskTask("There was an error asking the user for additional information")
@@ -308,7 +298,7 @@ func (p OpenAIProvider) NextTask(args NextTaskOptions) *database.Task {
 		task.Args = database.StringToNullString(string(args))
 		task.Message = database.StringToNullString(string(params.Message))
 	case "done":
-		params, err := extractArgs(tool.Function.Arguments, &DoneArgs{})
+		params, err := extractArgs(tool.FunctionCall.Arguments, &DoneArgs{})
 		if err != nil {
 			log.Printf("Failed to extract done args, asking user: %v", err)
 			return defaultAskTask("There was an error marking the task as done")
