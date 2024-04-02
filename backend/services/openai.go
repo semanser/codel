@@ -4,21 +4,21 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"os"
 
 	"github.com/sashabaranov/go-openai"
 	"github.com/semanser/ai-coder/assets"
+	"github.com/semanser/ai-coder/config"
 	"github.com/semanser/ai-coder/templates"
 )
 
 var OpenAIclient *openai.Client
-var OPEN_AI_KEY string
 
 func Init() {
-	OPEN_AI_KEY := os.Getenv("OPEN_AI_KEY")
-	OpenAIclient = openai.NewClient(OPEN_AI_KEY)
+	cfg := openai.DefaultConfig(config.Config.OpenAIKey)
+	cfg.BaseURL = config.Config.OpenAIServerURL
+	OpenAIclient = openai.NewClientWithConfig(cfg)
 
-	if OPEN_AI_KEY == "" {
+	if config.Config.OpenAIKey == "" {
 		log.Fatal("OPEN_AI_KEY is not set")
 	}
 }
