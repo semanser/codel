@@ -17,7 +17,6 @@ import (
 	"github.com/semanser/ai-coder/database"
 	"github.com/semanser/ai-coder/executor"
 	"github.com/semanser/ai-coder/router"
-	"github.com/semanser/ai-coder/services"
 )
 
 //go:embed templates/prompts/*.tmpl
@@ -55,7 +54,6 @@ func main() {
 	r := router.New(queries)
 
 	assets.Init(promptTemplates, scriptTemplates)
-	services.Init()
 
 	err = executor.InitClient()
 	if err != nil {

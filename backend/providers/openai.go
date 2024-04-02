@@ -1,8 +1,7 @@
-package agent
+package providers
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -12,62 +11,93 @@ import (
 	"github.com/semanser/ai-coder/assets"
 	"github.com/semanser/ai-coder/config"
 	"github.com/semanser/ai-coder/database"
-	"github.com/semanser/ai-coder/services"
 	"github.com/semanser/ai-coder/templates"
 )
 
-type Message string
-
-type InputArgs struct {
-	Query string
+type OpenAIProvider struct {
+	client *openai.Client
 }
 
-type TerminalArgs struct {
-	Input string
-	Message
+func (p OpenAIProvider) New() Provider {
+	cfg := openai.DefaultConfig(config.Config.OpenAIKey)
+	cfg.BaseURL = config.Config.OpenAIServerURL
+	client := openai.NewClientWithConfig(cfg)
+
+	return OpenAIProvider{client}
 }
 
-type BrowserAction string
+func (p OpenAIProvider) Summary(query string, n int) (string, error) {
+	prompt, err := templates.Render(assets.PromptTemplates, "prompts/summary.tmpl", map[string]any{
+		"Text": query,
+		"N":    n,
+	})
+	if err != nil {
+		return "", err
+	}
 
-const (
-	Read BrowserAction = "read"
-	Url  BrowserAction = "url"
-)
+	req := openai.ChatCompletionRequest{
+		Temperature: 0.0,
+		Model:       openai.GPT3Dot5Turbo,
+		Messages: []openai.ChatCompletionMessage{
+			{
+				Role:    openai.ChatMessageRoleSystem,
+				Content: prompt,
+			},
+		},
+		TopP: 0.2,
+		N:    1,
+	}
 
-type BrowserArgs struct {
-	Url    string
-	Action BrowserAction
-	Message
+	resp, err := p.client.CreateChatCompletion(context.Background(), req)
+	if err != nil {
+		return "", fmt.Errorf("completion error: %v", err)
+	}
+
+	choices := resp.Choices
+
+	if len(choices) == 0 {
+		return "", fmt.Errorf("no choices found")
+	}
+
+	return choices[0].Message.Content, nil
 }
 
-type CodeAction string
+func (p OpenAIProvider) DockerImageName(task string) (string, error) {
+	prompt, err := templates.Render(assets.PromptTemplates, "prompts/docker.tmpl", map[string]any{
+		"Task": task,
+	})
+	if err != nil {
+		return "", err
+	}
 
-const (
-	ReadFile   CodeAction = "read_file"
-	UpdateFile CodeAction = "update_file"
-)
+	req := openai.ChatCompletionRequest{
+		Temperature: 0.0,
+		Model:       openai.GPT3Dot5Turbo,
+		Messages: []openai.ChatCompletionMessage{
+			{
+				Role:    openai.ChatMessageRoleSystem,
+				Content: prompt,
+			},
+		},
+		TopP: 0.2,
+		N:    1,
+	}
 
-type CodeArgs struct {
-	Action  CodeAction
-	Content string
-	Path    string
-	Message
+	resp, err := p.client.CreateChatCompletion(context.Background(), req)
+	if err != nil {
+		return "", fmt.Errorf("completion error: %v", err)
+	}
+
+	choices := resp.Choices
+
+	if len(choices) == 0 {
+		return "", fmt.Errorf("no choices found")
+	}
+
+	return choices[0].Message.Content, nil
 }
 
-type AskArgs struct {
-	Message
-}
-
-type DoneArgs struct {
-	Message
-}
-
-type AgentPrompt struct {
-	Tasks       []database.Task
-	DockerImage string
-}
-
-func NextTask(args AgentPrompt) *database.Task {
+func (p OpenAIProvider) NextTask(args NextTaskOptions) *database.Task {
 	log.Println("Getting next task")
 
 	prompt, err := templates.Render(assets.PromptTemplates, "prompts/agent.tmpl", args)
@@ -184,7 +214,7 @@ func NextTask(args AgentPrompt) *database.Task {
 		N:     1,
 	}
 
-	resp, err := services.OpenAIclient.CreateChatCompletion(context.Background(), req)
+	resp, err := p.client.CreateChatCompletion(context.Background(), req)
 	if err != nil {
 		log.Printf("Failed to get response from OpenAI %v", err)
 		return defaultAskTask("There was an error getting the next task")
@@ -294,26 +324,4 @@ func NextTask(args AgentPrompt) *database.Task {
 	task.ToolCallID = database.StringToNullString(tool.ID)
 
 	return &task
-}
-
-func defaultAskTask(message string) *database.Task {
-	task := database.Task{
-		Type: database.StringToNullString("ask"),
-	}
-
-	task.Args = database.StringToNullString("{}")
-	task.Message = sql.NullString{
-		String: fmt.Sprintf("%s. What should I do next?", message),
-		Valid:  true,
-	}
-
-	return &task
-}
-
-func extractArgs[T any](openAIargs string, args *T) (*T, error) {
-	err := json.Unmarshal([]byte(openAIargs), args)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal args: %v", err)
-	}
-	return args, nil
 }

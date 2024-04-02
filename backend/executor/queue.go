@@ -8,11 +8,10 @@ import (
 	"log"
 
 	"github.com/docker/docker/api/types/container"
-	"github.com/semanser/ai-coder/agent"
 	"github.com/semanser/ai-coder/database"
 	gmodel "github.com/semanser/ai-coder/graph/model"
 	"github.com/semanser/ai-coder/graph/subscriptions"
-	"github.com/semanser/ai-coder/services"
+	"github.com/semanser/ai-coder/providers"
 	"github.com/semanser/ai-coder/websocket"
 )
 
@@ -52,6 +51,14 @@ func CleanQueue(flowId int64) {
 func ProcessQueue(flowId int64, db *database.Queries) {
 	log.Println("Starting tasks processor for queue %d", flowId)
 
+	provider, err := providers.ProviderFactory(providers.ProviderOpenAI)
+
+	if err != nil {
+		log.Printf("failed to get provider: %v", err)
+		CleanQueue(flowId)
+		return
+	}
+
 	go func() {
 		for {
 			select {
@@ -78,14 +85,14 @@ func ProcessQueue(flowId int64, db *database.Queries) {
 				})
 
 				if task.Type.String == "input" {
-					err := processInputTask(db, task)
+					err := processInputTask(provider, db, task)
 
 					if err != nil {
 						log.Printf("failed to process input: %w", err)
 						continue
 					}
 
-					nextTask, err := getNextTask(db, task.FlowID.Int64)
+					nextTask, err := getNextTask(provider, db, task.FlowID.Int64)
 
 					if err != nil {
 						log.Printf("failed to get next task: %w", err)
@@ -111,7 +118,7 @@ func ProcessQueue(flowId int64, db *database.Queries) {
 						log.Printf("failed to process terminal: %w", err)
 						continue
 					}
-					nextTask, err := getNextTask(db, task.FlowID.Int64)
+					nextTask, err := getNextTask(provider, db, task.FlowID.Int64)
 
 					if err != nil {
 						log.Printf("failed to get next task: %w", err)
@@ -129,7 +136,7 @@ func ProcessQueue(flowId int64, db *database.Queries) {
 						continue
 					}
 
-					nextTask, err := getNextTask(db, task.FlowID.Int64)
+					nextTask, err := getNextTask(provider, db, task.FlowID.Int64)
 
 					if err != nil {
 						log.Printf("failed to get next task: %w", err)
@@ -156,7 +163,7 @@ func ProcessQueue(flowId int64, db *database.Queries) {
 						continue
 					}
 
-					nextTask, err := getNextTask(db, task.FlowID.Int64)
+					nextTask, err := getNextTask(provider, db, task.FlowID.Int64)
 
 					if err != nil {
 						log.Printf("failed to get next task: %w", err)
@@ -171,7 +178,7 @@ func ProcessQueue(flowId int64, db *database.Queries) {
 }
 
 func processBrowserTask(db *database.Queries, task database.Task) error {
-	var args = agent.BrowserArgs{}
+	var args = providers.BrowserArgs{}
 	err := json.Unmarshal([]byte(task.Args.String), &args)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal args: %v", err)
@@ -180,7 +187,7 @@ func processBrowserTask(db *database.Queries, task database.Task) error {
 	var url = args.Url
 	var screenshotName string
 
-	if args.Action == agent.Read {
+	if args.Action == providers.Read {
 		content, screenshot, err := Content(url)
 
 		if err != nil {
@@ -200,7 +207,7 @@ func processBrowserTask(db *database.Queries, task database.Task) error {
 		}
 	}
 
-	if args.Action == agent.Url {
+	if args.Action == providers.Url {
 		content, screenshot, err := URLs(url)
 
 		if err != nil {
@@ -247,7 +254,7 @@ func processDoneTask(db *database.Queries, task database.Task) error {
 	return nil
 }
 
-func processInputTask(db *database.Queries, task database.Task) error {
+func processInputTask(provider providers.Provider, db *database.Queries, task database.Task) error {
 	tasks, err := db.ReadTasksByFlowId(context.Background(), sql.NullInt64{
 		Int64: task.FlowID.Int64,
 		Valid: true,
@@ -260,13 +267,13 @@ func processInputTask(db *database.Queries, task database.Task) error {
 	// This is the first task in the flow.
 	// We need to get the basic flow data as well as spin up the container
 	if len(tasks) == 1 {
-		summary, err := services.GetMessageSummary(task.Message.String, 10)
+		summary, err := provider.Summary(task.Message.String, 10)
 
 		if err != nil {
 			return fmt.Errorf("failed to get message summary: %w", err)
 		}
 
-		dockerImage, err := services.GetDockerImageName(task.Message.String)
+		dockerImage, err := provider.DockerImageName(task.Message.String)
 
 		if err != nil {
 			return fmt.Errorf("failed to get docker image name: %w", err)
@@ -376,7 +383,7 @@ func processAskTask(db *database.Queries, task database.Task) error {
 }
 
 func processTerminalTask(db *database.Queries, task database.Task) error {
-	var args = agent.TerminalArgs{}
+	var args = providers.TerminalArgs{}
 	err := json.Unmarshal([]byte(task.Args.String), &args)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal args: %v", err)
@@ -401,7 +408,7 @@ func processTerminalTask(db *database.Queries, task database.Task) error {
 }
 
 func processCodeTask(db *database.Queries, task database.Task) error {
-	var args = agent.CodeArgs{}
+	var args = providers.CodeArgs{}
 	err := json.Unmarshal([]byte(task.Args.String), &args)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal args: %v", err)
@@ -410,7 +417,7 @@ func processCodeTask(db *database.Queries, task database.Task) error {
 	var cmd = ""
 	var results = ""
 
-	if args.Action == agent.ReadFile {
+	if args.Action == providers.ReadFile {
 		// TODO consider using dockerClient.CopyFromContainer command instead
 		cmd = fmt.Sprintf("cat %s", args.Path)
 		results, err = ExecCommand(task.FlowID.Int64, cmd, db)
@@ -420,7 +427,7 @@ func processCodeTask(db *database.Queries, task database.Task) error {
 		}
 	}
 
-	if args.Action == agent.UpdateFile {
+	if args.Action == providers.UpdateFile {
 		err = WriteFile(task.FlowID.Int64, args.Content, args.Path, db)
 
 		if err != nil {
@@ -446,7 +453,7 @@ func processCodeTask(db *database.Queries, task database.Task) error {
 	return nil
 }
 
-func getNextTask(db *database.Queries, flowId int64) (*database.Task, error) {
+func getNextTask(provider providers.Provider, db *database.Queries, flowId int64) (*database.Task, error) {
 	flow, err := db.ReadFlow(context.Background(), flowId)
 
 	if err != nil {
@@ -472,7 +479,7 @@ func getNextTask(db *database.Queries, flowId int64) (*database.Task, error) {
 		}
 	}
 
-	c := agent.NextTask(agent.AgentPrompt{
+	c := provider.NextTask(providers.NextTaskOptions{
 		Tasks:       tasks,
 		DockerImage: flow.ContainerImage.String,
 	})
