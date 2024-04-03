@@ -48,15 +48,23 @@ func CleanQueue(flowId int64) {
 func ProcessQueue(flowId int64, db *database.Queries) {
 	log.Println("Starting tasks processor for queue", flowId)
 
-	provider, err := providers.ProviderFactory(providers.ProviderOllama)
-
-	log.Println("Using provider: ", provider.Name())
+	flow, err := db.ReadFlow(context.Background(), flowId)
 
 	if err != nil {
 		log.Printf("failed to get provider: %v", err)
 		CleanQueue(flowId)
 		return
 	}
+
+	provider, err := providers.ProviderFactory(providers.ProviderType(flow.Model.String))
+
+	if err != nil {
+		log.Printf("failed to get provider: %v", err)
+		CleanQueue(flowId)
+		return
+	}
+
+	log.Println("Using provider: ", provider.Name())
 
 	go func() {
 		for {

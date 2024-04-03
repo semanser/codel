@@ -9,3 +9,7 @@ query flows {
     ...flowOverviewFragment
   }
 }
+
+query availableModels {
+  availableModels
+}

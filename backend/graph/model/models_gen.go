@@ -21,6 +21,7 @@ type Flow struct {
 	Terminal *Terminal  `json:"terminal"`
 	Browser  *Browser   `json:"browser"`
 	Status   FlowStatus `json:"status"`
+	Model    string     `json:"model"`
 }
 
 type Log struct {

@@ -56,15 +56,17 @@ type Flow {
   terminal: Terminal!
   browser: Browser!
   status: FlowStatus!
+  model: String!
 }
 
 type Query {
+  availableModels: [String!]!
   flows: [Flow!]!
   flow(id: Uint!): Flow!
 }
 
 type Mutation {
-  createFlow: Flow!
+  createFlow(model: String!): Flow!
   createTask(flowId: Uint!, query: String!): Task!
   finishFlow(flowId: Uint!): Flow!
 

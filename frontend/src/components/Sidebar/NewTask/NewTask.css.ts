@@ -8,7 +8,7 @@ export const wrapperStyles = style([
   {
     display: "block",
     textDecoration: "none",
-    background: "none",
+    background: vars.color.gray3,
     border: "none",
     textAlign: "left",
     color: vars.color.gray12,
@@ -20,13 +20,13 @@ export const wrapperStyles = style([
     selectors: {
       "&.active": {
         color: vars.color.primary9,
-        backgroundColor: vars.color.gray2,
+        backgroundColor: vars.color.gray5,
       },
     },
 
     ":hover": {
       color: vars.color.primary9,
-      backgroundColor: vars.color.gray2,
+      backgroundColor: vars.color.gray4,
     },
   },
 ]);

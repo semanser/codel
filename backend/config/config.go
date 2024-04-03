@@ -18,7 +18,7 @@ type config struct {
 	OpenAIServerURL string `env:"OPEN_AI_SERVER_URL" envDefault:"https://api.openai.com/v1"`
 
 	// Ollama
-	OllamaModel     string `env:"OLLAMA_MODEL" envDefault:"llama2"`
+	OllamaModel     string `env:"OLLAMA_MODEL"`
 	OllamaServerURL string `env:"OLLAMA_SERVER_URL" envDefault:"http://localhost:11434"`
 }
 

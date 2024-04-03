@@ -46,6 +46,7 @@ export const ChatPage = () => {
     true,
   );
   const [activeTab, setActiveTab] = useState("terminal");
+  const [selectedModel, setSelectedModel] = useLocalStorage("model", "");
 
   const [{ operation, data }] = useFlowQuery({
     pause: isNewFlow,

@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/semanser/ai-coder/config"
 	"github.com/semanser/ai-coder/database"
 	"github.com/semanser/ai-coder/executor"
 	gmodel "github.com/semanser/ai-coder/graph/model"
@@ -20,10 +21,15 @@ import (
 )
 
 // CreateFlow is the resolver for the createFlow field.
-func (r *mutationResolver) CreateFlow(ctx context.Context) (*gmodel.Flow, error) {
+func (r *mutationResolver) CreateFlow(ctx context.Context, model string) (*gmodel.Flow, error) {
+	if model == "" {
+		return nil, fmt.Errorf("modelID is required")
+	}
+
 	flow, err := r.Db.CreateFlow(ctx, database.CreateFlowParams{
 		Name:   database.StringToNullString("New Task"),
 		Status: database.StringToNullString("in_progress"),
+		Model:  database.StringToNullString(model),
 	})
 
 	if err != nil {
@@ -36,6 +42,7 @@ func (r *mutationResolver) CreateFlow(ctx context.Context) (*gmodel.Flow, error)
 		ID:     uint(flow.ID),
 		Name:   flow.Name.String,
 		Status: gmodel.FlowStatus(flow.Status.String),
+		Model:  flow.Model.String,
 	}, nil
 }
 
@@ -64,10 +71,6 @@ func (r *mutationResolver) CreateTask(ctx context.Context, flowID uint, query st
 	}
 
 	executor.AddCommand(int64(flowID), task)
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to execute command: %w", err)
-	}
 
 	return &gmodel.Task{
 		ID:        uint(task.ID),
@@ -125,6 +128,21 @@ func (r *mutationResolver) Exec(ctx context.Context, containerID string, command
 	return b.String(), nil
 }
 
+// AvailableModels is the resolver for the availableModels field.
+func (r *queryResolver) AvailableModels(ctx context.Context) ([]string, error) {
+	var availableModels []string
+
+	if config.Config.OpenAIKey != "" && config.Config.OpenAIModel != "" {
+		availableModels = append(availableModels, config.Config.OpenAIModel)
+	}
+
+	if config.Config.OllamaModel != "" {
+		availableModels = append(availableModels, config.Config.OllamaModel)
+	}
+
+	return availableModels, nil
+}
+
 // Flows is the resolver for the flows field.
 func (r *queryResolver) Flows(ctx context.Context) ([]*gmodel.Flow, error) {
 	flows, err := r.Db.ReadAllFlows(ctx)
@@ -149,6 +167,7 @@ func (r *queryResolver) Flows(ctx context.Context) ([]*gmodel.Flow, error) {
 			},
 			Tasks:  gTasks,
 			Status: gmodel.FlowStatus(flow.Status.String),
+			Model:  flow.Model.String,
 		})
 	}
 
@@ -217,6 +236,7 @@ func (r *queryResolver) Flow(ctx context.Context, id uint) (*gmodel.Flow, error)
 			URL:           "",
 			ScreenshotURL: "",
 		},
+		Model: flow.Model.String,
 	}
 
 	return gFlow, nil
