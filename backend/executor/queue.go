@@ -56,7 +56,7 @@ func ProcessQueue(flowId int64, db *database.Queries) {
 		return
 	}
 
-	provider, err := providers.ProviderFactory(providers.ProviderType(flow.Model.String))
+	provider, err := providers.ProviderFactory(providers.ProviderType(flow.ModelProvider.String))
 
 	if err != nil {
 		log.Printf("failed to get provider: %v", err)
@@ -64,7 +64,7 @@ func ProcessQueue(flowId int64, db *database.Queries) {
 		return
 	}
 
-	log.Println("Using provider: ", provider.Name())
+	log.Printf("Using provider: %s. Model: %s\n", provider.Name(), flow.ModelProvider.String)
 
 	go func() {
 		for {

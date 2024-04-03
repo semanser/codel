@@ -1,9 +1,9 @@
 -- name: CreateFlow :one
 INSERT INTO flows (
-  name, status, container_id, model
+  name, status, container_id, model, model_provider
 )
 VALUES (
-  ?, ?, ?, ?
+  ?, ?, ?, ?, ?
 )
 RETURNING *;
 

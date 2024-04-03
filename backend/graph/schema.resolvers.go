@@ -21,15 +21,16 @@ import (
 )
 
 // CreateFlow is the resolver for the createFlow field.
-func (r *mutationResolver) CreateFlow(ctx context.Context, model string) (*gmodel.Flow, error) {
-	if model == "" {
-		return nil, fmt.Errorf("modelID is required")
+func (r *mutationResolver) CreateFlow(ctx context.Context, modelProvider string, modelID string) (*gmodel.Flow, error) {
+	if modelID == "" || modelProvider == "" {
+		return nil, fmt.Errorf("model is required")
 	}
 
 	flow, err := r.Db.CreateFlow(ctx, database.CreateFlowParams{
-		Name:   database.StringToNullString("New Task"),
-		Status: database.StringToNullString("in_progress"),
-		Model:  database.StringToNullString(model),
+		Name:          database.StringToNullString("New Task"),
+		Status:        database.StringToNullString("in_progress"),
+		Model:         database.StringToNullString(modelID),
+		ModelProvider: database.StringToNullString(modelProvider),
 	})
 
 	if err != nil {
@@ -42,7 +43,10 @@ func (r *mutationResolver) CreateFlow(ctx context.Context, model string) (*gmode
 		ID:     uint(flow.ID),
 		Name:   flow.Name.String,
 		Status: gmodel.FlowStatus(flow.Status.String),
-		Model:  flow.Model.String,
+		Model: &gmodel.Model{
+			Provider: flow.ModelProvider.String,
+			ID:       flow.Model.String,
+		},
 	}, nil
 }
 
@@ -129,15 +133,21 @@ func (r *mutationResolver) Exec(ctx context.Context, containerID string, command
 }
 
 // AvailableModels is the resolver for the availableModels field.
-func (r *queryResolver) AvailableModels(ctx context.Context) ([]string, error) {
-	var availableModels []string
+func (r *queryResolver) AvailableModels(ctx context.Context) ([]*gmodel.Model, error) {
+	var availableModels []*gmodel.Model
 
 	if config.Config.OpenAIKey != "" && config.Config.OpenAIModel != "" {
-		availableModels = append(availableModels, config.Config.OpenAIModel)
+		availableModels = append(availableModels, &gmodel.Model{
+			Provider: "openai",
+			ID:       config.Config.OpenAIModel,
+		})
 	}
 
 	if config.Config.OllamaModel != "" {
-		availableModels = append(availableModels, config.Config.OllamaModel)
+		availableModels = append(availableModels, &gmodel.Model{
+			Provider: "ollama",
+			ID:       config.Config.OllamaModel,
+		})
 	}
 
 	return availableModels, nil
@@ -167,7 +177,10 @@ func (r *queryResolver) Flows(ctx context.Context) ([]*gmodel.Flow, error) {
 			},
 			Tasks:  gTasks,
 			Status: gmodel.FlowStatus(flow.Status.String),
-			Model:  flow.Model.String,
+			Model: &gmodel.Model{
+				Provider: flow.ModelProvider.String,
+				ID:       flow.Model.String,
+			},
 		})
 	}
 
@@ -236,7 +249,10 @@ func (r *queryResolver) Flow(ctx context.Context, id uint) (*gmodel.Flow, error)
 			URL:           "",
 			ScreenshotURL: "",
 		},
-		Model: flow.Model.String,
+		Model: &gmodel.Model{
+			Provider: flow.ModelProvider.String,
+			ID:       flow.Model.String,
+		},
 	}
 
 	return gFlow, nil

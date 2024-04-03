@@ -30,7 +30,7 @@ export type Flow = {
   __typename?: 'Flow';
   browser: Browser;
   id: Scalars['Uint']['output'];
-  model: Scalars['String']['output'];
+  model: Model;
   name: Scalars['String']['output'];
   status: FlowStatus;
   tasks: Array<Task>;
@@ -46,6 +46,12 @@ export type Log = {
   __typename?: 'Log';
   id: Scalars['Uint']['output'];
   text: Scalars['String']['output'];
+};
+
+export type Model = {
+  __typename?: 'Model';
+  id: Scalars['String']['output'];
+  provider: Scalars['String']['output'];
 };
 
 export type Mutation = {
@@ -64,7 +70,8 @@ export type Mutation_ExecArgs = {
 
 
 export type MutationCreateFlowArgs = {
-  model: Scalars['String']['input'];
+  modelId: Scalars['String']['input'];
+  modelProvider: Scalars['String']['input'];
 };
 
 
@@ -80,7 +87,7 @@ export type MutationFinishFlowArgs = {
 
 export type Query = {
   __typename?: 'Query';
-  availableModels: Array<Scalars['String']['output']>;
+  availableModels: Array<Model>;
   flow: Flow;
   flows: Array<Flow>;
 };
@@ -160,6 +167,12 @@ export const FlowOverviewFragmentFragmentDoc = gql`
   status
 }
     `;
+export const ModelFragmentFragmentDoc = gql`
+    fragment modelFragment on Model {
+  id
+  provider
+}
+    `;
 export const LogFragmentFragmentDoc = gql`
     fragment logFragment on Log {
   text
@@ -188,7 +201,9 @@ export const FlowFragmentFragmentDoc = gql`
   id
   name
   status
-  model
+  model {
+    ...modelFragment
+  }
   terminal {
     containerName
     connected
@@ -203,7 +218,8 @@ export const FlowFragmentFragmentDoc = gql`
     ...taskFragment
   }
 }
-    ${LogFragmentFragmentDoc}
+    ${ModelFragmentFragmentDoc}
+${LogFragmentFragmentDoc}
 ${BrowserFragmentFragmentDoc}
 ${TaskFragmentFragmentDoc}`;
 export const FlowsDocument = gql`
@@ -219,9 +235,11 @@ export function useFlowsQuery(options?: Omit<Urql.UseQueryArgs<FlowsQueryVariabl
 };
 export const AvailableModelsDocument = gql`
     query availableModels {
-  availableModels
+  availableModels {
+    ...modelFragment
+  }
 }
-    `;
+    ${ModelFragmentFragmentDoc}`;
 
 export function useAvailableModelsQuery(options?: Omit<Urql.UseQueryArgs<AvailableModelsQueryVariables>, 'query'>) {
   return Urql.useQuery<AvailableModelsQuery, AvailableModelsQueryVariables>({ query: AvailableModelsDocument, ...options });
@@ -238,8 +256,8 @@ export function useFlowQuery(options: Omit<Urql.UseQueryArgs<FlowQueryVariables>
   return Urql.useQuery<FlowQuery, FlowQueryVariables>({ query: FlowDocument, ...options });
 };
 export const CreateFlowDocument = gql`
-    mutation createFlow($model: String!) {
-  createFlow(model: $model) {
+    mutation createFlow($modelProvider: String!, $modelId: String!) {
+  createFlow(modelProvider: $modelProvider, modelId: $modelId) {
     id
     name
   }
@@ -323,6 +341,8 @@ export function useBrowserUpdatedSubscription<TData = BrowserUpdatedSubscription
 };
 export type FlowOverviewFragmentFragment = { __typename?: 'Flow', id: any, name: string, status: FlowStatus };
 
+export type ModelFragmentFragment = { __typename?: 'Model', id: string, provider: string };
+
 export type FlowsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
@@ -331,7 +351,7 @@ export type FlowsQuery = { __typename?: 'Query', flows: Array<{ __typename?: 'Fl
 export type AvailableModelsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type AvailableModelsQuery = { __typename?: 'Query', availableModels: Array<string> };
+export type AvailableModelsQuery = { __typename?: 'Query', availableModels: Array<{ __typename?: 'Model', id: string, provider: string }> };
 
 export type TaskFragmentFragment = { __typename?: 'Task', id: any, type: TaskType, message: string, status: TaskStatus, args: any, results: any, createdAt: any };
 
@@ -339,17 +359,18 @@ export type LogFragmentFragment = { __typename?: 'Log', text: string, id: any };
 
 export type BrowserFragmentFragment = { __typename?: 'Browser', url: string, screenshotUrl: string };
 
-export type FlowFragmentFragment = { __typename?: 'Flow', id: any, name: string, status: FlowStatus, model: string, terminal: { __typename?: 'Terminal', containerName: string, connected: boolean, logs: Array<{ __typename?: 'Log', text: string, id: any }> }, browser: { __typename?: 'Browser', url: string, screenshotUrl: string }, tasks: Array<{ __typename?: 'Task', id: any, type: TaskType, message: string, status: TaskStatus, args: any, results: any, createdAt: any }> };
+export type FlowFragmentFragment = { __typename?: 'Flow', id: any, name: string, status: FlowStatus, model: { __typename?: 'Model', id: string, provider: string }, terminal: { __typename?: 'Terminal', containerName: string, connected: boolean, logs: Array<{ __typename?: 'Log', text: string, id: any }> }, browser: { __typename?: 'Browser', url: string, screenshotUrl: string }, tasks: Array<{ __typename?: 'Task', id: any, type: TaskType, message: string, status: TaskStatus, args: any, results: any, createdAt: any }> };
 
 export type FlowQueryVariables = Exact<{
   id: Scalars['Uint']['input'];
 }>;
 
 
-export type FlowQuery = { __typename?: 'Query', flow: { __typename?: 'Flow', id: any, name: string, status: FlowStatus, model: string, terminal: { __typename?: 'Terminal', containerName: string, connected: boolean, logs: Array<{ __typename?: 'Log', text: string, id: any }> }, browser: { __typename?: 'Browser', url: string, screenshotUrl: string }, tasks: Array<{ __typename?: 'Task', id: any, type: TaskType, message: string, status: TaskStatus, args: any, results: any, createdAt: any }> } };
+export type FlowQuery = { __typename?: 'Query', flow: { __typename?: 'Flow', id: any, name: string, status: FlowStatus, model: { __typename?: 'Model', id: string, provider: string }, terminal: { __typename?: 'Terminal', containerName: string, connected: boolean, logs: Array<{ __typename?: 'Log', text: string, id: any }> }, browser: { __typename?: 'Browser', url: string, screenshotUrl: string }, tasks: Array<{ __typename?: 'Task', id: any, type: TaskType, message: string, status: TaskStatus, args: any, results: any, createdAt: any }> } };
 
 export type CreateFlowMutationVariables = Exact<{
-  model: Scalars['String']['input'];
+  modelProvider: Scalars['String']['input'];
+  modelId: Scalars['String']['input'];
 }>;
 
 
@@ -472,8 +493,9 @@ export default {
             "type": {
               "kind": "NON_NULL",
               "ofType": {
-                "kind": "SCALAR",
-                "name": "Any"
+                "kind": "OBJECT",
+                "name": "Model",
+                "ofType": null
               }
             },
             "args": []
@@ -564,6 +586,35 @@ export default {
       },
       {
         "kind": "OBJECT",
+        "name": "Model",
+        "fields": [
+          {
+            "name": "id",
+            "type": {
+              "kind": "NON_NULL",
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "Any"
+              }
+            },
+            "args": []
+          },
+          {
+            "name": "provider",
+            "type": {
+              "kind": "NON_NULL",
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "Any"
+              }
+            },
+            "args": []
+          }
+        ],
+        "interfaces": []
+      },
+      {
+        "kind": "OBJECT",
         "name": "Mutation",
         "fields": [
           {
@@ -610,7 +661,17 @@ export default {
             },
             "args": [
               {
-                "name": "model",
+                "name": "modelId",
+                "type": {
+                  "kind": "NON_NULL",
+                  "ofType": {
+                    "kind": "SCALAR",
+                    "name": "Any"
+                  }
+                }
+              },
+              {
+                "name": "modelProvider",
                 "type": {
                   "kind": "NON_NULL",
                   "ofType": {
@@ -693,8 +754,9 @@ export default {
                 "ofType": {
                   "kind": "NON_NULL",
                   "ofType": {
-                    "kind": "SCALAR",
-                    "name": "Any"
+                    "kind": "OBJECT",
+                    "name": "Model",
+                    "ofType": null
                   }
                 }
               }

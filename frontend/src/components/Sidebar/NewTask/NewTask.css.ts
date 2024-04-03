@@ -3,7 +3,14 @@ import { style } from "@vanilla-extract/css";
 import { font } from "@/styles/font.css";
 import { vars } from "@/styles/theme.css";
 
-export const wrapperStyles = style([
+export const wrapperStyles = style({
+  display: "flex",
+  alignItems: "center",
+  marginBottom: 16,
+  justifyContent: "space-between",
+});
+
+export const linkWrapperStyles = style([
   font.textSmSemibold,
   {
     display: "block",
@@ -14,8 +21,8 @@ export const wrapperStyles = style([
     color: vars.color.gray12,
     padding: "9px 16px",
     cursor: "pointer",
-    marginBottom: 16,
-    borderRadius: 6,
+    borderRadius: "6px 0 0 6px",
+    flex: 1,
 
     selectors: {
       "&.active": {

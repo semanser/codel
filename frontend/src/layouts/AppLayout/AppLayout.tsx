@@ -22,7 +22,10 @@ export const AppLayout = () => {
 
   return (
     <div className={wrapperStyles}>
-      <Sidebar items={sidebarItems} />
+      <Sidebar
+        items={sidebarItems}
+        availableModels={availableModelsData?.availableModels ?? []}
+      />
       <Outlet />
     </div>
   );

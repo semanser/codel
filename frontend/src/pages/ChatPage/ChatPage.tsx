@@ -17,6 +17,7 @@ import {
 import { Terminal } from "@/components/Terminal/Terminal";
 import { Tooltip } from "@/components/Tooltip/Tooltip";
 import {
+  Model,
   useBrowserUpdatedSubscription,
   useCreateFlowMutation,
   useCreateTaskMutation,
@@ -45,8 +46,8 @@ export const ChatPage = () => {
     "isFollowingTabs",
     true,
   );
+  const [selectedModel] = useLocalStorage<Model>("model");
   const [activeTab, setActiveTab] = useState("terminal");
-  const [selectedModel, setSelectedModel] = useLocalStorage("model", "");
 
   const [{ operation, data }] = useFlowQuery({
     pause: isNewFlow,
@@ -61,6 +62,7 @@ export const ChatPage = () => {
   const status = !isStaleData ? data?.flow.status : undefined;
   const terminal = !isStaleData ? data?.flow.terminal : undefined;
   const browser = !isStaleData ? data?.flow.browser : undefined;
+  const model = !isStaleData ? data?.flow.model : undefined;
 
   useBrowserUpdatedSubscription(
     {
@@ -97,8 +99,11 @@ export const ChatPage = () => {
   });
 
   const handleSubmit = async (message: string) => {
-    if (isNewFlow) {
-      const result = await createFlowMutation({});
+    if (isNewFlow && selectedModel.id) {
+      const result = await createFlowMutation({
+        modelProvider: selectedModel.provider,
+        modelId: selectedModel.id,
+      });
 
       const flowId = result?.data?.createFlow.id;
       if (flowId) {
@@ -135,6 +140,7 @@ export const ChatPage = () => {
           flowStatus={status}
           isNew={isNewFlow}
           onFlowStop={handleFlowStop}
+          model={model}
         />
       </Panel>
       <Panel>

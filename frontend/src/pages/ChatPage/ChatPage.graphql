@@ -22,7 +22,9 @@ fragment flowFragment on Flow {
   id
   name
   status
-  model
+  model {
+    ...modelFragment
+  }
   terminal {
     containerName
     connected
@@ -44,8 +46,8 @@ query flow($id: Uint!) {
   }
 }
 
-mutation createFlow($model: String!) {
-  createFlow(model: $model) {
+mutation createFlow($modelProvider: String!, $modelId: String!) {
+  createFlow(modelProvider: $modelProvider, modelId: $modelId) {
     id
     name
   }

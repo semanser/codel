@@ -12,19 +12,20 @@ import (
 
 const createFlow = `-- name: CreateFlow :one
 INSERT INTO flows (
-  name, status, container_id, model
+  name, status, container_id, model, model_provider
 )
 VALUES (
-  ?, ?, ?, ?
+  ?, ?, ?, ?, ?
 )
-RETURNING id, created_at, updated_at, name, status, container_id, model
+RETURNING id, created_at, updated_at, name, status, container_id, model, model_provider
 `
 
 type CreateFlowParams struct {
-	Name        sql.NullString
-	Status      sql.NullString
-	ContainerID sql.NullInt64
-	Model       sql.NullString
+	Name          sql.NullString
+	Status        sql.NullString
+	ContainerID   sql.NullInt64
+	Model         sql.NullString
+	ModelProvider sql.NullString
 }
 
 func (q *Queries) CreateFlow(ctx context.Context, arg CreateFlowParams) (Flow, error) {
@@ -33,6 +34,7 @@ func (q *Queries) CreateFlow(ctx context.Context, arg CreateFlowParams) (Flow, e
 		arg.Status,
 		arg.ContainerID,
 		arg.Model,
+		arg.ModelProvider,
 	)
 	var i Flow
 	err := row.Scan(
@@ -43,13 +45,14 @@ func (q *Queries) CreateFlow(ctx context.Context, arg CreateFlowParams) (Flow, e
 		&i.Status,
 		&i.ContainerID,
 		&i.Model,
+		&i.ModelProvider,
 	)
 	return i, err
 }
 
 const readAllFlows = `-- name: ReadAllFlows :many
 SELECT
-  f.id, f.created_at, f.updated_at, f.name, f.status, f.container_id, f.model,
+  f.id, f.created_at, f.updated_at, f.name, f.status, f.container_id, f.model, f.model_provider,
   c.name AS container_name
 FROM flows f
 LEFT JOIN containers c ON f.container_id = c.id
@@ -64,6 +67,7 @@ type ReadAllFlowsRow struct {
 	Status        sql.NullString
 	ContainerID   sql.NullInt64
 	Model         sql.NullString
+	ModelProvider sql.NullString
 	ContainerName sql.NullString
 }
 
@@ -84,6 +88,7 @@ func (q *Queries) ReadAllFlows(ctx context.Context) ([]ReadAllFlowsRow, error) {
 			&i.Status,
 			&i.ContainerID,
 			&i.Model,
+			&i.ModelProvider,
 			&i.ContainerName,
 		); err != nil {
 			return nil, err
@@ -101,7 +106,7 @@ func (q *Queries) ReadAllFlows(ctx context.Context) ([]ReadAllFlowsRow, error) {
 
 const readFlow = `-- name: ReadFlow :one
 SELECT
-  f.id, f.created_at, f.updated_at, f.name, f.status, f.container_id, f.model,
+  f.id, f.created_at, f.updated_at, f.name, f.status, f.container_id, f.model, f.model_provider,
   c.name AS container_name,
   c.image AS container_image,
   c.status AS container_status,
@@ -119,6 +124,7 @@ type ReadFlowRow struct {
 	Status           sql.NullString
 	ContainerID      sql.NullInt64
 	Model            sql.NullString
+	ModelProvider    sql.NullString
 	ContainerName    sql.NullString
 	ContainerImage   sql.NullString
 	ContainerStatus  sql.NullString
@@ -136,6 +142,7 @@ func (q *Queries) ReadFlow(ctx context.Context, id int64) (ReadFlowRow, error) {
 		&i.Status,
 		&i.ContainerID,
 		&i.Model,
+		&i.ModelProvider,
 		&i.ContainerName,
 		&i.ContainerImage,
 		&i.ContainerStatus,
@@ -148,7 +155,7 @@ const updateFlowContainer = `-- name: UpdateFlowContainer :one
 UPDATE flows
 SET container_id = ?
 WHERE id = ?
-RETURNING id, created_at, updated_at, name, status, container_id, model
+RETURNING id, created_at, updated_at, name, status, container_id, model, model_provider
 `
 
 type UpdateFlowContainerParams struct {
@@ -167,6 +174,7 @@ func (q *Queries) UpdateFlowContainer(ctx context.Context, arg UpdateFlowContain
 		&i.Status,
 		&i.ContainerID,
 		&i.Model,
+		&i.ModelProvider,
 	)
 	return i, err
 }
@@ -175,7 +183,7 @@ const updateFlowName = `-- name: UpdateFlowName :one
 UPDATE flows
 SET name = ?
 WHERE id = ?
-RETURNING id, created_at, updated_at, name, status, container_id, model
+RETURNING id, created_at, updated_at, name, status, container_id, model, model_provider
 `
 
 type UpdateFlowNameParams struct {
@@ -194,6 +202,7 @@ func (q *Queries) UpdateFlowName(ctx context.Context, arg UpdateFlowNameParams) 
 		&i.Status,
 		&i.ContainerID,
 		&i.Model,
+		&i.ModelProvider,
 	)
 	return i, err
 }
@@ -202,7 +211,7 @@ const updateFlowStatus = `-- name: UpdateFlowStatus :one
 UPDATE flows
 SET status = ?
 WHERE id = ?
-RETURNING id, created_at, updated_at, name, status, container_id, model
+RETURNING id, created_at, updated_at, name, status, container_id, model, model_provider
 `
 
 type UpdateFlowStatusParams struct {
@@ -221,6 +230,7 @@ func (q *Queries) UpdateFlowStatus(ctx context.Context, arg UpdateFlowStatusPara
 		&i.Status,
 		&i.ContainerID,
 		&i.Model,
+		&i.ModelProvider,
 	)
 	return i, err
 }

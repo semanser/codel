@@ -18,13 +18,14 @@ type Container struct {
 }
 
 type Flow struct {
-	ID          int64
-	CreatedAt   sql.NullTime
-	UpdatedAt   sql.NullTime
-	Name        sql.NullString
-	Status      sql.NullString
-	ContainerID sql.NullInt64
-	Model       sql.NullString
+	ID            int64
+	CreatedAt     sql.NullTime
+	UpdatedAt     sql.NullTime
+	Name          sql.NullString
+	Status        sql.NullString
+	ContainerID   sql.NullInt64
+	Model         sql.NullString
+	ModelProvider sql.NullString
 }
 
 type Log struct {
