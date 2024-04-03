@@ -48,7 +48,7 @@ func CleanQueue(flowId int64) {
 func ProcessQueue(flowId int64, db *database.Queries) {
 	log.Println("Starting tasks processor for queue", flowId)
 
-	provider, err := providers.ProviderFactory(providers.ProviderOpenAI)
+	provider, err := providers.ProviderFactory(providers.ProviderOllama)
 
 	log.Println("Using provider: ", provider.Name())
 

@@ -8,11 +8,18 @@ import (
 )
 
 type config struct {
+	// General
+	DatabaseURL string `env:"DATABASE_URL" envDefault:"database.db"`
+	Port        int    `env:"PORT" envDefault:"8080"`
+
+	// OpenAI
 	OpenAIKey       string `env:"OPEN_AI_KEY"`
 	OpenAIModel     string `env:"OPEN_AI_MODEL" envDefault:"gpt-4-0125-preview"`
 	OpenAIServerURL string `env:"OPEN_AI_SERVER_URL" envDefault:"https://api.openai.com/v1"`
-	DatabaseURL     string `env:"DATABASE_URL" envDefault:"database.db"`
-	Port            int    `env:"PORT" envDefault:"8080"`
+
+	// Ollama
+	OllamaModel     string `env:"OLLAMA_MODEL" envDefault:"llama2"`
+	OllamaServerURL string `env:"OLLAMA_SERVER_URL" envDefault:"http://localhost:11434"`
 }
 
 var Config config

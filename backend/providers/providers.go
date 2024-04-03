@@ -1,16 +1,12 @@
 package providers
 
 import (
-	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
 
-	"github.com/semanser/ai-coder/assets"
-	"github.com/semanser/ai-coder/config"
 	"github.com/semanser/ai-coder/database"
-	"github.com/semanser/ai-coder/templates"
 
 	"github.com/invopop/jsonschema"
 	"github.com/tmc/langchaingo/llms"
@@ -21,6 +17,7 @@ type ProviderType string
 
 const (
 	ProviderOpenAI ProviderType = "openai"
+	ProviderOllama ProviderType = "ollama"
 )
 
 type Provider interface {
@@ -36,120 +33,76 @@ type NextTaskOptions struct {
 	DockerImage string
 }
 
+var Tools = []llms.Tool{
+	{
+		Type: "function",
+		Function: &llms.FunctionDefinition{
+			Name:        "terminal",
+			Description: "Calls a terminal command",
+			Parameters:  jsonschema.Reflect(&TerminalArgs{}).Definitions["TerminalArgs"],
+		},
+	},
+	{
+		Type: "function",
+		Function: &llms.FunctionDefinition{
+			Name:        "browser",
+			Description: "Opens a browser to look for additional information",
+			Parameters:  jsonschema.Reflect(&BrowserArgs{}).Definitions["BrowserArgs"],
+		},
+	},
+	{
+		Type: "function",
+		Function: &llms.FunctionDefinition{
+			Name:        "code",
+			Description: "Modifies or reads code files",
+			Parameters:  jsonschema.Reflect(&CodeArgs{}).Definitions["CodeArgs"],
+		},
+	},
+	{
+		Type: "function",
+		Function: &llms.FunctionDefinition{
+			Name:        "ask",
+			Description: "Sends a question to the user for additional information",
+			Parameters:  jsonschema.Reflect(&AskArgs{}).Definitions["AskArgs"],
+		},
+	},
+	{
+		Type: "function",
+		Function: &llms.FunctionDefinition{
+			Name:        "done",
+			Description: "Mark the whole task as done. Should be called at the very end when everything is completed",
+			Parameters:  jsonschema.Reflect(&DoneArgs{}).Definitions["DoneArgs"],
+		},
+	},
+}
+
 func ProviderFactory(provider ProviderType) (Provider, error) {
 	switch provider {
 	case ProviderOpenAI:
 		return OpenAIProvider{}.New(), nil
+	case ProviderOllama:
+		return OllamaProvider{}.New(), nil
 	default:
 		return nil, fmt.Errorf("unknown provider: %s", provider)
 	}
 }
 
-func Summary(llm llms.Model, model string, query string, n int) (string, error) {
-	prompt, err := templates.Render(assets.PromptTemplates, "prompts/summary.tmpl", map[string]any{
-		"Text": query,
-		"N":    n,
-	})
-	if err != nil {
-		return "", err
+func defaultAskTask(message string) *database.Task {
+	task := database.Task{
+		Type: database.StringToNullString("ask"),
 	}
 
-	response, err := llms.GenerateFromSinglePrompt(
-		context.Background(),
-		llm,
-		prompt,
-		llms.WithTemperature(0.0),
-		// Use a simpler model for this task
-		llms.WithModel(model),
-		llms.WithTopP(0.2),
-		llms.WithN(1),
-	)
+	task.Args = database.StringToNullString("{}")
+	task.Message = sql.NullString{
+		String: fmt.Sprintf("%s. What should I do next?", message),
+		Valid:  true,
+	}
 
-	return response, err
+	return &task
 }
 
-func DockerImageName(llm llms.Model, model string, task string) (string, error) {
-	prompt, err := templates.Render(assets.PromptTemplates, "prompts/docker.tmpl", map[string]any{
-		"Task": task,
-	})
-	if err != nil {
-		return "", err
-	}
-
-	response, err := llms.GenerateFromSinglePrompt(
-		context.Background(),
-		llm,
-		prompt,
-		llms.WithTemperature(0.0),
-		llms.WithModel(model),
-		llms.WithTopP(0.2),
-		llms.WithN(1),
-	)
-
-	return response, err
-}
-
-func NextTask(args NextTaskOptions, llm llms.Model) *database.Task {
-	log.Println("Getting next task")
-
-	prompt, err := templates.Render(assets.PromptTemplates, "prompts/agent.tmpl", args)
-
-	// TODO In case of lots of tasks, we should try to get a summary using gpt-3.5
-	if len(prompt) > 30000 {
-		log.Println("Prompt too long, asking user")
-		return defaultAskTask("My prompt is too long and I can't process it")
-	}
-
-	if err != nil {
-		log.Println("Failed to render prompt, asking user, %w", err)
-		return defaultAskTask("There was an error getting the next task")
-	}
-
-	tools := []llms.Tool{
-		{
-			Type: "function",
-			Function: &llms.FunctionDefinition{
-				Name:        "terminal",
-				Description: "Calls a terminal command",
-				Parameters:  jsonschema.Reflect(&TerminalArgs{}).Definitions["TerminalArgs"],
-			},
-		},
-		{
-			Type: "function",
-			Function: &llms.FunctionDefinition{
-				Name:        "browser",
-				Description: "Opens a browser to look for additional information",
-				Parameters:  jsonschema.Reflect(&BrowserArgs{}).Definitions["BrowserArgs"],
-			},
-		},
-		{
-			Type: "function",
-			Function: &llms.FunctionDefinition{
-				Name:        "code",
-				Description: "Modifies or reads code files",
-				Parameters:  jsonschema.Reflect(&CodeArgs{}).Definitions["CodeArgs"],
-			},
-		},
-		{
-			Type: "function",
-			Function: &llms.FunctionDefinition{
-				Name:        "ask",
-				Description: "Sends a question to the user for additional information",
-				Parameters:  jsonschema.Reflect(&AskArgs{}).Definitions["AskArgs"],
-			},
-		},
-		{
-			Type: "function",
-			Function: &llms.FunctionDefinition{
-				Name:        "done",
-				Description: "Mark the whole task as done. Should be called at the very end when everything is completed",
-				Parameters:  jsonschema.Reflect(&DoneArgs{}).Definitions["DoneArgs"],
-			},
-		},
-	}
-
+func tasksToMessages(tasks []database.Task, prompt string) []llms.MessageContent {
 	var messages []llms.MessageContent
-
 	messages = append(messages, llms.MessageContent{
 		Role: schema.ChatMessageTypeSystem,
 		Parts: []llms.ContentPart{
@@ -157,7 +110,7 @@ func NextTask(args NextTaskOptions, llm llms.Model) *database.Task {
 		},
 	})
 
-	for _, task := range args.Tasks {
+	for _, task := range tasks {
 		if task.Type.String == "input" {
 			messages = append(messages, llms.MessageContent{
 				Role: schema.ChatMessageTypeHuman,
@@ -205,143 +158,123 @@ func NextTask(args NextTaskOptions, llm llms.Model) *database.Task {
 		}
 	}
 
-	resp, err := llm.GenerateContent(
-		context.Background(),
-		messages,
-		llms.WithTemperature(0.0),
-		llms.WithModel(config.Config.OpenAIModel),
-		llms.WithTopP(0.2),
-		llms.WithN(1),
-		llms.WithTools(tools),
-	)
+	return messages
+}
 
-	if err != nil {
-		log.Printf("Failed to get response from OpenAI %v", err)
-		return defaultAskTask("There was an error getting the next task")
+func textToTask(text string) (*database.Task, error) {
+	c := unmarshalCall(text)
+
+	if c == nil {
+		return nil, fmt.Errorf("can't unmarshalCall %s", text)
 	}
 
-	choices := resp.Choices
+	task := database.Task{
+		// TODO validate tool name
+		Type: database.StringToNullString(c.Tool),
+	}
 
+	arg, err := json.Marshal(c.Input)
+	if err != nil {
+		log.Printf("Failed to marshal terminal args, asking user: %v", err)
+		return defaultAskTask("There was an error running the terminal command"), nil
+	}
+	task.Args = database.StringToNullString(string(arg))
+
+	// Sometimes the model returns an empty string for the message
+	// In that case, we use the input as the message
+	msg := c.Message
+	if msg == "" {
+		msg = string(arg)
+	}
+
+	task.Message = database.StringToNullString(msg)
+	task.Status = database.StringToNullString("in_progress")
+
+	return &task, nil
+}
+
+func extractJSONArgs[T any](functionArgs map[string]string, args *T) (*T, error) {
+	b, err := json.Marshal(functionArgs)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal args: %v", err)
+	}
+
+	err = json.Unmarshal(b, args)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal args: %v", err)
+	}
+	return args, nil
+}
+
+func unmarshalCall(input string) *Call {
+	log.Printf("Unmarshalling tool call: %v", input)
+
+	var c Call
+
+	err := json.Unmarshal([]byte(input), &c)
+	if err != nil {
+		log.Printf("Failed to unmarshal tool call: %v", err)
+		return nil
+	}
+
+	if c.Tool != "" {
+		log.Printf("Unmarshalled tool call: %v", c)
+		return &c
+	}
+
+	return nil
+}
+
+func toolToTask(choices []*llms.ContentChoice) (*database.Task, error) {
 	if len(choices) == 0 {
-		log.Println("No choices found, asking user")
-		return defaultAskTask("Looks like I couldn't find a task to run")
+		return nil, fmt.Errorf("no choices found, asking user")
 	}
 
 	toolCalls := choices[0].ToolCalls
 
 	if len(toolCalls) == 0 {
-		log.Println("No tool calls found, asking user")
-		return defaultAskTask("I couln't find a task to run")
+		return nil, fmt.Errorf("no tool calls found, asking user")
 	}
 
 	tool := toolCalls[0]
-
-	if tool.FunctionCall.Name == "" {
-		log.Println("No tool found, asking user")
-		return defaultAskTask("The next task is empty, I don't know what to do next")
-	}
 
 	task := database.Task{
 		Type: database.StringToNullString(tool.FunctionCall.Name),
 	}
 
-	switch tool.FunctionCall.Name {
-	case "terminal":
-		params, err := extractArgs(tool.FunctionCall.Arguments, &TerminalArgs{})
-		if err != nil {
-			log.Printf("Failed to extract terminal args, asking user: %v", err)
-			return defaultAskTask("There was an error running the terminal command")
-		}
-		args, err := json.Marshal(params)
-		if err != nil {
-			log.Printf("Failed to marshal terminal args, asking user: %v", err)
-			return defaultAskTask("There was an error running the terminal command")
-		}
-		task.Args = database.StringToNullString(string(args))
-
-		// Sometimes the model returns an empty string for the message
-		msg := string(params.Message)
-		if msg == "" {
-			msg = params.Input
-		}
-
-		task.Message = database.StringToNullString(msg)
-		task.Status = database.StringToNullString("in_progress")
-
-	case "browser":
-		params, err := extractArgs(tool.FunctionCall.Arguments, &BrowserArgs{})
-		if err != nil {
-			log.Printf("Failed to extract browser args, asking user: %v", err)
-			return defaultAskTask("There was an error opening the browser")
-		}
-		args, err := json.Marshal(params)
-		if err != nil {
-			log.Printf("Failed to marshal browser args, asking user: %v", err)
-			return defaultAskTask("There was an error opening the browser")
-		}
-		task.Args = database.StringToNullString(string(args))
-		task.Message = database.StringToNullString(string(params.Message))
-	case "code":
-		params, err := extractArgs(tool.FunctionCall.Arguments, &CodeArgs{})
-		if err != nil {
-			log.Printf("Failed to extract code args, asking user: %v", err)
-			return defaultAskTask("There was an error reading or updating the file")
-		}
-		args, err := json.Marshal(params)
-		if err != nil {
-			log.Printf("Failed to marshal code args, asking user: %v", err)
-			return defaultAskTask("There was an error reading or updating the file")
-		}
-		task.Args = database.StringToNullString(string(args))
-		task.Message = database.StringToNullString(string(params.Message))
-	case "ask":
-		params, err := extractArgs(tool.FunctionCall.Arguments, &AskArgs{})
-		if err != nil {
-			log.Printf("Failed to extract ask args, asking user: %v", err)
-			return defaultAskTask("There was an error asking the user for additional information")
-		}
-		args, err := json.Marshal(params)
-		if err != nil {
-			log.Printf("Failed to marshal ask args, asking user: %v", err)
-			return defaultAskTask("There was an error asking the user for additional information")
-		}
-		task.Args = database.StringToNullString(string(args))
-		task.Message = database.StringToNullString(string(params.Message))
-	case "done":
-		params, err := extractArgs(tool.FunctionCall.Arguments, &DoneArgs{})
-		if err != nil {
-			log.Printf("Failed to extract done args, asking user: %v", err)
-			return defaultAskTask("There was an error marking the task as done")
-		}
-		args, err := json.Marshal(params)
-		if err != nil {
-			return defaultAskTask("There was an error marking the task as done")
-		}
-		task.Args = database.StringToNullString(string(args))
-		task.Message = database.StringToNullString(string(params.Message))
+	if tool.FunctionCall.Name == "" {
+		return nil, fmt.Errorf("no tool name found, asking user")
 	}
+
+	// We use AskArgs to extract the message
+	params, err := extractToolArgs(tool.FunctionCall.Arguments, &AskArgs{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract args: %v", err)
+	}
+	args, err := json.Marshal(params)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal terminal args, asking user: %v", err)
+	}
+	task.Args = database.StringToNullString(string(args))
+
+	// Sometimes the model returns an empty string for the message
+	msg := string(params.Message)
+	if msg == "" {
+		msg = tool.FunctionCall.Arguments
+	}
+
+	task.Message = database.StringToNullString(msg)
+	task.Status = database.StringToNullString("in_progress")
 
 	task.ToolCallID = database.StringToNullString(tool.ID)
 
-	return &task
+	return &task, nil
 }
 
-func defaultAskTask(message string) *database.Task {
-	task := database.Task{
-		Type: database.StringToNullString("ask"),
-	}
-
-	task.Args = database.StringToNullString("{}")
-	task.Message = sql.NullString{
-		String: fmt.Sprintf("%s. What should I do next?", message),
-		Valid:  true,
-	}
-
-	return &task
-}
-
-func extractArgs[T any](openAIargs string, args *T) (*T, error) {
-	err := json.Unmarshal([]byte(openAIargs), args)
+func extractToolArgs[T any](functionArgs string, args *T) (*T, error) {
+	err := json.Unmarshal([]byte(functionArgs), args)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal args: %v", err)
 	}

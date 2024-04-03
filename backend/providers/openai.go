@@ -1,11 +1,15 @@
 package providers
 
 import (
+	"context"
 	"log"
 
+	"github.com/semanser/ai-coder/assets"
 	"github.com/semanser/ai-coder/config"
 	"github.com/semanser/ai-coder/database"
+	"github.com/semanser/ai-coder/templates"
 
+	"github.com/tmc/langchaingo/llms"
 	"github.com/tmc/langchaingo/llms/openai"
 )
 
@@ -43,15 +47,52 @@ func (p OpenAIProvider) Name() ProviderType {
 }
 
 func (p OpenAIProvider) Summary(query string, n int) (string, error) {
-	// TODO Use more basic model for this task
 	return Summary(p.client, config.Config.OpenAIModel, query, n)
 }
 
 func (p OpenAIProvider) DockerImageName(task string) (string, error) {
-	// TODO Use more basic model for this task
 	return DockerImageName(p.client, config.Config.OpenAIModel, task)
 }
 
 func (p OpenAIProvider) NextTask(args NextTaskOptions) *database.Task {
-	return NextTask(args, p.client)
+	log.Println("Getting next task")
+
+	prompt, err := templates.Render(assets.PromptTemplates, "prompts/agent.tmpl", args)
+
+	// TODO In case of lots of tasks, we should try to get a summary using gpt-3.5
+	if len(prompt) > 30000 {
+		log.Println("Prompt too long, asking user")
+		return defaultAskTask("My prompt is too long and I can't process it")
+	}
+
+	if err != nil {
+		log.Println("Failed to render prompt, asking user, %w", err)
+		return defaultAskTask("There was an error getting the next task")
+	}
+
+	messages := tasksToMessages(args.Tasks, prompt)
+
+	resp, err := p.client.GenerateContent(
+		context.Background(),
+		messages,
+		llms.WithTemperature(0.0),
+		llms.WithModel(p.model),
+		llms.WithTopP(0.2),
+		llms.WithN(1),
+		llms.WithTools(Tools),
+	)
+
+	if err != nil {
+		log.Printf("Failed to get response from model %v", err)
+		return defaultAskTask("There was an error getting the next task")
+	}
+
+	task, err := toolToTask(resp.Choices)
+
+	if err != nil {
+		log.Printf("Failed to convert tool to task %v", err)
+		return defaultAskTask("There was an error getting the next task")
+	}
+
+	return task
 }
