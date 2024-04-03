@@ -22,7 +22,7 @@ The simplest way to run Codel is to use a pre-built Docker image. You can find t
 > Don't forget to set the required environment variables.
 
 ```bash
-docker run -d \
+docker run \
   -e OPEN_AI_KEY=<your_open_ai_key> \
   -p 3000:8080 \
   -v /var/run/docker.sock:/var/run/docker.sock \
@@ -31,7 +31,7 @@ docker run -d \
 
 Alternatively, you can create a .env file and run the Docker image with the following command:
 ```bash
-docker run -d \
+docker run \
   --env-file .env \
   -p 3000:8080 \
   -v /var/run/docker.sock:/var/run/docker.sock \
