@@ -28,7 +28,7 @@ func Init() {
 	godotenv.Load()
 
 	if err := env.ParseWithOptions(&Config, env.Options{
-		RequiredIfNoDef: true,
+		RequiredIfNoDef: false,
 	}); err != nil {
 		log.Fatalf("Unable to parse config: %v\n", err)
 	}
