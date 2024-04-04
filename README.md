@@ -24,7 +24,7 @@ The simplest way to run Codel is to use a pre-built Docker image. You can find t
 
 ```bash
 docker run \
-  -e OPEN_AI_KEY=your_open_ai_key \ # Use any of the supported language models
+  -e OPEN_AI_KEY=your_open_ai_key \ # Replace OPEN_AI_KEY with any other supported model
   -p 3000:8080 \
   -v /var/run/docker.sock:/var/run/docker.sock \
   ghcr.io/semanser/codel:latest
