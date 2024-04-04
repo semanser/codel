@@ -21,10 +21,12 @@ The simplest way to run Codel is to use a pre-built Docker image. You can find t
 > [!IMPORTANT]
 > You need to use a corresponding environment variable in order to use any of the supported language models.
 
-
+You can run the Docker image with the following command. Remove or change the environment variables according to your needs.
 ```bash
 docker run \
-  -e OPEN_AI_KEY=your_open_ai_key \ # Replace OPEN_AI_KEY with any other supported model
+  -e OPEN_AI_KEY=your_open_ai_key \
+  -e OPEN_AI_MODEL=gpt-4-0125-preview \
+  -e OLLAMA_MODEL=llama2 \
   -p 3000:8080 \
   -v /var/run/docker.sock:/var/run/docker.sock \
   ghcr.io/semanser/codel:latest
