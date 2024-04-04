@@ -30,6 +30,7 @@ export type Flow = {
   __typename?: 'Flow';
   browser: Browser;
   id: Scalars['Uint']['output'];
+  model: Model;
   name: Scalars['String']['output'];
   status: FlowStatus;
   tasks: Array<Task>;
@@ -47,6 +48,12 @@ export type Log = {
   text: Scalars['String']['output'];
 };
 
+export type Model = {
+  __typename?: 'Model';
+  id: Scalars['String']['output'];
+  provider: Scalars['String']['output'];
+};
+
 export type Mutation = {
   __typename?: 'Mutation';
   _exec: Scalars['String']['output'];
@@ -62,6 +69,12 @@ export type Mutation_ExecArgs = {
 };
 
 
+export type MutationCreateFlowArgs = {
+  modelId: Scalars['String']['input'];
+  modelProvider: Scalars['String']['input'];
+};
+
+
 export type MutationCreateTaskArgs = {
   flowId: Scalars['Uint']['input'];
   query: Scalars['String']['input'];
@@ -74,6 +87,7 @@ export type MutationFinishFlowArgs = {
 
 export type Query = {
   __typename?: 'Query';
+  availableModels: Array<Model>;
   flow: Flow;
   flows: Array<Flow>;
 };
@@ -153,6 +167,12 @@ export const FlowOverviewFragmentFragmentDoc = gql`
   status
 }
     `;
+export const ModelFragmentFragmentDoc = gql`
+    fragment modelFragment on Model {
+  id
+  provider
+}
+    `;
 export const LogFragmentFragmentDoc = gql`
     fragment logFragment on Log {
   text
@@ -181,6 +201,9 @@ export const FlowFragmentFragmentDoc = gql`
   id
   name
   status
+  model {
+    ...modelFragment
+  }
   terminal {
     containerName
     connected
@@ -195,7 +218,8 @@ export const FlowFragmentFragmentDoc = gql`
     ...taskFragment
   }
 }
-    ${LogFragmentFragmentDoc}
+    ${ModelFragmentFragmentDoc}
+${LogFragmentFragmentDoc}
 ${BrowserFragmentFragmentDoc}
 ${TaskFragmentFragmentDoc}`;
 export const FlowsDocument = gql`
@@ -209,6 +233,17 @@ export const FlowsDocument = gql`
 export function useFlowsQuery(options?: Omit<Urql.UseQueryArgs<FlowsQueryVariables>, 'query'>) {
   return Urql.useQuery<FlowsQuery, FlowsQueryVariables>({ query: FlowsDocument, ...options });
 };
+export const AvailableModelsDocument = gql`
+    query availableModels {
+  availableModels {
+    ...modelFragment
+  }
+}
+    ${ModelFragmentFragmentDoc}`;
+
+export function useAvailableModelsQuery(options?: Omit<Urql.UseQueryArgs<AvailableModelsQueryVariables>, 'query'>) {
+  return Urql.useQuery<AvailableModelsQuery, AvailableModelsQueryVariables>({ query: AvailableModelsDocument, ...options });
+};
 export const FlowDocument = gql`
     query flow($id: Uint!) {
   flow(id: $id) {
@@ -221,8 +256,8 @@ export function useFlowQuery(options: Omit<Urql.UseQueryArgs<FlowQueryVariables>
   return Urql.useQuery<FlowQuery, FlowQueryVariables>({ query: FlowDocument, ...options });
 };
 export const CreateFlowDocument = gql`
-    mutation createFlow {
-  createFlow {
+    mutation createFlow($modelProvider: String!, $modelId: String!) {
+  createFlow(modelProvider: $modelProvider, modelId: $modelId) {
     id
     name
   }
@@ -306,10 +341,17 @@ export function useBrowserUpdatedSubscription<TData = BrowserUpdatedSubscription
 };
 export type FlowOverviewFragmentFragment = { __typename?: 'Flow', id: any, name: string, status: FlowStatus };
 
+export type ModelFragmentFragment = { __typename?: 'Model', id: string, provider: string };
+
 export type FlowsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
 export type FlowsQuery = { __typename?: 'Query', flows: Array<{ __typename?: 'Flow', id: any, name: string, status: FlowStatus }> };
+
+export type AvailableModelsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type AvailableModelsQuery = { __typename?: 'Query', availableModels: Array<{ __typename?: 'Model', id: string, provider: string }> };
 
 export type TaskFragmentFragment = { __typename?: 'Task', id: any, type: TaskType, message: string, status: TaskStatus, args: any, results: any, createdAt: any };
 
@@ -317,16 +359,19 @@ export type LogFragmentFragment = { __typename?: 'Log', text: string, id: any };
 
 export type BrowserFragmentFragment = { __typename?: 'Browser', url: string, screenshotUrl: string };
 
-export type FlowFragmentFragment = { __typename?: 'Flow', id: any, name: string, status: FlowStatus, terminal: { __typename?: 'Terminal', containerName: string, connected: boolean, logs: Array<{ __typename?: 'Log', text: string, id: any }> }, browser: { __typename?: 'Browser', url: string, screenshotUrl: string }, tasks: Array<{ __typename?: 'Task', id: any, type: TaskType, message: string, status: TaskStatus, args: any, results: any, createdAt: any }> };
+export type FlowFragmentFragment = { __typename?: 'Flow', id: any, name: string, status: FlowStatus, model: { __typename?: 'Model', id: string, provider: string }, terminal: { __typename?: 'Terminal', containerName: string, connected: boolean, logs: Array<{ __typename?: 'Log', text: string, id: any }> }, browser: { __typename?: 'Browser', url: string, screenshotUrl: string }, tasks: Array<{ __typename?: 'Task', id: any, type: TaskType, message: string, status: TaskStatus, args: any, results: any, createdAt: any }> };
 
 export type FlowQueryVariables = Exact<{
   id: Scalars['Uint']['input'];
 }>;
 
 
-export type FlowQuery = { __typename?: 'Query', flow: { __typename?: 'Flow', id: any, name: string, status: FlowStatus, terminal: { __typename?: 'Terminal', containerName: string, connected: boolean, logs: Array<{ __typename?: 'Log', text: string, id: any }> }, browser: { __typename?: 'Browser', url: string, screenshotUrl: string }, tasks: Array<{ __typename?: 'Task', id: any, type: TaskType, message: string, status: TaskStatus, args: any, results: any, createdAt: any }> } };
+export type FlowQuery = { __typename?: 'Query', flow: { __typename?: 'Flow', id: any, name: string, status: FlowStatus, model: { __typename?: 'Model', id: string, provider: string }, terminal: { __typename?: 'Terminal', containerName: string, connected: boolean, logs: Array<{ __typename?: 'Log', text: string, id: any }> }, browser: { __typename?: 'Browser', url: string, screenshotUrl: string }, tasks: Array<{ __typename?: 'Task', id: any, type: TaskType, message: string, status: TaskStatus, args: any, results: any, createdAt: any }> } };
 
-export type CreateFlowMutationVariables = Exact<{ [key: string]: never; }>;
+export type CreateFlowMutationVariables = Exact<{
+  modelProvider: Scalars['String']['input'];
+  modelId: Scalars['String']['input'];
+}>;
 
 
 export type CreateFlowMutation = { __typename?: 'Mutation', createFlow: { __typename?: 'Flow', id: any, name: string } };
@@ -444,6 +489,18 @@ export default {
             "args": []
           },
           {
+            "name": "model",
+            "type": {
+              "kind": "NON_NULL",
+              "ofType": {
+                "kind": "OBJECT",
+                "name": "Model",
+                "ofType": null
+              }
+            },
+            "args": []
+          },
+          {
             "name": "name",
             "type": {
               "kind": "NON_NULL",
@@ -529,6 +586,35 @@ export default {
       },
       {
         "kind": "OBJECT",
+        "name": "Model",
+        "fields": [
+          {
+            "name": "id",
+            "type": {
+              "kind": "NON_NULL",
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "Any"
+              }
+            },
+            "args": []
+          },
+          {
+            "name": "provider",
+            "type": {
+              "kind": "NON_NULL",
+              "ofType": {
+                "kind": "SCALAR",
+                "name": "Any"
+              }
+            },
+            "args": []
+          }
+        ],
+        "interfaces": []
+      },
+      {
+        "kind": "OBJECT",
         "name": "Mutation",
         "fields": [
           {
@@ -573,7 +659,28 @@ export default {
                 "ofType": null
               }
             },
-            "args": []
+            "args": [
+              {
+                "name": "modelId",
+                "type": {
+                  "kind": "NON_NULL",
+                  "ofType": {
+                    "kind": "SCALAR",
+                    "name": "Any"
+                  }
+                }
+              },
+              {
+                "name": "modelProvider",
+                "type": {
+                  "kind": "NON_NULL",
+                  "ofType": {
+                    "kind": "SCALAR",
+                    "name": "Any"
+                  }
+                }
+              }
+            ]
           },
           {
             "name": "createTask",
@@ -638,6 +745,24 @@ export default {
         "kind": "OBJECT",
         "name": "Query",
         "fields": [
+          {
+            "name": "availableModels",
+            "type": {
+              "kind": "NON_NULL",
+              "ofType": {
+                "kind": "LIST",
+                "ofType": {
+                  "kind": "NON_NULL",
+                  "ofType": {
+                    "kind": "OBJECT",
+                    "name": "Model",
+                    "ofType": null
+                  }
+                }
+              }
+            },
+            "args": []
+          },
           {
             "name": "flow",
             "type": {

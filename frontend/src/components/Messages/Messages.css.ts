@@ -30,6 +30,10 @@ export const titleStyles = style([
   },
 ]);
 
+export const modelStyles = style({
+  color: vars.color.gray10,
+});
+
 export const newMessageTextarea = style([
   font.textSmMedium,
   {

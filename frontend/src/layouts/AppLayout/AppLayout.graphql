@@ -4,8 +4,19 @@ fragment flowOverviewFragment on Flow {
   status
 }
 
+fragment modelFragment on Model {
+  id
+  provider
+}
+
 query flows {
   flows {
     ...flowOverviewFragment
+  }
+}
+
+query availableModels {
+  availableModels {
+    ...modelFragment
   }
 }

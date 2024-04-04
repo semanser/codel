@@ -21,11 +21,17 @@ type Flow struct {
 	Terminal *Terminal  `json:"terminal"`
 	Browser  *Browser   `json:"browser"`
 	Status   FlowStatus `json:"status"`
+	Model    *Model     `json:"model"`
 }
 
 type Log struct {
 	ID   uint   `json:"id"`
 	Text string `json:"text"`
+}
+
+type Model struct {
+	Provider string `json:"provider"`
+	ID       string `json:"id"`
 }
 
 type Mutation struct {

@@ -1,12 +1,13 @@
 import { useEffect, useRef } from "react";
 
-import { FlowStatus, Task } from "@/generated/graphql";
+import { FlowStatus, Model, Task } from "@/generated/graphql";
 
 import { Button } from "../Button/Button";
 import { Message } from "./Message/Message";
 import {
   messagesListWrapper,
   messagesWrapper,
+  modelStyles,
   newMessageTextarea,
   titleStyles,
 } from "./Messages.css";
@@ -18,6 +19,7 @@ type MessagesProps = {
   onFlowStop: () => void;
   flowStatus?: FlowStatus;
   isNew?: boolean;
+  model?: Model;
 };
 
 export const Messages = ({
@@ -27,6 +29,7 @@ export const Messages = ({
   onSubmit,
   isNew,
   onFlowStop,
+  model,
 }: MessagesProps) => {
   const messages =
     tasks.map((task) => ({
@@ -90,14 +93,15 @@ export const Messages = ({
     <div className={messagesWrapper}>
       {name && (
         <div className={titleStyles}>
-          {name}{" "}
+          {name}
+          <span className={modelStyles}>{` - ${model?.id}`}</span>{" "}
           {isFlowFinished ? (
             " (Finished)"
           ) : (
             <Button hierarchy="danger" size="small" onClick={onFlowStop}>
               Finish
             </Button>
-          )}
+          )}{" "}
         </div>
       )}
       <div className={messagesListWrapper} ref={messagesRef}>

@@ -1,12 +1,17 @@
 import { Outlet } from "react-router-dom";
 
 import { Sidebar } from "@/components/Sidebar/Sidebar";
-import { FlowStatus, useFlowsQuery } from "@/generated/graphql";
+import {
+  FlowStatus,
+  useAvailableModelsQuery,
+  useFlowsQuery,
+} from "@/generated/graphql";
 
 import { wrapperStyles } from "./AppLayout.css";
 
 export const AppLayout = () => {
   const [{ data }] = useFlowsQuery();
+  const [{ data: availableModelsData }] = useAvailableModelsQuery();
 
   const sidebarItems =
     data?.flows.map((flow) => ({
@@ -17,7 +22,10 @@ export const AppLayout = () => {
 
   return (
     <div className={wrapperStyles}>
-      <Sidebar items={sidebarItems} />
+      <Sidebar
+        items={sidebarItems}
+        availableModels={availableModelsData?.availableModels ?? []}
+      />
       <Outlet />
     </div>
   );

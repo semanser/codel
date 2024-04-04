@@ -49,6 +49,11 @@ type Browser {
   screenshotUrl: String!
 }
 
+type Model {
+  provider: String!
+  id: String!
+}
+
 type Flow {
   id: Uint!
   name: String!
@@ -56,15 +61,17 @@ type Flow {
   terminal: Terminal!
   browser: Browser!
   status: FlowStatus!
+  model: Model!
 }
 
 type Query {
+  availableModels: [Model!]!
   flows: [Flow!]!
   flow(id: Uint!): Flow!
 }
 
 type Mutation {
-  createFlow: Flow!
+  createFlow(modelProvider: String!, modelId: String!): Flow!
   createTask(flowId: Uint!, query: String!): Task!
   finishFlow(flowId: Uint!): Flow!
 
