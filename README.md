@@ -43,6 +43,7 @@ Now you can visit [localhost:3000](localhost:3000) in your browser and start usi
     * `OPEN_AI_MODEL` - OpenAI model (default: gpt-4-0125-preview). The list of supported OpenAI models can be found [here](https://pkg.go.dev/github.com/sashabaranov/go-openai#pkg-constants).
     * `OPEN_AI_SERVER_URL` - OpenAI server URL (default: https://api.openai.com/v1). Change this URL if you are using an OpenAI compatible server.
     * `OLLAMA_MODEL` - locally hosted Ollama model (default: https://ollama.com/model). The list of supported Ollama models can be found [here](https://ollama.com/models).
+    * `OLLAMA_SERVER_URL` - Ollama server URL (default: https://host.docker.internal:11434). Change this URL if you are using an Ollama compatible server.
     See backend [.env.example](./backend/.env.example) for more details.
 
 </details>
