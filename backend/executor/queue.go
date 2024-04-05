@@ -64,7 +64,7 @@ func ProcessQueue(flowId int64, db *database.Queries) {
 		return
 	}
 
-	log.Printf("Using provider: %s. Model: %s\n", provider.Name(), flow.ModelProvider.String)
+	log.Printf("Using provider: %s. Model: %s\n", provider.Name(), flow.Model.String)
 
 	go func() {
 		for {
