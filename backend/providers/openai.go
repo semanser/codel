@@ -59,7 +59,7 @@ func (p OpenAIProvider) NextTask(args NextTaskOptions) *database.Task {
 
 	promptArgs := map[string]interface{}{
 		"DockerImage":     args.DockerImage,
-		"ToolPlaceholder": getToolPlaceholder(),
+		"ToolPlaceholder": "Always use your function calling functionality, instead of returning a text result.",
 		"Tasks":           args.Tasks,
 	}
 
