@@ -249,7 +249,26 @@ func toolToTask(choices []*llms.ContentChoice) (*database.Task, error) {
 	}
 
 	// We use AskArgs to extract the message
-	params, err := extractToolArgs(tool.FunctionCall.Arguments, &AskArgs{})
+	var toolType Messanger
+
+	switch tool.FunctionCall.Name {
+	case "input":
+		toolType = &InputArgs{}
+	case "terminal":
+		toolType = &TerminalArgs{}
+	case "browser":
+		toolType = &BrowserArgs{}
+	case "code":
+		toolType = &CodeArgs{}
+	case "ask":
+		toolType = &AskArgs{}
+	case "done":
+		toolType = &DoneArgs{}
+	default:
+		return nil, fmt.Errorf("unknown tool name: %s", tool.FunctionCall.Name)
+	}
+
+	params, err := extractToolArgs(tool.FunctionCall.Arguments, &toolType)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract args: %v", err)
 	}
@@ -260,7 +279,7 @@ func toolToTask(choices []*llms.ContentChoice) (*database.Task, error) {
 	task.Args = database.StringToNullString(string(args))
 
 	// Sometimes the model returns an empty string for the message
-	msg := string(params.Message)
+	msg := string((*params).GetMessage())
 	if msg == "" {
 		msg = tool.FunctionCall.Arguments
 	}
