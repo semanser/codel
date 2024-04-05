@@ -24,23 +24,27 @@ const defaultImage = "debian:latest"
 func InitClient() error {
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
-		return fmt.Errorf("Error initializing docker client: %w", err)
+		return fmt.Errorf("error initializing docker client: %w", err)
 	}
+	cli.NegotiateAPIVersion(context.Background())
+
 	dockerClient = cli
 	info, err := dockerClient.Info(context.Background())
 
 	if err != nil {
-		return fmt.Errorf("Error getting docker info: %w", err)
+		return fmt.Errorf("error getting docker info: %w", err)
 	}
 
-	log.Printf("Docker client initialized: %s", info.Name)
+	log.Printf("Docker client initialized: %s, %s", info.Name, info.Architecture)
+	log.Printf("Docker server API version: %s", info.ServerVersion)
+	log.Printf("Docker client API version: %s", dockerClient.ClientVersion())
 
 	return nil
 }
 
 func SpawnContainer(ctx context.Context, name string, config *container.Config, hostConfig *container.HostConfig, db *database.Queries) (dbContainerID int64, err error) {
 	if config == nil {
-		return 0, fmt.Errorf("No config found for container %s", name)
+		return 0, fmt.Errorf("no config found for container %s", name)
 	}
 
 	log.Printf("Spawning container %s \"%s\"\n", config.Image, name)
@@ -52,7 +56,7 @@ func SpawnContainer(ctx context.Context, name string, config *container.Config, 
 	})
 
 	if err != nil {
-		return dbContainer.ID, fmt.Errorf("Error creating container in database: %w", err)
+		return dbContainer.ID, fmt.Errorf("error creating container in database: %w", err)
 	}
 
 	localContainerID := ""
@@ -64,7 +68,7 @@ func SpawnContainer(ctx context.Context, name string, config *container.Config, 
 			err := StopContainer(localContainerID, dbContainerID, db)
 
 			if err != nil {
-				log.Printf("Error stopping failed container %s: %s\n", dbContainerID, err)
+				log.Printf("error stopping failed container %d: %v\n", dbContainerID, err)
 			}
 		} else {
 			status = "running"
@@ -76,13 +80,17 @@ func SpawnContainer(ctx context.Context, name string, config *container.Config, 
 		})
 
 		if err != nil {
-			log.Printf("Error updating container status: %s\n", err)
+			log.Printf("error updating container status: %s\n", err)
 		}
 
 		_, err = db.UpdateContainerLocalId(ctx, database.UpdateContainerLocalIdParams{
 			ID:      dbContainer.ID,
 			LocalID: database.StringToNullString(localContainerID),
 		})
+
+		if err != nil {
+			log.Printf("error updating container local id: %s\n", err)
+		}
 	}()
 
 	filters := filters.NewArgs()
@@ -92,7 +100,7 @@ func SpawnContainer(ctx context.Context, name string, config *container.Config, 
 	})
 
 	if err != nil {
-		return dbContainer.ID, fmt.Errorf("Error listing images: %w", err)
+		return dbContainer.ID, fmt.Errorf("error listing images: %w", err)
 	}
 
 	imageExistsLocally := len(images) > 0
@@ -122,7 +130,7 @@ func SpawnContainer(ctx context.Context, name string, config *container.Config, 
 	resp, err := dockerClient.ContainerCreate(ctx, config, hostConfig, nil, nil, name)
 
 	if err != nil {
-		return dbContainer.ID, fmt.Errorf("Error creating container: %w", err)
+		return dbContainer.ID, fmt.Errorf("error creating container: %w", err)
 	}
 
 	log.Printf("Container %s created\n", name)
@@ -131,7 +139,7 @@ func SpawnContainer(ctx context.Context, name string, config *container.Config, 
 	err = dockerClient.ContainerStart(ctx, localContainerID, container.StartOptions{})
 
 	if err != nil {
-		return dbContainer.ID, fmt.Errorf("Error starting container: %w", err)
+		return dbContainer.ID, fmt.Errorf("error starting container: %w", err)
 	}
 	log.Printf("Container %s started\n", name)
 
@@ -149,7 +157,7 @@ func StopContainer(containerID string, dbID int64, db *database.Queries) error {
 
 			return nil
 		} else {
-			return fmt.Errorf("Error stopping container: %w", err)
+			return fmt.Errorf("error stopping container: %w", err)
 		}
 	}
 
@@ -159,7 +167,7 @@ func StopContainer(containerID string, dbID int64, db *database.Queries) error {
 	})
 
 	if err != nil {
-		return fmt.Errorf("Error updating container status to stopped: %w", err)
+		return fmt.Errorf("error updating container status to stopped: %w", err)
 	}
 
 	log.Printf("Container %s stopped\n", containerID)
@@ -170,11 +178,11 @@ func DeleteContainer(containerID string, dbID int64, db *database.Queries) error
 	log.Printf("Deleting container %s...\n", containerID)
 
 	if err := StopContainer(containerID, dbID, db); err != nil {
-		return fmt.Errorf("Error stopping container: %w", err)
+		return fmt.Errorf("error stopping container: %w", err)
 	}
 
 	if err := dockerClient.ContainerRemove(context.Background(), containerID, container.RemoveOptions{}); err != nil {
-		return fmt.Errorf("Error removing container: %w", err)
+		return fmt.Errorf("error removing container: %w", err)
 	}
 	log.Printf("Container %s removed\n", containerID)
 	return nil
@@ -185,7 +193,7 @@ func Cleanup(db *database.Queries) error {
 	log.Println("Removing tmp files...")
 	err := os.RemoveAll("./tmp/")
 	if err != nil {
-		return fmt.Errorf("Error removing tmp files: %w", err)
+		return fmt.Errorf("error removing tmp files: %w", err)
 	}
 
 	log.Println("Cleaning up containers and making all flows finished...")
@@ -195,7 +203,7 @@ func Cleanup(db *database.Queries) error {
 	containers, err := db.GetAllRunningContainers(context.Background())
 
 	if err != nil {
-		return fmt.Errorf("Error getting running containers: %w", err)
+		return fmt.Errorf("error getting running containers: %w", err)
 	}
 
 	for _, container := range containers {
@@ -214,7 +222,7 @@ func Cleanup(db *database.Queries) error {
 	flows, err := db.ReadAllFlows(context.Background())
 
 	if err != nil {
-		return fmt.Errorf("Error getting all flows: %w", err)
+		return fmt.Errorf("error getting all flows: %w", err)
 	}
 
 	for _, flow := range flows {
@@ -237,7 +245,7 @@ func IsContainerRunning(containerID string) (bool, error) {
 	containerInfo, err := dockerClient.ContainerInspect(context.Background(), containerID)
 
 	if err != nil {
-		return false, fmt.Errorf("Error inspecting container: %w", err)
+		return false, fmt.Errorf("error inspecting container: %w", err)
 	}
 
 	return containerInfo.State.Running, err
