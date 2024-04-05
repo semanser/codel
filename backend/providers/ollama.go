@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"os"
 
 	"github.com/semanser/ai-coder/assets"
 	"github.com/semanser/ai-coder/config"
@@ -26,10 +25,6 @@ type OllamaProvider struct {
 func (p OllamaProvider) New() Provider {
 	model := config.Config.OllamaModel
 	baseURL := config.Config.OllamaServerURL
-
-	if isRunningInDockerContainer() {
-		baseURL = fmt.Sprintf("http://host.docker.internal:%s", "11434")
-	}
 
 	client, err := ollama.New(
 		ollama.WithModel(model),
@@ -57,10 +52,6 @@ func (p OllamaProvider) Summary(query string, n int) (string, error) {
 	model := config.Config.OllamaModel
 	baseURL := config.Config.OllamaServerURL
 
-	if isRunningInDockerContainer() {
-		baseURL = fmt.Sprintf("http://host.docker.internal:%s", "11434")
-	}
-
 	client, err := ollama.New(
 		ollama.WithModel(model),
 		ollama.WithServerURL(baseURL),
@@ -76,10 +67,6 @@ func (p OllamaProvider) Summary(query string, n int) (string, error) {
 func (p OllamaProvider) DockerImageName(task string) (string, error) {
 	model := config.Config.OllamaModel
 	baseURL := config.Config.OllamaServerURL
-
-	if isRunningInDockerContainer() {
-		baseURL = fmt.Sprintf("http://host.docker.internal:%s", "11434")
-	}
 
 	client, err := ollama.New(
 		ollama.WithModel(model),
@@ -173,18 +160,4 @@ To use a tool, respond with a JSON object with the following structure:
 
 Always use a tool. Always reply with valid JOSN. Always include a message.
 `, string(bs))
-}
-
-// Source: https://paulbradley.org/indocker/
-func isRunningInDockerContainer() bool {
-	// docker creates a .dockerenv file at the root
-	// of the directory tree inside the container.
-	// if this file exists then the viewer is running
-	// from inside a container so return true
-
-	if _, err := os.Stat("/.dockerenv"); err == nil {
-		return true
-	}
-
-	return false
 }

@@ -19,7 +19,7 @@ type config struct {
 
 	// Ollama
 	OllamaModel     string `env:"OLLAMA_MODEL"`
-	OllamaServerURL string `env:"OLLAMA_SERVER_URL" envDefault:"http://localhost:11434"`
+	OllamaServerURL string `env:"OLLAMA_SERVER_URL" envDefault:"http://host.docker.internal:11434"`
 }
 
 var Config config
