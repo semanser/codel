@@ -57,7 +57,13 @@ func (p OpenAIProvider) DockerImageName(task string) (string, error) {
 func (p OpenAIProvider) NextTask(args NextTaskOptions) *database.Task {
 	log.Println("Getting next task")
 
-	prompt, err := templates.Render(assets.PromptTemplates, "prompts/agent.tmpl", args)
+	promptArgs := map[string]interface{}{
+		"DockerImage":     args.DockerImage,
+		"ToolPlaceholder": getToolPlaceholder(),
+		"Tasks":           args.Tasks,
+	}
+
+	prompt, err := templates.Render(assets.PromptTemplates, "prompts/agent.tmpl", promptArgs)
 
 	// TODO In case of lots of tasks, we should try to get a summary using gpt-3.5
 	if len(prompt) > 30000 {
