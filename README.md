@@ -48,6 +48,20 @@ Now you can visit [localhost:3000](localhost:3000) in your browser and start usi
 
 </details>
 
+# Ngrok Tunneling Setup
+
+To enable ngrok tunneling for local development and testing, follow these steps:
+
+1. Obtain an ngrok auth token by signing up at [ngrok.com](https://ngrok.com/).
+2. Configure the `.env` file in the `backend` directory with your ngrok auth token and desired tunnel name:
+   ```
+   NGROK_AUTH_TOKEN=your_ngrok_auth_token
+   NGROK_TUNNEL_NAME=your_desired_tunnel_name
+   ```
+3. Start the ngrok tunnel to expose your local development server to the internet. The exposed URL will be displayed in the terminal.
+
+This setup allows you to test your local development server from external devices and share your work with others without deploying it.
+
 # Development
 
 Check out the [DEVELOPMENT.md](./DEVELOPMENT.md) for more information.
