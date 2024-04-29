@@ -12,9 +12,11 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/semanser/ai-coder/database"
 	gmodel "github.com/semanser/ai-coder/graph/model"
-	"github.com/semanser/ai-coder/graph/subscriptions"
 	"github.com/semanser/ai-coder/websocket"
+	"github.com/ngrok/ngrok-api-go"
 )
+
+var ngrokAuthToken = "your_ngrok_auth_token" // Placeholder for ngrok auth token
 
 func ExecCommand(flowID int64, command string, db *database.Queries) (result string, err error) {
 	container := TerminalName(flowID)
@@ -189,5 +191,22 @@ func WriteFile(flowID int64, content string, path string, db *database.Queries) 
 }
 
 func TerminalName(flowID int64) string {
-	return fmt.Sprintf("codel-terminal-%d", flowID)
+	// Initialize ngrok with the specified auth token
+	ngrokClient := ngrok.NewClient(ngrokAuthToken)
+
+	// Create or retrieve an ngrok tunnel
+	tunnel, err := ngrokClient.Tunnels.GetOrCreate(context.Background(), &ngrok.TunnelCreate{
+		Name:    fmt.Sprintf("codel-terminal-%d", flowID),
+		Addr:    fmt.Sprintf("http://localhost:%d", flowID), // Assuming the service runs on a port that matches the flowID
+		Proto:   "http",
+		Region:  "us",
+		Auth:    "",
+		BinAddr: "",
+		BindTLS: true,
+	})
+	if err != nil {
+		log.Fatalf("Failed to create or retrieve ngrok tunnel: %v", err)
+	}
+
+	return tunnel.PublicURL // Use ngrok tunnel URL
 }
